@@ -15,8 +15,8 @@
 
 | Modèle / configuration | État |
 | --- | --- |
-| **C5L** | Vidéo et PTZ validés sur le matériel de développement |
-| **Deux C9C3CA11 avec station H1L** | Vidéo validée dans une configuration de développement ; PTZ encore expérimental et non confirmé physiquement dans la base 0.8.10 |
+| **C5L** | Vidéo et PTZ confirmés sur le matériel de développement |
+| **Deux C9C3CA11 avec station H1L** | Vidéo et PTZ confirmés sur les deux caméras dans la configuration de développement |
 | Caméras, stations ou nombres de caméras différents | Non validés |
 
 **Version de référence sur le matériel de développement : 0.8.10.** Une version bêta expérimentale destinée aux installations externes est en préparation. Aucune release publique installable n’est annoncée. N’installez pas ce dépôt via HACS avant la publication explicite d’une release compatible.
@@ -25,7 +25,7 @@
 
 - Vidéo dans Home Assistant, avec démarrage et arrêt du direct.
 - Cartes dédiées pour la vidéo, le plein écran et les commandes.
-- Sur C5L, des mouvements PTZ et l’arrêt ont été observés. Sur C9, les commandes PTZ restent expérimentales : le mouvement et l’arrêt physiques ne sont pas confirmés dans la base 0.8.10.
+- Les trois caméras du matériel de développement (une C5L et deux C9C3CA11 derrière H1L) fonctionnent en vidéo et en PTZ. Cette validation porte sur cette configuration; les autres réseaux, comptes et modèles restent à vérifier.
 - L’authentification ou la négociation d’une session peut dépendre d’AOSU/Tuya.
 
 ### Essais manuels
@@ -50,8 +50,8 @@ Utilisez les Issues GitHub en indiquant seulement le modèle de caméra, le type
 
 ### Compatibility
 
-- **C5L:** video and PTZ validated on development equipment.
-- **Two C9C3CA11 cameras behind one H1L station:** video validated in one development setup; PTZ remains experimental and was not physically confirmed in the 0.8.10 baseline. Other networks and devices remain unverified.
+- **C5L:** video and PTZ confirmed on the development equipment.
+- **Two C9C3CA11 cameras behind one H1L station:** video and PTZ confirmed on both cameras in the development setup. This validation covers that setup; other networks, accounts and models remain unverified.
 - Other camera/station combinations and camera counts are not validated.
 
 Version 0.8.10 is a development baseline. An experimental beta for external installations is being prepared; no public installable release is announced. Do not install through HACS until a compatible release is explicitly published.
