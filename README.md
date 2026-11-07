@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta5 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta6 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -40,3 +40,7 @@ La négociation MQTT émet d'abord une interrogation sigQry (protocole 22), puis
 ## Beta 0.8.13-beta5 — diagnostic de correspondance C9C autonome
 
 La carte C9C autonome propose **Vérifier identité**. Le bouton lit un inventaire Tuya en mémoire, ou l'actualise manuellement si besoin, puis compare exclusivement en RAM les numéros de série AOSU et les identifiants coopUUID avec les champs Tuya connus. Il ne transmet jamais ces identifiants dans le résultat. La sélection d'un seul appareil Tuya sans catégorie vidéo **ne prouve pas** son identité. L'appel n'envoie ni offre SDP, ni message MQTT, ni commande caméra ou PTZ. Le protocole de la C5L et les contrôleurs H1L restent inchangés.
+
+## 0.8.13-beta6 : lecture seule du routage C9C
+
+Le bouton **Vérifier identité** présente aussi les informations déjà filtrées du dernier inventaire AOSU : fournisseur `sdkProvider`, type P2P, branche PTZ Gz/Ty et présence de référence Tuya. Le type de transport vidéo réel reste **non démontré**. Une comparaison exacte supplémentaire teste localement si le numéro de série AOSU est identique à l'identifiant Tuya. **Aucune sélection automatique n'est modifiée** ; aucun réseau, vidéo, PTZ ou secret n'est utilisé par cet ajout.

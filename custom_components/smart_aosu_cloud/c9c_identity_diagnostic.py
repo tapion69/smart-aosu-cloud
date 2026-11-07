@@ -61,8 +61,41 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
             "compatibilite_video_prouvee": False,
         },
     }
-    if select_standalone(data) is None:
+    selected = select_standalone(data)
+    if selected is None:
         return {**result, "etat": "topologie_c9c_non_unique"}
+    # These fields come from the AOSU inventory already sanitized in memory.
+    # svcType is a PTZ routing hint, *not* proof of the live-video backend.
+    row = data.get(selected) if isinstance(data, dict) else None
+    row = row if isinstance(row, dict) else {}
+    platform = row.get("ptz_iot_platform")
+    platform = platform if platform in ("Gz", "Ty") else "indeterminee"
+    ref = row.get("ptz_tuya_reference_status")
+    allowed_ref = ("racine_et_infos_concordantes", "racine_et_infos_differentes",
+                   "racine_presente", "infos_seulement", "format_non_reconnu",
+                   "absent", "indisponible")
+    ref = ref if ref in allowed_ref else "indisponible"
+    # Separate provider hints (sdkProvider/p2pType) are also cached at getList.
+    # Never infer a provider from a product's name or the user device name.
+    snapshot = getattr(client, "_provider_snapshot", None)
+    provider_rows = snapshot.get("appareils") if isinstance(snapshot, dict) else None
+    provider_row = (provider_rows[0] if isinstance(provider_rows, list)
+                    and len(provider_rows) == 1 and isinstance(provider_rows[0], dict)
+                    else {})
+    provider = provider_row.get("sdk_provider_declare_nom")
+    allowed_provider = ("TUTK", "THING", "THING_STATION", "FISHEYE",
+                        "VIRTUAL", "INDETERMINE")
+    provider = provider if provider in allowed_provider else "INDETERMINE"
+    p2p_type = provider_row.get("p2p_type_declare")
+    p2p_type = p2p_type if type(p2p_type) is int and 0 <= p2p_type <= 9 else "absent"
+    result["aosu_routage_declare"] = {
+        "branche_ptz": platform,
+        "reference_tuya": ref,
+        "fournisseur_p2p": provider,
+        "p2p_type": p2p_type,
+        "fournisseur_runtime_confirme": False,
+        "video_c5l_compatible_confirmee": False,
+    }
     sn = getattr(client, "_standalone_c9c_sn", None)
     coop = getattr(client, "_standalone_c9c_coop_id", None)
     sn = sn if isinstance(sn, str) and sn else None
@@ -90,10 +123,16 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
     strong_sn = 0
     strong_coop = 0
     all_video = 0
+    sn_matches_tuya_id = 0
     details = []
-    for item in devices.values():
+    for dev_id, item in devices.items():
         objs = _objects(item)
         cats = _categories(item)
+        # Some bridges use the AOSU SN as Tuya devId instead of a SN field.
+        # This is *additional evidence only*, never a routing override.
+        tuya_ids = [dev_id] + [obj.get(k) for obj in objs for k in _COOP_FIELDS]
+        sn_matches_tuya_id += int(bool(sn) and any(
+            isinstance(v, str) and v == sn for v in tuya_ids))
         strong_sn += int(_exact(objs, _SN_FIELDS, sn))
         strong_coop += int(_exact(objs, _COOP_FIELDS, coop))
         all_video += int(bool(cats & _VIDEO))
@@ -132,6 +171,7 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
     exact = target is not None and method == "identite_exacte"
     result["correspondance"] = {
         "serie_exacte_nombre": strong_sn,
+        "serie_egale_id_tuya_nombre": sn_matches_tuya_id,
         "coop_exact_nombre": strong_coop,
         "cameras_tuya_reconnues": all_video,
         "selection_rtc": method,

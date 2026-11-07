@@ -125,7 +125,12 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; catégorie Tuya absente : '+(device.categorie_absente===true?'oui':'non')+
         ' ; modèle Tuya présent : '+(device.modele_present===true?'oui':'non')+
         ' ; sélection RTC : '+String(match.selection_rtc||'non disponible')+
-        '. Aucune vidéo/commande PTZ envoyée par ce diagnostic.');
+        ' ; SN=ID Tuya : '+String(match.serie_egale_id_tuya_nombre??'?')+
+        ' ; branche PTZ AOSU : '+String((report.aosu_routage_declare||{}).branche_ptz||'indeterminee')+
+        ' ; fournisseur P2P déclaré : '+String((report.aosu_routage_declare||{}).fournisseur_p2p||'INDETERMINE')+
+        ' ; type P2P : '+String((report.aosu_routage_declare||{}).p2p_type??'absent')+
+        ' ; référence Tuya : '+String((report.aosu_routage_declare||{}).reference_tuya||'indisponible')+
+        '. Indices AOSU non confirmés par la vidéo. Aucune vidéo/commande PTZ envoyée par ce diagnostic.');
     } finally {
       this._busy=false;
       if(button)button.disabled=false;
