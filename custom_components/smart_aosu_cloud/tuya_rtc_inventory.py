@@ -304,6 +304,9 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
             candidates=[did for did,kind in statuses.items() if kind in ('camera_candidate','camera_candidate_name')]
             out['c5l_identification_exacte']=len(confirmed)==1
             out['cameras_candidates']=len(candidates)
+            # Safe counts only: no device IDs or names returned to Home Assistant.
+            out['cameras_tuya_categorie_video']=sum(
+                _has_camera_category(item) for item in all_devices.values())
             out['cameras_c5l_confirmees']=len(confirmed)
             out['cameras_categorie_productBean']=sum(
                 bool(isinstance(item.get('productBean'),dict) and

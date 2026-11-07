@@ -105,7 +105,16 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     const state=response?.response||response;
     if(!state){this._message('Diagnostic non disponible.');return;}
     const images=state?.decodage?.images_jpeg_decodees;
-    this._message('État : '+String(state.etat||'inconnu')+' ; images JPEG : '+(Number.isInteger(images)?images:'non disponible')+' ; P2P actif : '+(state.direct_actif===true?'oui':'non')+'.');
+    const last=state?.dernier_resultat||{};
+    const stage=typeof last.etat_negociation==='string' ? last.etat_negociation : '';
+    const selection=typeof last.methode_selection_rtc==='string' ? last.methode_selection_rtc : '';
+    const cams=Number.isInteger(last.cameras_tuya_categorie_video) ? last.cameras_tuya_categorie_video : '?';
+    const total=Number.isInteger(last.nombre_appareils_tuya) ? last.nombre_appareils_tuya : '?';
+    const brief='État : '+String(state.etat||'inconnu')+' ; JPEG : '+(Number.isInteger(images)?images:'?')+' ; P2P : '+(state.direct_actif===true?'oui':'non');
+    this._message(brief+(stage ? ' ; phase : '+stage : '')+
+      (stage==='rtc_non_lance_c9c_non_identifiee'
+        ? ' ; identification : '+selection+' ; caméras Tuya : '+cams+' / appareils Tuya : '+total+'. Ne pas relancer sans correction.'
+        : '.'));
   }
 }
 if(!customElements.get('smart-aosu-c9c-autonome-b1'))

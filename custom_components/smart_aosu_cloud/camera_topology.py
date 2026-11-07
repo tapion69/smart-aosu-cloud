@@ -51,10 +51,11 @@ def select_standalone_c9c_key(data):
 
 
 def select_tuya_standalone_target(devices, *, camera_sn, camera_coop):
-    """Find the one Tuya target using exact AOSU IDs, or sole IPC fallback.
+    """Match exact identifiers or a unique explicitly categorized Tuya camera.
 
-    Identifier values stay local in memory. Fallback requires EXACTLY one Tuya
-    device with an explicit IPC category and is only used after manual consent.
+    Fallback is only for one AOSU standalone C9C and a manual video trial,
+    as enforced by the caller. Other Tuya device types may coexist, but two
+    eligible cameras are always ambiguous. Never use names or device order.
     """
     if not isinstance(devices, dict) or not devices:
         return None, 'inventaire_tuya_absent'
@@ -76,9 +77,15 @@ def select_tuya_standalone_target(devices, *, camera_sn, camera_coop):
         return matches[0], 'identite_exacte'
     if matches:
         return None, 'correspondance_ambigue'
-    if len(devices) == 1:
-        dev_id, item = next(iter(devices.items()))
-        if any(str(obj.get('category') or '').strip().lower()
-               in ('sp','ipc','camera','smart_camera') for obj in objects(item)):
-            return dev_id, 'camera_tuya_unique_non_confirmee'
-    return None, 'camera_tuya_non_identifiee'
+    # A Tuya account can contain gateways, switches and sensors in addition
+    # to the one standalone C9C. These must not make an otherwise unique IPC
+    # ambiguous. Never guess if zero or multiple video candidates remain.
+    cameras = [dev_id for dev_id, item in devices.items()
+               if any(str(obj.get('category') or '').strip().lower()
+                      in ('sp', 'ipc', 'camera', 'smart_camera')
+                      for obj in objects(item))]
+    if len(cameras) == 1:
+        return cameras[0], 'camera_tuya_unique_non_confirmee'
+    if len(cameras) > 1:
+        return None, 'cameras_tuya_multiples_ambigues'
+    return None, 'aucune_camera_tuya_identifiable'

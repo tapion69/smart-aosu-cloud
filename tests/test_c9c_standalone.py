@@ -44,6 +44,19 @@ class C9CAutonomeTests(unittest.TestCase):
         self.assertEqual(choose({'a':{'productBean':{'category':'sp'}}},camera_sn=None,camera_coop=None),
                          ('a','camera_tuya_unique_non_confirmee'))
         self.assertIsNone(choose({'a':{'name':'unrelated'}},camera_sn=None,camera_coop=None)[0])
+        # A single explicit IPC remains safe even with additional non-camera devices.
+        devices={'a':{'productBean':{'category':'switch'}},
+                 'b':{'productBean':{'category':'sp'}},
+                 'c':{'category':'gw'}}
+        self.assertEqual(choose(devices,camera_sn=None,camera_coop=None),
+                         ('b','camera_tuya_unique_non_confirmee'))
+        # Never silently select when multiple camera-category devices exist.
+        both={'a':{'productBean':{'category':'sp'}},'b':{'category':'ipc'},'c':{'category':'gw'}}
+        self.assertEqual(choose(both,camera_sn=None,camera_coop=None),
+                         (None,'cameras_tuya_multiples_ambigues'))
+        self.assertEqual(choose({'a':{'category':'gw'},'b':{'category':'switch'}},
+                                camera_sn=None,camera_coop=None),
+                         (None,'aucune_camera_tuya_identifiable'))
         self.assertIsNone(choose({'a':{'sn':'same'},'b':{'sn':'same'}},camera_sn='same',camera_coop=None)[0])
 
     def test_manual_video_only_path_and_no_ptz_card(self):
@@ -63,6 +76,9 @@ class C9CAutonomeTests(unittest.TestCase):
         # Only the explicit start method may choose a standalone candidate.
         self.assertIn('if standalone_c9c_video_test:',route)
         self.assertIn('if standalone_c9c_video_test and not interactive_live:',route)
+        self.assertIn("out['cameras_tuya_categorie_video']",route)
+        self.assertIn("'methode_selection_rtc':report.get",stream)
+        self.assertIn('cameras_tuya_categorie_video',js)
 
     def test_grammar_and_safety(self):
         for p in COMP.glob('*.py'):

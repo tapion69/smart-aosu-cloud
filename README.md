@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.12-beta2 (import automatique dans Home Assistant)
+# Smart AOSU Cloud — 0.8.13-beta2 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -22,3 +22,9 @@ Les ressources propriétaires sont importées uniquement depuis l'ordinateur du 
 **Limitations :** les fichiers doivent correspondre précisément au build AOSU 5.10.12 étudié ; une autre version est rejetée. Les cartes Lovelace doivent encore être ajoutées en suivant [docs/CARTES_LOVELACE.md](docs/CARTES_LOVELACE.md). Voir [docs/INSTALLATION_TEST.md](docs/INSTALLATION_TEST.md) pour le détail et [docs/PLAN_TEST.md](docs/PLAN_TEST.md) pour le test physique.
 
 **Confidentialité :** ne publiez jamais APK, OEM ZIP, `profile.json`, mot de passe, jeton, IP, MAC, numéro de série, captures ou logs non expurgés. Une APK modifiée reste soumise aux droits de son éditeur ; chaque testeur doit utiliser des copies qu'il est autorisé à utiliser. Le code original est proposé sous PolyForm Strict 1.0.0, sous réserve des droits de tiers.
+
+## C9C autonome — essai vidéo expérimental (0.8.13-beta2)
+
+Après installation sur un compte ne contenant qu'une C9C autonome et sans base H1L, ajouter la carte décrite dans `docs/CARTES_LOVELACE.md`. La première bêta échouait parfois avant la négociation RTC (`rtc_non_lance_c9c_non_identifiee`) lorsque l'inventaire Tuya contenait plusieurs appareils, dont une seule caméra. Cette version corrige cette condition et affiche les comptes d'appareils/caméras anonymisés si la sélection échoue.
+
+Ne pas relancer plusieurs fois sans examiner le statut. Les commandes PTZ sont désactivées pour cette caméra tant que la vidéo et le STOP ne sont pas validés.
