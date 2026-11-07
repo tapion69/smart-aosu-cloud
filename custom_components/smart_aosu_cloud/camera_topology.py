@@ -88,4 +88,29 @@ def select_tuya_standalone_target(devices, *, camera_sn, camera_coop):
         return cameras[0], 'camera_tuya_unique_non_confirmee'
     if len(cameras) > 1:
         return None, 'cameras_tuya_multiples_ambigues'
+    # Experimental last resort for an account holding EXACTLY one AOSU C9C
+    # and exactly one Tuya device. The caller already checks the AOSU model,
+    # absence of H1L and express video-only consent. Never use this fallback
+    # with multiple Tuya devices or without the exact AOSU camera SN in RAM.
+    # A non-video device may still be the sole Tuya device, so reject explicit
+    # non-video categories rather than assuming every unique device is a camera.
+    if len(devices) == 1 and isinstance(camera_sn, str) and camera_sn:
+        dev_id, item = next(iter(devices.items()))
+        if not isinstance(item, dict):
+            return None, 'appareil_tuya_unique_invalide'
+        categories = {
+            str(obj['category']).strip().lower()
+            for obj in objects(item)
+            if isinstance(obj.get('category'), str) and obj['category'].strip()
+        }
+        # Common Tuya non-camera categories and hub aliases. This list is
+        # deliberately conservative, and only prevents the WEAK fallback;
+        # confirmed identity matching above keeps its original behavior.
+        non_video = {
+            'gw', 'gateway', 'hub', 'switch', 'socket', 'sensor', 'light',
+            'zigbee', 'plug', 'cz', 'kg', 'dj', 'cl', 'pir', 'wsdcg',
+        }
+        if categories & non_video:
+            return None, 'appareil_tuya_unique_categorie_non_video'
+        return dev_id, 'appareil_tuya_unique_sans_categorie_video'
     return None, 'aucune_camera_tuya_identifiable'

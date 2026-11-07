@@ -114,7 +114,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this._message(brief+(stage ? ' ; phase : '+stage : '')+
       (stage==='rtc_non_lance_c9c_non_identifiee'
         ? ' ; identification : '+selection+' ; caméras Tuya : '+cams+' / appareils Tuya : '+total+'. Ne pas relancer sans correction.'
-        : '.'));
+        : ' ; sélection RTC : '+selection+' ; config RTC : '+String(last.configuration_rtc_acceptee===true?'acceptée':last.configuration_rtc_acceptee===false?'refusée':'inconnue')+'.'));
   }
 }
 if(!customElements.get('smart-aosu-c9c-autonome-b1'))

@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta2 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta3 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -23,8 +23,12 @@ Les ressources propriétaires sont importées uniquement depuis l'ordinateur du 
 
 **Confidentialité :** ne publiez jamais APK, OEM ZIP, `profile.json`, mot de passe, jeton, IP, MAC, numéro de série, captures ou logs non expurgés. Une APK modifiée reste soumise aux droits de son éditeur ; chaque testeur doit utiliser des copies qu'il est autorisé à utiliser. Le code original est proposé sous PolyForm Strict 1.0.0, sous réserve des droits de tiers.
 
-## C9C autonome — essai vidéo expérimental (0.8.13-beta2)
+## C9C autonome — essai vidéo expérimental (0.8.13-beta3)
 
 Après installation sur un compte ne contenant qu'une C9C autonome et sans base H1L, ajouter la carte décrite dans `docs/CARTES_LOVELACE.md`. La première bêta échouait parfois avant la négociation RTC (`rtc_non_lance_c9c_non_identifiee`) lorsque l'inventaire Tuya contenait plusieurs appareils, dont une seule caméra. Cette version corrige cette condition et affiche les comptes d'appareils/caméras anonymisés si la sélection échoue.
 
 Ne pas relancer plusieurs fois sans examiner le statut. Les commandes PTZ sont désactivées pour cette caméra tant que la vidéo et le STOP ne sont pas validés.
+
+## 0.8.13-beta3 : test C9C autonome sans catégorie Tuya
+
+Avec une seule C9C autonome détectée dans AOSU, un seul appareil dans l’inventaire Tuya peut être essayé sans catégorie caméra reconnue, seulement après action manuelle et si Tuya n’annonce pas explicitement une catégorie non vidéo. Cette sélection reste **incertaine** : pas de PTZ et pas d’essai automatique. Consulter le diagnostic `statut_direct_c5l` après un seul essai.

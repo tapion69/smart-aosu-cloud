@@ -59,6 +59,36 @@ class C9CAutonomeTests(unittest.TestCase):
                          (None,'aucune_camera_tuya_identifiable'))
         self.assertIsNone(choose({'a':{'sn':'same'},'b':{'sn':'same'}},camera_sn='same',camera_coop=None)[0])
 
+
+    def test_one_tuya_device_without_camera_category_for_manual_video(self):
+        """Observed external install: one C9C, one Tuya device, no IPC category.
+
+        The weak match cannot run without an AOSU camera SN or if the sole
+        Tuya device self-identifies as a non-video device. It does not select
+        anything when the Tuya account contains multiple unclassified devices.
+        """
+        choose=TOPO['select_tuya_standalone_target']
+        alone={'opaque':{'devId':'opaque','localKey':'not-a-real-key'}}
+        self.assertEqual(choose(alone,camera_sn='one-c9c-sn',camera_coop=None),
+                         ('opaque','appareil_tuya_unique_sans_categorie_video'))
+        self.assertEqual(choose({'opaque':{'category':'new-camera-category'}},
+                         camera_sn='one-c9c-sn',camera_coop=None),
+                         ('opaque','appareil_tuya_unique_sans_categorie_video'))
+        self.assertEqual(choose(alone,camera_sn=None,camera_coop=None),
+                         (None,'aucune_camera_tuya_identifiable'))
+        self.assertEqual(choose({'x':{'localKey':'x'},'y':{'localKey':'y'}},
+                         camera_sn='one-c9c-sn',camera_coop=None),
+                         (None,'aucune_camera_tuya_identifiable'))
+        for non_video in ('gw','gateway','hub','switch','socket','sensor','light','cz','kg','dj'):
+            self.assertEqual(choose({'x':{'productBean':{'category':non_video}}},
+                             camera_sn='one-c9c-sn',camera_coop=None),
+                             (None,'appareil_tuya_unique_categorie_non_video'))
+        self.assertEqual(choose({'a':None},camera_sn='one-c9c-sn',camera_coop=None),
+                         (None,'appareil_tuya_unique_invalide'))
+        self.assertEqual(choose({'a':{'category':'gw','deviceId':'exact-coop'}},
+                         camera_sn='one-c9c-sn',camera_coop='exact-coop'),
+                         ('a','identite_exacte'))
+
     def test_manual_video_only_path_and_no_ptz_card(self):
         init=(COMP/'__init__.py').read_text()
         service_name='demarrer_video_c9c_autonome_beta'

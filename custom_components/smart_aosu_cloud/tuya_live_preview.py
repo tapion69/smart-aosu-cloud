@@ -680,6 +680,8 @@ class LiveController:
                 'nombre_appareils_tuya':report.get('nombre_appareils_tuya'),
                 'cameras_tuya_categorie_video':report.get('cameras_tuya_categorie_video'),
                 'inventaire_cache_utilise':report.get('inventaire_cache_utilise'),
+                'configuration_rtc_acceptee':report.get('configuration_rtc_acceptee'),
+                'rtc_parametres_presents':bool((report.get('rtc') or {}).get('reponse_non_vide')),
                 'etat_mqtt':mqtt.get('etat','non_disponible'),
                 'signalisation_b89': mqtt.get('signalisation_b89'),
                 'etat_relais':(mqtt.get('relais_tcp') or {}).get('etat','non_disponible'),
