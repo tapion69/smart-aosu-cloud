@@ -74,6 +74,19 @@ def _decode_signal(key:bytes,blob:bytes)->tuple[int,dict]:
     return obj.get('protocol'),obj['data']
 
 
+def _signal_protocol_class(protocol: object) -> str:
+    """Fixed labels only, never expose MQTT payload or vendor identifiers.
+
+    Protocol 22 is the response family for the sigQry that this same client
+    sends immediately before its protocol-302 offer. It is not a SDP answer.
+    """
+    if type(protocol) is int and protocol == 22:
+        return 'sigqry'
+    if type(protocol) is int and protocol == 302:
+        return 'offer_answer'
+    return 'other'
+
+
 def _mqtt_publish(topic:str,payload:bytes,packet_id:int)->bytes:
     if len(payload)>_MAX_PACKET:raise ValueError('oversized signal')
     body=_u16_string(topic)+struct.pack('!H',packet_id)+payload
@@ -254,7 +267,10 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         'messages_sur_topic_session': 0,
         'messages_hors_topic_session': 0,
         'reponses_session_incorrecte': 0,
+        'reponses_sigqry': 0,  # response to our own protocol-22 query (not SDP)
         'reponses_protocole_inattendu': 0,
+        'messages_302_format_invalide': 0,
+        'messages_302_autres_types': 0,
         'messages_indecodables': 0,
         'messages_candidats': 0,
         'messages_answer': 0,
@@ -344,11 +360,20 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                                 continue
                             diag['messages_sur_topic_session']+=1
                             protocol,data=_decode_signal(key,raw)
-                            if protocol!=302:
+                            protocol_class = _signal_protocol_class(protocol)
+                            if protocol_class == 'sigqry':
+                                # Expected response family for our sigQry
+                                # request, not evidence of an incompatible
+                                # media protocol or of a successful offer.
+                                diag['reponses_sigqry']+=1
+                                continue
+                            if protocol_class != 'offer_answer':
                                 diag['reponses_protocole_inattendu']+=1
                                 continue
                             header=data.get('header');msg=data.get('msg')
-                            if not isinstance(header,dict) or not isinstance(msg,dict):continue
+                            if not isinstance(header,dict) or not isinstance(msg,dict):
+                                diag['messages_302_format_invalide']+=1
+                                continue
                             if header.get('sessionid')!=media.session_id:
                                 diag['reponses_session_incorrecte']+=1
                                 continue
@@ -404,6 +429,11 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             if typ=='candidate':
                                 result['candidats_distants_recus']=True
                                 diag['messages_candidats']+=1
+                            elif typ=='answer':
+                                # Missing/nonstring SDP. Never expose it.
+                                diag['messages_302_format_invalide']+=1
+                            else:
+                                diag['messages_302_autres_types']+=1
                         except (UnicodeError,ValueError,TypeError,KeyError,json.JSONDecodeError):
                             result['trame_mqtt_indecodable']=True
                             diag['messages_indecodables']+=1

@@ -111,10 +111,14 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     const cams=Number.isInteger(last.cameras_tuya_categorie_video) ? last.cameras_tuya_categorie_video : '?';
     const total=Number.isInteger(last.nombre_appareils_tuya) ? last.nombre_appareils_tuya : '?';
     const brief='État : '+String(state.etat||'inconnu')+' ; JPEG : '+(Number.isInteger(images)?images:'?')+' ; P2P : '+(state.direct_actif===true?'oui':'non');
+    const sig=last.signalisation_b89||{};
+    const count=(v)=>Number.isInteger(v)?v:'?';
+    const noSdp=last.etat_mqtt==='offre_envoyee_sans_reponse_sdp';
     this._message(brief+(stage ? ' ; phase : '+stage : '')+
       (stage==='rtc_non_lance_c9c_non_identifiee'
         ? ' ; identification : '+selection+' ; caméras Tuya : '+cams+' / appareils Tuya : '+total+'. Ne pas relancer sans correction.'
-        : ' ; sélection RTC : '+selection+' ; config RTC : '+String(last.configuration_rtc_acceptee===true?'acceptée':last.configuration_rtc_acceptee===false?'refusée':'inconnue')+'.'));
+        : ' ; sélection RTC : '+selection+' ; config RTC : '+String(last.configuration_rtc_acceptee===true?'acceptée':last.configuration_rtc_acceptee===false?'refusée':'inconnue')+
+          (noSdp ? ' ; MQTT : sigQry='+count(sig.reponses_sigqry)+', autres='+count(sig.reponses_protocole_inattendu)+', 302 inconnu='+count(sig.messages_302_autres_types)+', 302 invalide='+count(sig.messages_302_format_invalide)+' ; SDP absente.' : '.')));
   }
 }
 if(!customElements.get('smart-aosu-c9c-autonome-b1'))
