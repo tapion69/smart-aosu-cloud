@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta4 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta5 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -23,16 +23,20 @@ Les ressources propriétaires sont importées uniquement depuis l'ordinateur du 
 
 **Confidentialité :** ne publiez jamais APK, OEM ZIP, `profile.json`, mot de passe, jeton, IP, MAC, numéro de série, captures ou logs non expurgés. Une APK modifiée reste soumise aux droits de son éditeur ; chaque testeur doit utiliser des copies qu'il est autorisé à utiliser. Le code original est proposé sous PolyForm Strict 1.0.0, sous réserve des droits de tiers.
 
-## C9C autonome — essai vidéo expérimental (0.8.13-beta4)
+## C9C autonome — essai vidéo expérimental (0.8.13-beta5)
 
 Après installation sur un compte ne contenant qu'une C9C autonome et sans base H1L, ajouter la carte décrite dans `docs/CARTES_LOVELACE.md`. La première bêta échouait parfois avant la négociation RTC (`rtc_non_lance_c9c_non_identifiee`) lorsque l'inventaire Tuya contenait plusieurs appareils, dont une seule caméra. Cette version corrige cette condition et affiche les comptes d'appareils/caméras anonymisés si la sélection échoue.
 
 Ne pas relancer plusieurs fois sans examiner le statut. Les commandes PTZ sont désactivées pour cette caméra tant que la vidéo et le STOP ne sont pas validés.
 
-## 0.8.13-beta4 : test C9C autonome sans catégorie Tuya
+## 0.8.13-beta5 : test C9C autonome sans catégorie Tuya
 
 Avec une seule C9C autonome détectée dans AOSU, un seul appareil dans l’inventaire Tuya peut être essayé sans catégorie caméra reconnue, seulement après action manuelle et si Tuya n’annonce pas explicitement une catégorie non vidéo. Cette sélection reste **incertaine** : pas de PTZ et pas d’essai automatique. Consulter le diagnostic `statut_direct_c5l` après un seul essai.
 
-## 0.8.13-beta4 : clarification du diagnostic MQTT C9C
+## 0.8.13-beta5 : clarification du diagnostic MQTT C9C
 
 La négociation MQTT émet d'abord une interrogation sigQry (protocole 22), puis une offre SDP (protocole 302). Une réponse à l'interrogation ne constitue pas une réponse SDP vidéo : les deux familles sont désormais comptées distinctement. Aucun changement de protocole n'est introduit. Le modèle C9C autonome reste expérimental et sans PTZ.
+
+## Beta 0.8.13-beta5 — diagnostic de correspondance C9C autonome
+
+La carte C9C autonome propose **Vérifier identité**. Le bouton lit un inventaire Tuya en mémoire, ou l'actualise manuellement si besoin, puis compare exclusivement en RAM les numéros de série AOSU et les identifiants coopUUID avec les champs Tuya connus. Il ne transmet jamais ces identifiants dans le résultat. La sélection d'un seul appareil Tuya sans catégorie vidéo **ne prouve pas** son identité. L'appel n'envoie ni offre SDP, ni message MQTT, ni commande caméra ou PTZ. Le protocole de la C5L et les contrôleurs H1L restent inchangés.

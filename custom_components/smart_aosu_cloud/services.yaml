@@ -3009,3 +3009,18 @@ demarrer_video_c9c_autonome_beta:
       required: true
       selector:
         boolean: {}
+
+diagnostiquer_identite_c9c_autonome:
+  name: C9C autonome — comparer les identités AOSU et Tuya
+  description: >-
+    Compare les identifiants seulement en mémoire, sans jamais les afficher.
+    Lit au besoin l'inventaire Tuya du compte (authentification chiffrée)
+    si le cache est absent ou ancien. Aucune demande vidéo, MQTT, RTC,
+    PTZ ou commande caméra n'est envoyée. La catégorie seule ne garantit
+    jamais que les identités correspondent.
+  fields:
+    confirmation_lecture_tuya:
+      name: Autoriser la lecture de l'inventaire Tuya
+      required: true
+      selector:
+        boolean: {}

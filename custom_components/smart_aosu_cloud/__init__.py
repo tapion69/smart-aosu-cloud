@@ -79,7 +79,8 @@ from .ptz_packet_size_b69 import audit_packet_size_b69
 from .coordinator import SmartAosuCloudCoordinator
 from .const import CONF_EMAIL, CONF_PASSWORD, DOMAIN, CONF_SCAN_INTERVAL, CONF_STATION_IP, DEFAULT_SCAN_INTERVAL, ALLOWED_SCAN_INTERVALS
 from .network_config import optional_station_ip
-from .camera_topology import select_standalone_c9c_key
+from .camera_topology import select_standalone_c9c_key, select_tuya_standalone_target
+from .c9c_identity_diagnostic import inspect_c9c_identity_cache
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
 
 async def async_setup(hass,config):
@@ -382,6 +383,68 @@ async def async_setup(hass,config):
         if call.data.get('confirmation_envoi_mot_de_passe') is not True or call.data.get('confirmation_camera_c5l') is not True:
             raise ServiceValidationError('Confirmer le login Tuya et la camera candidate avant le direct')
         return _loaded_direct_controller().start(password_confirmed=True,candidate_confirmed=True)
+
+    async def diagnostiquer_identite_c9c_autonome(call):
+        """Explicit read-only identity comparison, with optional Tuya cloud refresh.
+
+        Refresh only the account's Tuya device inventory if cache is absent
+        or older than ten minutes. Never ask for RTC, publish an MQTT offer,
+        start a camera, move motors, return names, identifiers or passwords.
+        """
+        if call.data.get('confirmation_lecture_tuya') is not True:
+            raise ServiceValidationError('Confirmer la lecture de l inventaire Tuya')
+        entries=[e for e in hass.config_entries.async_entries(DOMAIN)
+                 if getattr(e,'runtime_data',None)]
+        if len(entries) != 1:
+            raise ServiceValidationError('Une seule configuration AOSU active est requise')
+        runtime=entries[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une C9C autonome unique sans H1L est requise')
+        client=runtime.client
+        import time
+        cache=getattr(client,'_tuya_oem_inventory_cache',None)
+        refreshed=False
+        network_calls=0
+        created=cache.get('created') if isinstance(cache,dict) else None
+        try:
+            fresh=(isinstance(cache.get('devices'),dict) and
+                   0 <= time.monotonic()-float(created) <= 600)
+        except (AttributeError,TypeError,ValueError,OverflowError):
+            fresh=False
+        if not fresh:
+            # Manual button authorizes a normal Tuya UID login when required,
+            # and read-only home/group list calls. The existing rate limits
+            # are kept; no RTC, MQTT, KCP, video or PTZ requests are made.
+            inventory=await hass.async_add_executor_job(partial(
+                run_tuya_oem_inventory,client,
+                confirmation_envoi_mot_de_passe=True,tester_rtc=False,
+                tester_mqtt=False,tester_offre_mqtt=False,tester_media=False))
+            calls=inventory.get('appel_reseau')
+            network_calls=min(20,max(0,calls)) if type(calls) is int else 0
+            refreshed=True
+            if inventory.get('etat') != 'inventaire_termine':
+                status=inventory.get('etat')
+                allowed=('test_deja_en_cours','limite_inventaire_30_minutes',
+                    'limite_login_une_heure','login_UID_non_reussi',
+                    'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+                    'lecture_maisons_refusee','groupes_non_identifies',
+                    'erreur_api_tuya','erreur_execution_sans_details')
+                return {
+                    'diagnostic':'aosu_c9c_identite_cache_b5',
+                    'etat':'lecture_tuya_non_disponible',
+                    'cause':status if status in allowed else 'autre',
+                    'appels_reseau':network_calls,'commandes_camera':0,
+                    'commandes_ptz':0,'video_lancee':False,
+                    'identifiants_retournes':False,'secrets_retournes':False,
+                }
+            cache=getattr(client,'_tuya_oem_inventory_cache',None)
+        result=inspect_c9c_identity_cache(
+            data=runtime.data,client=client,cache=cache,
+            select_standalone=select_standalone_c9c_key,
+            select_tuya=select_tuya_standalone_target)
+        result['actualisation_inventaire_tuya']=refreshed
+        result['appels_reseau']=network_calls
+        return result
 
     async def demarrer_video_c9c_autonome_beta(call):
         """Explicit video-only C5L P2P experiment on one standalone C9C.
@@ -1703,6 +1766,9 @@ async def async_setup(hass,config):
     hass.services.async_register(DOMAIN,'audit_ecarts_offre_video_c9_b124',audit_ecarts_offre_video_c9_b124,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'audit_rtc_c9_topologie_b102',audit_rtc_c9_candidate_b101,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'diagnostiquer_identite_c9c_autonome',
+                                 diagnostiquer_identite_c9c_autonome,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'demarrer_video_c9c_autonome_beta',
                                  demarrer_video_c9c_autonome_beta,

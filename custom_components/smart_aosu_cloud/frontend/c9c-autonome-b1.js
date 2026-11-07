@@ -38,12 +38,13 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play());
     this.shadowRoot.getElementById('stop').addEventListener('click',()=>void this._stop());
     this.shadowRoot.getElementById('state').addEventListener('click',()=>void this._state());
+    this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
     this.shadowRoot.getElementById('screen').addEventListener('click',()=>{
       const element=this.shadowRoot.getElementById('view');
       if(element?.requestFullscreen) void element.requestFullscreen().catch(()=>{});
@@ -99,6 +100,36 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this._close();
     const response=await this._service('arreter_direct_c5l');
     this._message(response===null?'Arrêt non confirmé, vérifier les journaux.':'Arrêt du direct demandé.');
+  }
+  async _identity() {
+    if(this._busy)return;
+    this._busy=true;
+    const button=this.shadowRoot.getElementById('identity');
+    if(button)button.disabled=true;
+    this._message('Comparaison AOSU/Tuya : lecture du cache ou de l’inventaire Tuya, sans vidéo…');
+    try {
+      const response=await this._service('diagnostiquer_identite_c9c_autonome',{
+        confirmation_lecture_tuya:true
+      });
+      const report=response?.response||response;
+      if(!report || typeof report.etat!=='string')return;
+      const match=report.correspondance||{};
+      const aosu=report.identite_aosu||{};
+      const device=report.unique_appareil_tuya||{};
+      this._message('Diagnostic : '+report.etat+
+        (report.cause ? ' ('+report.cause+')' : '')+
+        ' ; liaison exacte : '+(match.identite_exacte_confirmee===true?'oui':'non')+
+        ' ; SN concordants : '+String(match.serie_exacte_nombre??'?')+
+        ' ; coopUUID concordants : '+String(match.coop_exact_nombre??'?')+
+        ' ; coopUUID AOSU présent : '+(aosu.coop_uuid_present===true?'oui':'non')+
+        ' ; catégorie Tuya absente : '+(device.categorie_absente===true?'oui':'non')+
+        ' ; modèle Tuya présent : '+(device.modele_present===true?'oui':'non')+
+        ' ; sélection RTC : '+String(match.selection_rtc||'non disponible')+
+        '. Aucune vidéo/commande PTZ envoyée par ce diagnostic.');
+    } finally {
+      this._busy=false;
+      if(button)button.disabled=false;
+    }
   }
   async _state() {
     const response=await this._service('statut_direct_c5l');
