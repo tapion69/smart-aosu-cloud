@@ -38,7 +38,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play());
@@ -46,6 +46,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('state').addEventListener('click',()=>void this._state());
     this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
     this.shadowRoot.getElementById('detail').addEventListener('click',()=>void this._detail());
+    this.shadowRoot.getElementById('rtc').addEventListener('click',()=>void this._rtc());
     this.shadowRoot.getElementById('screen').addEventListener('click',()=>{
       const element=this.shadowRoot.getElementById('view');
       if(element?.requestFullscreen) void element.requestFullscreen().catch(()=>{});
@@ -161,6 +162,38 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; fournisseur P2P déclaré : '+String(data.fournisseur_p2p_fiche||'INDETERMINE')+
         ' ; type P2P : '+String(data.type_p2p_fiche??'absent')+
         '. Sans vidéo ni PTZ.');
+    } finally {
+      this._busy=false;
+      if(btn)btn.disabled=false;
+    }
+  }
+  async _rtc() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('rtc');
+    if(btn)btn.disabled=true;
+    this._message('Examen des paramètres RTC (lecture cloud, sans démarrer la caméra)…');
+    try {
+      const res=await this._service('diagnostiquer_rtc_c9c_autonome',{
+        confirmation_lecture_rtc:true
+      });
+      const report=res?.response||res;
+      if(!report||typeof report.etat!=='string')return;
+      if(report.etat!=='configuration_rtc_obtenue'){
+        this._message('RTC : '+report.etat+' ; sélection : '+String(report.selection||'?')+'. Aucune vidéo envoyée.');
+        return;
+      }
+      const x=report.schema||{};
+      const yn=v=>v===true?'oui':'non';
+      this._message('RTC : accepté ; sélection : '+String(report.selection||'?')+
+        ' ; moto_id : '+yn(x.moto_id_present)+
+        ' ; pv : '+String(x.version_mqtt_pv_connue||'non_identifiee')+
+        ' ; ICE : '+yn(x.serveurs_ice_presents)+
+        ' ; TURN : '+yn(x.serveur_turn_dans_ices)+
+        ' ; TCP : '+yn(x.relais_tcp_declare)+
+        ' ; UDP : '+yn(x.relais_udp_declare)+
+        ' ; clé locale : '+yn(x.cle_locale_presente)+
+        '. Identité non prouvée. Aucun direct ni PTZ lancé.');
     } finally {
       this._busy=false;
       if(btn)btn.disabled=false;

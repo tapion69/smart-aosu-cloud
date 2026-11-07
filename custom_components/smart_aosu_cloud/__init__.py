@@ -460,6 +460,52 @@ async def async_setup(hass,config):
             raise ServiceValidationError('Une seule C9C autonome sans H1L est requise')
         return await hass.async_add_executor_job(probe_c9c_detail, runtime.client)
 
+    async def diagnostiquer_rtc_c9c_autonome(call):
+        """One explicit read of RTC metadata; no MQTT, offer, camera or PTZ."""
+        if call.data.get('confirmation_lecture_rtc') is not True:
+            raise ServiceValidationError('Confirmer la lecture RTC expérimentale')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active est requise')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une C9C autonome unique sans station est requise')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory, runtime.client,
+            confirmation_envoi_mot_de_passe=True, tester_rtc=True,
+            standalone_c9c_rtc_audit=True, tester_mqtt=False,
+            tester_offre_mqtt=False, tester_relais_tcp=False,
+            tester_kcp=False, tester_media=False))
+        allowed_status={
+            'configuration_rtc_obtenue','rtc_non_lance_c9c_non_identifiee',
+            'configuration_rtc_refusee','erreur_api_tuya',
+            'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+            'limite_inventaire_30_minutes','limite_login_une_heure',
+            'limite_rtc_cinq_minutes','test_deja_en_cours',
+            'login_UID_non_reussi','lecture_maisons_refusee',
+            'groupes_non_identifies','erreur_execution_sans_details',
+            'audit_rtc_c9c_lecture_seule_uniquement',
+        }
+        selection=report.get('methode_selection_rtc')
+        allowed_selection={'identite_exacte','camera_tuya_unique_non_confirmee',
+            'appareil_tuya_unique_sans_categorie_video',
+            'appareil_tuya_unique_categorie_non_video',
+            'aucune_camera_tuya_identifiable',
+            'cameras_tuya_multiples_ambigues','correspondance_ambigue'}
+        safe=report.get('rtc_c9c_schema')
+        return {
+            'diagnostic':'aosu_c9c_rtc_passif_b8',
+            'etat':report.get('etat') if report.get('etat') in allowed_status else 'autre',
+            'selection':selection if selection in allowed_selection else 'non_disponible',
+            'rtc_acceptee':report.get('configuration_rtc_acceptee') is True,
+            'schema':safe if isinstance(safe,dict) else None,
+            'appels_reseau':min(20, max(0,report.get('appel_reseau',0)))
+                if type(report.get('appel_reseau')) is int else 0,
+            'commandes_camera':0,'video_lancee':False,
+            'identifiants_retournes':False,'secrets_retournes':False,
+        }
+
     async def demarrer_video_c9c_autonome_beta(call):
         """Explicit video-only C5L P2P experiment on one standalone C9C.
 
@@ -1786,6 +1832,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_fiche_c9c_autonome',
                                  diagnostiquer_fiche_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'diagnostiquer_rtc_c9c_autonome',
+                                 diagnostiquer_rtc_c9c_autonome,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'demarrer_video_c9c_autonome_beta',
                                  demarrer_video_c9c_autonome_beta,

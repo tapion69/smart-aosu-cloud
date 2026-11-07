@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta7 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta8 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -48,3 +48,7 @@ Le bouton **Vérifier identité** présente aussi les informations déjà filtr�
 ## 0.8.13-beta7 : fiche AOSU détaillée de la C9C autonome
 
 Bouton manuel **Fiche AOSU** sur la carte C9C autonome. Une seule requête HTTPS autorisée par heure vers `/v1/dev/getInfoBySn`, API déjà utilisée par le diagnostic C5L. Compare exclusivement en mémoire les champs d'identité à l'inventaire Tuya déjà disponible, sans afficher de SN, UID, clé locale ni jeton. Les indices de fournisseur P2P et de présence de références ne prouvent pas que la vidéo fonctionne. Aucune nouvelle offre vidéo ni PTZ. Une erreur ou un refus HTTP n'est pas relancé automatiquement.
+
+## 0.8.13-beta8 — diagnostic RTC C9C autonome, sans vidéo
+
+Le PCAPdroid fourni pour la C9C autonome montre une réception distante par TURN/UDP et KCP, sans prouver le protocole de signalisation dans le TLS. Le bouton **Examiner RTC** fait une lecture volontaire et limitée de la configuration RTC pour l'unique candidat Tuya (qui reste **non confirmé**). Il affiche uniquement la présence des paramètres ICE, TURN, relais TCP/UDP, `moto_id` et la version `pv` si reconnue (2.2/2.3). Aucun identifiant, URL, clé, SDP ni contenu privé n'est retourné, enregistré ou publié. L'action peut demander une authentification au service Tuya. Elle **n'envoie aucune offre MQTT, ne lance aucune vidéo ni PTZ**. Un résultat RTC positif n'établit pas que la cible Tuya est bien la C9C. Les contrôleurs C5L/H1L sont inchangés.

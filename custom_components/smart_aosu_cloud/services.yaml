@@ -3038,3 +3038,18 @@ diagnostiquer_fiche_c9c_autonome:
       required: true
       selector:
         boolean: {}
+
+diagnostiquer_rtc_c9c_autonome:
+  name: C9C autonome — examiner la configuration RTC sans vidéo
+  description: >-
+    Une lecture explicite des paramètres RTC de l'unique candidat Tuya,
+    sans publication MQTT, sans SDP envoyé, sans vidéo ou PTZ.
+    Peut s'authentifier au service Tuya avec le mot de passe AOSU déjà configuré.
+    Les limites de fréquence existantes sont conservées ; seuls des booléens
+    et des valeurs prédéfinies sont retournés.
+  fields:
+    confirmation_lecture_rtc:
+      name: Autoriser cette lecture RTC et l'authentification nécessaire
+      required: true
+      selector:
+        boolean: {}
