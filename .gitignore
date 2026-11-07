@@ -1,0 +1,40 @@
+# Development / Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Private AOSU device captures, firmware and keys
+*.pcap
+*.pcapng
+*.cap
+*.har
+*.apks
+*.apk
+*.key
+*.pem
+*.p12
+*.pfx
+smart_aosu_traces/
+*_private*
+*_prive*
+
+# Home Assistant user data and secrets
+.storage/
+secrets.yaml
+home-assistant_v2.db*
+home-assistant.log*
+*.log
+config_entries.json
+
+# Editor / operating system
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
