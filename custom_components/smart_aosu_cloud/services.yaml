@@ -2984,3 +2984,28 @@ retirer_ptz_c9_stable:
           min: 1
           max: 2
           step: 1
+
+
+demarrer_video_c9c_autonome_beta:
+  name: C9C autonome — essai vidéo expérimental (sans PTZ)
+  description: >-
+    Tentative volontaire du protocole vidéo P2P C5L sur UNE caméra C9C autonome,
+    sans station H1L et sans commande PTZ. Le protocole n'est pas encore validé
+    sur ce modèle. Les trois confirmations sont obligatoires. Aucune reprise
+    automatique n'est lancée.
+  fields:
+    confirmation_camera_c9c_autonome:
+      name: Confirmer caméra C9C autonome unique sans station
+      required: true
+      selector:
+        boolean: {}
+    confirmation_essai_video:
+      name: Autoriser une session vidéo expérimentale
+      required: true
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l'authentification Tuya pour ce direct
+      required: true
+      selector:
+        boolean: {}

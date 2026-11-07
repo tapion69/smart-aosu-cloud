@@ -134,6 +134,8 @@ class AosuCloudClient:
         self._last_dp_probe=0.0
         self._device_sn_index=[]  # RAM only; never log or store on disk
         self._camera_sn_index=[]  # 3 cameras, excluding the H1L base
+        self._standalone_c9c_sn=None  # RAM only; candidate for explicit VIDEO test
+        self._standalone_c9c_coop_id=None  # RAM only, never published
         self._c5l_sn=None  # private RAM-only target for manual discovery
         self._c5l_coop_present=False
         self._c5l_coop_id=None  # private RAM-only, never exposed in diagnostics
@@ -246,6 +248,22 @@ class AosuCloudClient:
             self._image_urls = private_urls
             self._cover_time_by_sn = private_cover_times
             self._camera_sn_index = cameras[:10]
+            # Single autonomous C9C: never treat it as the C5L or an H1L child.
+            # Retain exact identifiers only in RAM for a manually confirmed
+            # video-only P2P experiment; never expose them in HA entities.
+            standalone = [r for r in records if isinstance(r,dict)
+                and str(r.get('model') or '').strip().upper() == 'C9C'
+                and isinstance(r.get('sn'),str) and r['sn'] in cameras]
+            if len(cameras)==1 and len(standalone)==1 and not any(
+                    isinstance(r,dict) and str(r.get('model') or '').strip().upper()=='H1L'
+                    for r in records):
+                self._standalone_c9c_sn=standalone[0]['sn']
+                coop=standalone[0].get('coopUUID')
+                self._standalone_c9c_coop_id=(coop if isinstance(coop,str)
+                    and coop.strip() else None)
+            else:
+                self._standalone_c9c_sn=None
+                self._standalone_c9c_coop_id=None
             # One private target for the opt-in read-only identity audit.
             # APK conversion path: UUIDInfoWebDataItem.coopUUID -> GzDeviceInfo.cpDeviceId.
             c5l = [r for r in records if isinstance(r,dict) and r.get('model')=='C5L'
@@ -329,6 +347,8 @@ class AosuCloudClient:
         self._image_urls.clear()
         self._cover_time_by_sn.clear()
         self._camera_sn_index.clear()
+        self._standalone_c9c_sn=None
+        self._standalone_c9c_coop_id=None
         self._c5l_sn=None
         self._c5l_coop_present=False
         self._c5l_coop_id=None  # private RAM-only, never exposed in diagnostics

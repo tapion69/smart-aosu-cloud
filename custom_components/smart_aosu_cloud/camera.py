@@ -13,6 +13,7 @@ from homeassistant.components.camera import Camera
 from homeassistant.core import callback
 from .device import info_for_device
 from .live_device import select_live_camera_key
+from .camera_topology import has_h1l_video_topology, select_standalone_c9c_key
 
 # A long negotiation (OEM login / RTC / MQTT) may precede the first JPEG.
 _FIRST_FRAME_TIMEOUT = 45.0
@@ -30,21 +31,27 @@ def _mjpeg_part(jpeg: bytes) -> bytes:
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = entry.runtime_data
     registered = False
+    standalone_registered = False
 
     @callback
     def add_when_available():
-        nonlocal registered
+        nonlocal registered, standalone_registered
         key = select_live_camera_key(coordinator)
         if not registered and key is not None:
             registered = True
             async_add_entities([SmartAosuC5LPreview(coordinator, entry.entry_id, key)])
+        standalone_key = select_standalone_c9c_key(coordinator.data)
+        if standalone_key is not None and not standalone_registered:
+            standalone_registered = True
+            async_add_entities([SmartAosuStandaloneC9CPreview(
+                coordinator, entry.entry_id, standalone_key)])
 
     add_when_available()
     entry.async_on_unload(coordinator.async_add_listener(add_when_available))
-    if getattr(coordinator,'c9_live_b141',None) is not None:
+    if has_h1l_video_topology(coordinator.data) and getattr(coordinator,'c9_live_b141',None) is not None:
         async_add_entities([SmartAosuC9H1LPreviewB141(coordinator,entry.entry_id,n)
                             for n in (1,2)])
-    elif getattr(coordinator,'c9_live_b139',None) is not None:
+    elif has_h1l_video_topology(coordinator.data) and getattr(coordinator,'c9_live_b139',None) is not None:
         async_add_entities([SmartAosuC9H1LPreview(coordinator,entry.entry_id)])
 
 
@@ -210,6 +217,27 @@ class SmartAosuC5LPreview(Camera):
         # Play button alone starts P2P. Do not auto-connect from a GET request.
         return response
 
+
+
+class SmartAosuStandaloneC9CPreview(SmartAosuC5LPreview):
+    """Opt-in, video-only experiment with the C5L P2P pipeline on standalone C9C.
+
+    This is NOT a verified video-capable camera, and exposes no PTZ services.
+    """
+    _attr_name = 'C9C autonome - vidéo expérimentale'
+    _attr_model = 'C9C - essai P2P (sans PTZ)'
+
+    def __init__(self, coordinator, entry_id, device_key):
+        super().__init__(coordinator, entry_id, device_key)
+        self._attr_unique_id = f'smart_aosu_{entry_id}_c9c_standalone_video_beta'
+
+    @property
+    def extra_state_attributes(self):
+        result = dict(super().extra_state_attributes)
+        result['mode_video'] = 'essai_c5l_p2p_sur_c9c_autonome'
+        result['ptz_active'] = False
+        result['compatibilite_confirmee'] = False
+        return result
 
 class SmartAosuC9H1LPreview(SmartAosuC5LPreview):
     """Manual-only C9 video via the verified C5L HEVC/JPEG decoder."""

@@ -14,6 +14,7 @@ from .tuya_uid_gateway import (TuyaAuthSession, OEMGatewayError,
 from .tuya_media_bootstrap import inspect_rtc_media
 from .tuya_mqtt_signaling import run_tuya_mqtt_signalisation
 from .tuya_mqtt_offer import run_tuya_mqtt_offer
+from .camera_topology import select_tuya_standalone_target
 
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
@@ -178,7 +179,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                            tester_media:bool=False,confirmation_media:bool=False,
                            capturer_media_localement:bool=False,
                            confirmation_capture_locale:bool=False,
-                           repertoire_capture_locale:str|None=None,live_preview=None, interactive_live:bool=False):
+                           repertoire_capture_locale:str|None=None,live_preview=None, interactive_live:bool=False,
+                           standalone_c9c_video_test:bool=False):
     """Explicitly consented camera stream, or conservative manual one-shot diagnostic.
 
     interactive_live is an internal flag: it is accepted only with the real
@@ -190,6 +192,9 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
         and confirmation_envoi_mot_de_passe is True
         and confirmation_offre_mqtt is True and confirmation_relais_tcp is True
         and confirmation_kcp is True and confirmation_media is True)
+    if standalone_c9c_video_test and not interactive_live:
+        return {'etat': 'essai_autonome_reserve_au_direct_manuel', 'appel_reseau': 0,
+                'commande_camera': 0, 'secrets_retournes': False}
     out={'diagnostic':'aosu_tuya_oem_inventory_b27','session_tuya_authentifiee':False,
          'appel_reseau':0,'mot_de_passe_envoye':False,
          'commande_camera':0,'session_video_creee':False,'secrets_retournes':False,
@@ -322,7 +327,18 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 and isinstance(getattr(client,'_c5l_name',None),str)
                 and getattr(client,'_c5l_name').strip()
                 and item['name'].strip().casefold()==getattr(client,'_c5l_name').strip().casefold()]
-            if len(confirmed)==1:
+            if standalone_c9c_video_test:
+                # The C5L-specific selector is intentionally NOT reused here:
+                # any unrelated C5L match must never override a C9C selection.
+                target, selection = select_tuya_standalone_target(
+                    all_devices,
+                    camera_sn=getattr(client, '_standalone_c9c_sn', None),
+                    camera_coop=getattr(client, '_standalone_c9c_coop_id', None))
+                if not target or not getattr(client, '_standalone_c9c_sn', None):
+                    return {**out, 'etat': 'rtc_non_lance_c9c_non_identifiee',
+                            'methode_selection_rtc': selection}
+                out['methode_selection_rtc'] = selection
+            elif len(confirmed)==1:
                 target=confirmed[0]
                 out['methode_selection_rtc']='correspondance_exacte'
             elif len(confirmed)==0 and len(candidates)==1 and autoriser_candidat_unique is True:

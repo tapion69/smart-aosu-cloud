@@ -79,6 +79,7 @@ from .ptz_packet_size_b69 import audit_packet_size_b69
 from .coordinator import SmartAosuCloudCoordinator
 from .const import CONF_EMAIL, CONF_PASSWORD, DOMAIN, CONF_SCAN_INTERVAL, CONF_STATION_IP, DEFAULT_SCAN_INTERVAL, ALLOWED_SCAN_INTERVALS
 from .network_config import optional_station_ip
+from .camera_topology import select_standalone_c9c_key
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
 
 async def async_setup(hass,config):
@@ -122,6 +123,14 @@ async def async_setup(hass,config):
         await hass.http.async_register_static_paths([
             StaticPathConfig('/smart-aosu/c9-live-b141.js',
                 str(Path(__file__).resolve().parent/'frontend'/'c9-live-b141.js'),False)
+        ])
+    except RuntimeError:
+        pass
+    # Video-only standalone C9C trial. This JS contains no PTZ controls.
+    try:
+        await hass.http.async_register_static_paths([
+            StaticPathConfig('/smart-aosu/c9c-autonome-b1.js',
+                str(Path(__file__).resolve().parent/'frontend'/'c9c-autonome-b1.js'),False)
         ])
     except RuntimeError:
         pass
@@ -373,6 +382,28 @@ async def async_setup(hass,config):
         if call.data.get('confirmation_envoi_mot_de_passe') is not True or call.data.get('confirmation_camera_c5l') is not True:
             raise ServiceValidationError('Confirmer le login Tuya et la camera candidate avant le direct')
         return _loaded_direct_controller().start(password_confirmed=True,candidate_confirmed=True)
+
+    async def demarrer_video_c9c_autonome_beta(call):
+        """Explicit video-only C5L P2P experiment on one standalone C9C.
+
+        No C5L PTZ or station PTZ service is invoked, even if video works.
+        """
+        if (call.data.get('confirmation_camera_c9c_autonome') is not True or
+                call.data.get('confirmation_essai_video') is not True or
+                call.data.get('confirmation_envoi_mot_de_passe') is not True):
+            raise ServiceValidationError('Confirmer la camera C9C autonome et le direct experimental')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active est requise pour cet essai')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une seule C9C autonome sans station est requise')
+        if not getattr(runtime.client, '_standalone_c9c_sn', None):
+            raise ServiceValidationError('Identite C9C non disponible: actualiser l inventaire')
+        return runtime.live_controller.start(
+            password_confirmed=True,candidate_confirmed=True,
+            standalone_c9c_video_test=True)
 
     async def arreter_direct_c5l(call):
         return _loaded_direct_controller().stop()
@@ -1672,6 +1703,9 @@ async def async_setup(hass,config):
     hass.services.async_register(DOMAIN,'audit_ecarts_offre_video_c9_b124',audit_ecarts_offre_video_c9_b124,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'audit_rtc_c9_topologie_b102',audit_rtc_c9_candidate_b101,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'demarrer_video_c9c_autonome_beta',
+                                 demarrer_video_c9c_autonome_beta,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'demarrer_direct_c5l',demarrer_direct_c5l,
                                  supports_response=SupportsResponse.ONLY)

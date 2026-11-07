@@ -511,6 +511,7 @@ class LiveController:
         self._start_refusal: dict[str, Any] | None = None
         self._start_refusal_count = 0
         self._starts_accepted = 0
+        self._standalone_video_test_mode = False
         self._listeners=[]
 
     @property
@@ -587,7 +588,8 @@ class LiveController:
         self._start_refusal['refus_depuis_dernier_demarrage'] = self._start_refusal_count
         return result
 
-    def start(self, *, password_confirmed:bool, candidate_confirmed:bool)->dict[str,Any]:
+    def start(self, *, password_confirmed:bool, candidate_confirmed:bool,
+              standalone_c9c_video_test:bool=False)->dict[str,Any]:
         if not password_confirmed or not candidate_confirmed:
             return self._deny_start('autorisations_expresse_requises')
         if self.running:
@@ -628,9 +630,11 @@ class LiveController:
         self._start_refusal_count = 0
         self._starts_accepted += 1
         self._last_result={}
+        self._standalone_video_test_mode = standalone_c9c_video_test is True
         self._status='demarrage'
         import asyncio
-        self._task=asyncio.create_task(self._run(),name='aosu_c5l_live_preview')
+        self._task=asyncio.create_task(self._run(),
+            name='aosu_c9c_video_test' if standalone_c9c_video_test else 'aosu_c5l_live_preview')
         self._notify()
         return {'etat':'demarrage_demande','session_max_secondes':LIVE_SECONDS,
                 'demarrage_automatique':False,'PTZ':False}
@@ -657,7 +661,8 @@ class LiveController:
                 confirmation_relais_tcp=True,tester_kcp=True,
                 confirmation_kcp=True,tester_media=True,
                 confirmation_media=True,live_preview=preview,
-                interactive_live=True))
+                interactive_live=True,
+                standalone_c9c_video_test=self._standalone_video_test_mode))
             mqtt=report.get('signalisation_mqtt') or {}
             kcp=((mqtt.get('relais_tcp') or {}).get('kcp') or {})
             media=kcp.get('media_start') or {}
