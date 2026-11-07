@@ -81,6 +81,7 @@ from .const import CONF_EMAIL, CONF_PASSWORD, DOMAIN, CONF_SCAN_INTERVAL, CONF_S
 from .network_config import optional_station_ip
 from .camera_topology import select_standalone_c9c_key, select_tuya_standalone_target
 from .c9c_identity_diagnostic import inspect_c9c_identity_cache
+from .c9c_detail_probe import probe_c9c_detail
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
 
 async def async_setup(hass,config):
@@ -445,6 +446,19 @@ async def async_setup(hass,config):
         result['actualisation_inventaire_tuya']=refreshed
         result['appels_reseau']=network_calls
         return result
+
+    async def diagnostiquer_fiche_c9c_autonome(call):
+        """Manual read-only AOSU detailed device lookup for one standalone C9C."""
+        if call.data.get('confirmation_lecture_fiche') is not True:
+            raise ServiceValidationError('Confirmer la lecture de la fiche AOSU')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active est requise')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une seule C9C autonome sans H1L est requise')
+        return await hass.async_add_executor_job(probe_c9c_detail, runtime.client)
 
     async def demarrer_video_c9c_autonome_beta(call):
         """Explicit video-only C5L P2P experiment on one standalone C9C.
@@ -1769,6 +1783,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_identite_c9c_autonome',
                                  diagnostiquer_identite_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'diagnostiquer_fiche_c9c_autonome',
+                                 diagnostiquer_fiche_c9c_autonome,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'demarrer_video_c9c_autonome_beta',
                                  demarrer_video_c9c_autonome_beta,

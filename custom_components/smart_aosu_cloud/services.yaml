@@ -3024,3 +3024,17 @@ diagnostiquer_identite_c9c_autonome:
       required: true
       selector:
         boolean: {}
+
+diagnostiquer_fiche_c9c_autonome:
+  name: C9C autonome — consulter la fiche AOSU (lecture seule)
+  description: >-
+    Une requête HTTPS de fiche détaillée AOSU par heure au maximum pour une
+    unique C9C autonome, sans H1L. Compare les références en mémoire avec
+    l'inventaire Tuya existant, ne retourne aucun identifiant ni valeur privée.
+    Aucun démarrage vidéo, aucune commande caméra ou PTZ.
+  fields:
+    confirmation_lecture_fiche:
+      name: Autoriser la lecture de la fiche détaillée AOSU
+      required: true
+      selector:
+        boolean: {}

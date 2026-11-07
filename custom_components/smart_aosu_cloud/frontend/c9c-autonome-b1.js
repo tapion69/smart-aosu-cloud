@@ -38,13 +38,14 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play());
     this.shadowRoot.getElementById('stop').addEventListener('click',()=>void this._stop());
     this.shadowRoot.getElementById('state').addEventListener('click',()=>void this._state());
     this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
+    this.shadowRoot.getElementById('detail').addEventListener('click',()=>void this._detail());
     this.shadowRoot.getElementById('screen').addEventListener('click',()=>{
       const element=this.shadowRoot.getElementById('view');
       if(element?.requestFullscreen) void element.requestFullscreen().catch(()=>{});
@@ -134,6 +135,35 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     } finally {
       this._busy=false;
       if(button)button.disabled=false;
+    }
+  }
+  async _detail() {
+    if (this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('detail');
+    if(btn)btn.disabled=true;
+    this._message('Lecture unique de la fiche AOSU : aucune vidéo ni PTZ…');
+    try {
+      const response=await this._service('diagnostiquer_fiche_c9c_autonome',{
+        confirmation_lecture_fiche:true
+      });
+      const data=response?.response||response;
+      if(!data || typeof data.etat!=='string')return;
+      if(data.etat!=='fiche_obtenue'){
+        this._message('Fiche AOSU : '+data.etat+'. Aucune commande caméra envoyée.');
+        return;
+      }
+      const yes=(v)=>v===true?'oui':'non';
+      this._message('Fiche AOSU : obtenue ; références présentes : '+yes(data.references_connues_presentes)+
+        ' ; SN concordant : '+yes(data.numero_serie_concordant)+
+        ' ; SN contradictoire : '+yes(data.numero_serie_contradictoire)+
+        ' ; lien référence/ID Tuya : '+yes(data.correspondance_reference_tuya)+
+        ' ; fournisseur P2P déclaré : '+String(data.fournisseur_p2p_fiche||'INDETERMINE')+
+        ' ; type P2P : '+String(data.type_p2p_fiche??'absent')+
+        '. Sans vidéo ni PTZ.');
+    } finally {
+      this._busy=false;
+      if(btn)btn.disabled=false;
     }
   }
   async _state() {

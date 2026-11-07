@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta6 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta7 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -44,3 +44,7 @@ La carte C9C autonome propose **Vérifier identité**. Le bouton lit un inventai
 ## 0.8.13-beta6 : lecture seule du routage C9C
 
 Le bouton **Vérifier identité** présente aussi les informations déjà filtrées du dernier inventaire AOSU : fournisseur `sdkProvider`, type P2P, branche PTZ Gz/Ty et présence de référence Tuya. Le type de transport vidéo réel reste **non démontré**. Une comparaison exacte supplémentaire teste localement si le numéro de série AOSU est identique à l'identifiant Tuya. **Aucune sélection automatique n'est modifiée** ; aucun réseau, vidéo, PTZ ou secret n'est utilisé par cet ajout.
+
+## 0.8.13-beta7 : fiche AOSU détaillée de la C9C autonome
+
+Bouton manuel **Fiche AOSU** sur la carte C9C autonome. Une seule requête HTTPS autorisée par heure vers `/v1/dev/getInfoBySn`, API déjà utilisée par le diagnostic C5L. Compare exclusivement en mémoire les champs d'identité à l'inventaire Tuya déjà disponible, sans afficher de SN, UID, clé locale ni jeton. Les indices de fournisseur P2P et de présence de références ne prouvent pas que la vidéo fonctionne. Aucune nouvelle offre vidéo ni PTZ. Une erreur ou un refus HTTP n'est pas relancé automatiquement.
