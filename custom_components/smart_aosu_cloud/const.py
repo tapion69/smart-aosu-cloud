@@ -1,9 +1,10 @@
 """Constants for the unofficial AOSU Cloud integration."""
 from pathlib import Path
 DOMAIN = "smart_aosu_cloud"
-VERSION = "0.8.10"
+VERSION = "0.8.12-beta2"
 CONF_EMAIL = "email"
 CONF_PASSWORD = "password"
+CONF_STATION_IP = "station_ip"
 PROFILE_PATH = Path("/config/smart_aosu_cloud/profile.json")
 APK_PATH = Path("/config/smart_aosu_cloud/aosu_vendor_app.apk")
 # Polling for 4 devices is batched into ONE read-only getList call.

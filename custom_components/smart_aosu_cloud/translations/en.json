@@ -3,15 +3,29 @@
     "step": {
       "user": {
         "title": "Smart AOSU Cloud (experimental)",
-        "description": "First copy your APK and local client profile to /config/smart_aosu_cloud. Unofficial cloud integration. Your password is saved in the Home Assistant config entry.",
+        "description": "Resources have been imported and verified. Enter your AOSU account credentials. Android profile is created automatically.",
         "data": {
           "email": "AOSU email address",
-          "password": "AOSU password"
+          "password": "AOSU password",
+          "station_ip": "H1L station IPv4 address (optional)"
+        }
+      },
+      "resources": {
+        "title": "Import AOSU resources",
+        "description": "Select your two AOSU 5.10.12 files from this device. Home Assistant validates and stores them locally. No file is sent to an external server.",
+        "data": {
+          "apk_lite": "AOSU 5.10.12 Lite APK (.apk)",
+          "oem_resources": "AOSU OEM archive (.zip)"
         }
       }
     },
     "error": {
-      "invalid_input": "Invalid email or password"
+      "invalid_input": "Invalid email or password",
+      "invalid_station_ip": "Invalid private IPv4 address",
+      "missing_files": "Uploaded files missing; please select them again.",
+      "invalid_apk": "Invalid Lite APK or unsupported AOSU version (5.10.12 expected).",
+      "invalid_oem": "Invalid/incompatible OEM archive (5.10.12 expected).",
+      "cannot_store": "Could not store resources locally in Home Assistant."
     },
     "abort": {
       "already_configured": "This account has already been configured"
@@ -26,15 +40,17 @@
   "options": {
     "step": {
       "init": {
-        "title": "Refresh interval",
+        "title": "Polling and local H1L station",
         "description": "One read request for all four devices per refresh. Frequent calls may be rate-limited by AOSU.",
         "data": {
-          "scan_interval_seconds": "Time between reads"
+          "scan_interval_seconds": "Time between reads",
+          "station_ip": "Local H1L IPv4 (optional)"
         }
       }
     },
     "error": {
-      "invalid_interval": "Invalid interval"
+      "invalid_interval": "Invalid interval",
+      "invalid_station_ip": "Invalid private IPv4 address"
     }
   }
 }

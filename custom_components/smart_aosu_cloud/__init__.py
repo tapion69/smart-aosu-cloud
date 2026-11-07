@@ -77,10 +77,30 @@ from .ptz_mqtt_stop_b54 import test_mqtt_stop_once
 from .ptz_live_control_b56 import ExperimentalPtzLiveController
 from .ptz_packet_size_b69 import audit_packet_size_b69
 from .coordinator import SmartAosuCloudCoordinator
-from .const import CONF_EMAIL, CONF_PASSWORD, DOMAIN, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, ALLOWED_SCAN_INTERVALS
+from .const import CONF_EMAIL, CONF_PASSWORD, DOMAIN, CONF_SCAN_INTERVAL, CONF_STATION_IP, DEFAULT_SCAN_INTERVAL, ALLOWED_SCAN_INTERVALS
+from .network_config import optional_station_ip
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
 
 async def async_setup(hass,config):
+    def _station_ip_for_call(call):
+        """Use explicit card IP first; otherwise configured account station IP.
+
+        Never infer an arbitrary station from other HA entries. The existing
+        controllers still validate the selected IP before LAN requests.
+        """
+        raw = call.data.get('ip_station')
+        if raw not in (None, ''):
+            return raw
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if len(entries) != 1:
+            return None
+        entry = entries[0]
+        ip = entry.options.get(CONF_STATION_IP, entry.data.get(CONF_STATION_IP, ''))
+        try:
+            return optional_station_ip(ip) or None
+        except ValueError:
+            return None
+
     # Serve only public JS. Credentials never leave HA's authenticated services.
     from homeassistant.components.http import StaticPathConfig
     try:
@@ -429,7 +449,7 @@ async def async_setup(hass,config):
                 raise ServiceValidationError('Arreter le direct C5L avant le test reseau local')
         try:
             return await hass.async_add_executor_job(partial(
-                audit_local_h1l_b103,call.data.get('ip_station'),
+                audit_local_h1l_b103,_station_ip_for_call(call),
                 confirmed=call.data.get('confirmation_test_reseau_local') is True,
                 check_tcp=call.data.get('tester_tcp_6668') is True))
         except ValueError as exc:
@@ -443,7 +463,7 @@ async def async_setup(hass,config):
             raise ServiceValidationError('Une configuration Smart AOSU active est requise')
         return await hass.async_add_executor_job(partial(
             audit_local_station_auth_b104, loaded[0].runtime_data,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirm_identity=call.data.get('confirmation_station_candidate_non_prouvee') is True,
             confirm_handshake=call.data.get('confirmation_authentification_locale') is True))
 
@@ -467,7 +487,7 @@ async def async_setup(hass,config):
             raise ServiceValidationError('Une configuration Smart AOSU active est requise')
         return await hass.async_add_executor_job(partial(
             audit_h1l_read_status_b107, loaded[0].runtime_data,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirm_station=call.data.get('confirmation_station_candidate_non_prouvee') is True,
             confirm_read=call.data.get('confirmation_lecture_statut_lan') is True))
 
@@ -479,7 +499,7 @@ async def async_setup(hass,config):
             raise ServiceValidationError('Une configuration Smart AOSU active est requise')
         return await hass.async_add_executor_job(partial(
             audit_h1l_local_status_b108, loaded[0].runtime_data,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirm_station=call.data.get('confirmation_station_candidate_non_prouvee') is True,
             confirm_read=call.data.get('confirmation_lecture_statut_lan') is True,
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
@@ -493,7 +513,7 @@ async def async_setup(hass,config):
             raise ServiceValidationError('Une configuration Smart AOSU active est requise')
         return await hass.async_add_executor_job(partial(
             audit_h1l_local_status_b109, loaded[0].runtime_data,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirm_station=call.data.get('confirmation_station_candidate_non_prouvee') is True,
             confirm_read=call.data.get('confirmation_lecture_statut_lan') is True,
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
@@ -507,7 +527,7 @@ async def async_setup(hass,config):
             raise ServiceValidationError('Une configuration Smart AOSU active est requise')
         return await hass.async_add_executor_job(partial(
             audit_h1l_local_status_b110, loaded[0].runtime_data,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirm_station=call.data.get('confirmation_station_candidate_non_prouvee') is True,
             confirm_read=call.data.get('confirmation_lecture_statut_lan') is True,
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
@@ -523,7 +543,7 @@ async def async_setup(hass,config):
             analyse_capture_h1l_b111,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirmation_analyse_capture=call.data.get('confirmation_analyse_capture') is True,
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
             confirmation_envoi_mot_de_passe=call.data.get('confirmation_envoi_mot_de_passe') is True))
@@ -538,7 +558,7 @@ async def async_setup(hass,config):
             lancer_essai_lan_c9_b119, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -556,7 +576,7 @@ async def async_setup(hass,config):
             lancer_essai_lan_c9_b120, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -574,7 +594,7 @@ async def async_setup(hass,config):
             lancer_essai_lan_c9_b121, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -592,7 +612,7 @@ async def async_setup(hass,config):
             lancer_essai_lan_c9_b122, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -610,7 +630,7 @@ async def async_setup(hass,config):
             lancer_audit_c9_b123, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -627,7 +647,7 @@ async def async_setup(hass,config):
             lancer_audit_c9_b124, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -644,7 +664,7 @@ async def async_setup(hass,config):
             lancer_essai_lan_c9_b125, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -663,7 +683,7 @@ async def async_setup(hass,config):
             lancer_essai_ice_c9_b126,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -683,7 +703,7 @@ async def async_setup(hass,config):
             lancer_essai_ice_c9_b127,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -703,7 +723,7 @@ async def async_setup(hass,config):
             lancer_audit_kcp_c9_b128, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -720,7 +740,7 @@ async def async_setup(hass,config):
             lancer_transport_kcp_c9_b129, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -741,7 +761,7 @@ async def async_setup(hass,config):
             lancer_audit_auth_c9_b130, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -758,7 +778,7 @@ async def async_setup(hass,config):
             lancer_auth_kcp_c9_b130, loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -780,7 +800,7 @@ async def async_setup(hass,config):
             lancer_schema_auth_c9_b133,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -795,7 +815,7 @@ async def async_setup(hass,config):
         return await hass.async_add_executor_job(partial(
             lancer_profil_video_b137,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
-            nom_capture=call.data.get('nom_capture'),ip_station=call.data.get('ip_station'),
+            nom_capture=call.data.get('nom_capture'),ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -810,7 +830,7 @@ async def async_setup(hass,config):
         return await hass.async_add_executor_job(partial(
             lancer_demarrage_video_b137,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
-            nom_capture=call.data.get('nom_capture'),ip_station=call.data.get('ip_station'),
+            nom_capture=call.data.get('nom_capture'),ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -832,7 +852,7 @@ async def async_setup(hass,config):
         return await hass.async_add_executor_job(partial(
             lancer_analyse_media_b138,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
-            nom_capture=call.data.get('nom_capture'),ip_station=call.data.get('ip_station'),
+            nom_capture=call.data.get('nom_capture'),ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -863,7 +883,7 @@ async def async_setup(hass,config):
         runtime=_c9_controllers_b141()
         controller=runtime.c9_live_b141[_numero_c9_b141(call)]
         return controller.start(config_dir=hass.config.config_dir,
-            nom_capture=call.data.get('nom_capture'),ip_station=call.data.get('ip_station'),
+            nom_capture=call.data.get('nom_capture'),ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -882,7 +902,7 @@ async def async_setup(hass,config):
         runtime=_c9_controllers_b141()
         return await hass.async_add_executor_job(
             partial(audit_preparation_sans_capture_b144,runtime,
-               camera_numero=_numero_c9_b141(call),ip_station=call.data.get('ip_station'),
+               camera_numero=_numero_c9_b141(call),ip_station=_station_ip_for_call(call),
                autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
                confirmation_envoi_mot_de_passe=call.data.get('confirmation_envoi_mot_de_passe') is True))
 
@@ -890,7 +910,7 @@ async def async_setup(hass,config):
         runtime=_c9_controllers_b141()
         controller=runtime.c9_live_b141[_numero_c9_b141(call)]
         return controller.start_sans_capture(
-            ip_station=call.data.get('ip_station'),camera_numero=_numero_c9_b141(call),
+            ip_station=_station_ip_for_call(call),camera_numero=_numero_c9_b141(call),
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
             confirmation_envoi_mot_de_passe=call.data.get('confirmation_envoi_mot_de_passe') is True,
             autoriser_direct_c9_b144=call.data.get('autoriser_direct_c9_b144') is True)
@@ -899,7 +919,7 @@ async def async_setup(hass,config):
         runtime=_c9_controllers_b141()
         controller=runtime.c9_live_b141[_numero_c9_b141(call)]
         return controller.start_sans_capture(
-            ip_station=call.data.get('ip_station'),camera_numero=_numero_c9_b141(call),
+            ip_station=_station_ip_for_call(call),camera_numero=_numero_c9_b141(call),
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
             confirmation_envoi_mot_de_passe=call.data.get('confirmation_envoi_mot_de_passe') is True,
             autoriser_direct_c9_b144=call.data.get('autoriser_direct_c9_b145') is True,
@@ -909,7 +929,7 @@ async def async_setup(hass,config):
         """Run TCP probe in HA Core executor, never through the SSH add-on."""
         from .h1l_tcp_probe_b146 import tester_port_tcp_h1l_b146 as _probe_tcp
         return await hass.async_add_executor_job(partial(
-            _probe_tcp,ip_station=call.data.get('ip_station'),
+            _probe_tcp,ip_station=_station_ip_for_call(call),
             confirmation_test_tcp_h1l=call.data.get('confirmation_test_tcp_h1l') is True))
 
     async def statut_direct_c9_b141(call):
@@ -989,7 +1009,7 @@ async def async_setup(hass,config):
         if len(loaded)!=1:raise ServiceValidationError('Une configuration Smart AOSU active est requise')
         controller=loaded[0].runtime_data.c9_live_b139
         return controller.start(config_dir=hass.config.config_dir,
-            nom_capture=call.data.get('nom_capture'),ip_station=call.data.get('ip_station'),
+            nom_capture=call.data.get('nom_capture'),ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1025,7 +1045,7 @@ async def async_setup(hass,config):
             lancer_audit_champs_b136,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1041,7 +1061,7 @@ async def async_setup(hass,config):
             lancer_audit_kcp_suite_b135,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1057,7 +1077,7 @@ async def async_setup(hass,config):
             lancer_audit_cle_h1l_c9_b134,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1073,7 +1093,7 @@ async def async_setup(hass,config):
             lancer_essai_auth_station_c9_b134,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1096,7 +1116,7 @@ async def async_setup(hass,config):
             lancer_essai_auth_c9_b133,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1119,7 +1139,7 @@ async def async_setup(hass,config):
             lancer_correspondances_auth_c9_b132,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1136,7 +1156,7 @@ async def async_setup(hass,config):
             lancer_details_auth_c9_b131,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
             nom_capture=call.data.get('nom_capture'),
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             camera_numero=call.data.get('camera_numero'),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             confirmation_camera_candidate=call.data.get('confirmation_camera_candidate') is True,
@@ -1586,7 +1606,7 @@ async def async_setup(hass,config):
         return await hass.async_add_executor_job(partial(
             comparer_profil_b147,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirmation_capture_personnelle=call.data.get('confirmation_capture_personnelle') is True,
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
             confirmation_envoi_mot_de_passe=call.data.get('confirmation_envoi_mot_de_passe') is True))
@@ -1601,7 +1621,7 @@ async def async_setup(hass,config):
         return await hass.async_add_executor_job(partial(
             audit_routage_station_c9_b151,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirmation_captures_personnelles=call.data.get('confirmation_captures_personnelles') is True))
 
     hass.services.async_register(DOMAIN,'audit_routage_c9_h1l_b151',
@@ -1614,7 +1634,7 @@ async def async_setup(hass,config):
         return await hass.async_add_executor_job(partial(
             audit_reponses_station_c9_b153,loaded[0].runtime_data,
             config_dir=hass.config.config_dir,
-            ip_station=call.data.get('ip_station'),
+            ip_station=_station_ip_for_call(call),
             confirmation_captures_personnelles=call.data.get('confirmation_captures_personnelles') is True,
             autoriser_reconstitution_oem=call.data.get('autoriser_reconstitution_oem') is True,
             confirmation_envoi_mot_de_passe=call.data.get('confirmation_envoi_mot_de_passe') is True))

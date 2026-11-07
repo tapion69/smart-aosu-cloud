@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 import requests
 from .const import APK_PATH, PROFILE_PATH
+from .profile_bootstrap import ensure_profile
 from . import protocol_060 as proto
 from .transport_audit import platform_from_support, tuya_reference_status
 from .semantics import parse_cover_event_time
@@ -151,6 +152,10 @@ class AosuCloudClient:
     def _prepare(self):
         if self._material is not None:
             return
+        try:
+            ensure_profile(self.profile_path)
+        except OSError as exc:
+            raise AosuCloudError("Impossible de creer le profil Android local") from exc
         self._profile=load_profile(self.profile_path)
         try:
             native,dex=proto.read_apk_parts(self.apk_path)

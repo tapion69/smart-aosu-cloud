@@ -1,11 +1,15 @@
 {
   "domain": "smart_aosu_cloud",
   "name": "Smart AOSU Cloud",
-  "version": "0.8.10",
-  "documentation": "https://www.home-assistant.io/integrations/",
+  "version": "0.8.12-beta2",
+  "documentation": "https://github.com/tapion69/smart-aosu-cloud",
   "requirements": [],
   "codeowners": [],
   "iot_class": "cloud_polling",
   "config_flow": true,
-  "integration_type": "hub"
+  "integration_type": "hub",
+  "issue_tracker": "https://github.com/tapion69/smart-aosu-cloud/issues",
+  "dependencies": [
+    "file_upload"
+  ]
 }

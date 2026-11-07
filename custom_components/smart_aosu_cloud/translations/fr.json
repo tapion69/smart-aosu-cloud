@@ -3,15 +3,29 @@
     "step": {
       "user": {
         "title": "Connexion Smart AOSU Cloud (expérimental)",
-        "description": "Copiez d'abord votre APK et le profil local dans /config/smart_aosu_cloud. Connexion cloud non officielle. Le mot de passe est conservé dans la configuration Home Assistant.",
+        "description": "Les ressources ont été importées et vérifiées. Renseignez vos identifiants AOSU. Le profil Android sera créé automatiquement.",
         "data": {
           "email": "Adresse e-mail AOSU",
-          "password": "Mot de passe AOSU"
+          "password": "Mot de passe AOSU",
+          "station_ip": "Adresse IPv4 de la station H1L (facultatif)"
+        }
+      },
+      "resources": {
+        "title": "Importer les ressources AOSU",
+        "description": "Choisissez vos deux fichiers AOSU 5.10.12 depuis cet ordinateur. Ils seront vérifiés puis copiés automatiquement dans Home Assistant. Aucune ressource ne quitte votre installation.",
+        "data": {
+          "apk_lite": "APK Lite AOSU 5.10.12 (.apk)",
+          "oem_resources": "Archive OEM AOSU (.zip)"
         }
       }
     },
     "error": {
-      "invalid_input": "Adresse e-mail ou mot de passe invalide"
+      "invalid_input": "Adresse e-mail ou mot de passe invalide",
+      "invalid_station_ip": "Adresse IPv4 privée invalide",
+      "missing_files": "Fichiers envoyés introuvables, recommencez la sélection.",
+      "invalid_apk": "APK Lite invalide ou version AOSU incompatible (5.10.12 attendue).",
+      "invalid_oem": "Archive OEM invalide ou incompatible (5.10.12 attendue).",
+      "cannot_store": "Échec de l’enregistrement local dans Home Assistant."
     },
     "abort": {
       "already_configured": "Ce compte est déjà configuré"
@@ -26,15 +40,17 @@
   "options": {
     "step": {
       "init": {
-        "title": "Fréquence d’actualisation",
+        "title": "Actualisation et station H1L",
         "description": "Une requête de lecture pour les quatre appareils à chaque actualisation. Des appels trop fréquents peuvent être limités par AOSU.",
         "data": {
-          "scan_interval_seconds": "Intervalle entre deux lectures"
+          "scan_interval_seconds": "Intervalle entre deux lectures",
+          "station_ip": "Adresse IPv4 de la station H1L (facultatif)"
         }
       }
     },
     "error": {
-      "invalid_interval": "Intervalle non autorisé"
+      "invalid_interval": "Intervalle non autorisé",
+      "invalid_station_ip": "Adresse IPv4 privée invalide"
     }
   }
 }

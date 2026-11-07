@@ -26,19 +26,28 @@ class SmartAosuC9LiveB146 extends HTMLElement {
     if(config.camera_entity!==undefined && (typeof config.camera_entity!=='string' ||
         !config.camera_entity.startsWith('camera.')))
       throw new Error('camera_entity doit être de type camera.xxx');
-    // Currently only C9 #2 has verified RTC/LAN startup. Never accept another
-    // camera selection by a quiet override in frontend config.
+    // Only supported numbered C9 camera slots are accepted; each is matched
+    // to its physical station identity by the backend before PTZ permission.
     const number=config.camera_numero===undefined?2:config.camera_numero;
     if(!Number.isInteger(number)||![1,2].includes(number))
       throw new Error('camera_numero doit valoir 1 ou 2');
     const title=config.titre??config.nom;
     if(title!==undefined && (typeof title!=='string'||title.trim().length>100))
       throw new Error('titre doit être un texte de 100 caractères maximum');
+    // An address can be set centrally in the integration options.
+    // A card-specific address remains supported for multiple H1L stations.
     const stationIp=config.ip_station;
-    if(typeof stationIp!=='string'||!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(stationIp))
-      throw new Error('ip_station doit être une adresse IPv4 locale');
+    if(stationIp !== undefined && stationIp !== null && stationIp !== ''){
+      if(typeof stationIp!=='string'||!/^(?:\d{1,3}\.){3}\d{1,3}$/.test(stationIp))
+        throw new Error('ip_station doit être une adresse IPv4 locale');
+      const octets=stationIp.split('.').map(Number);
+      if(!octets.every((v,i)=>Number.isInteger(v)&&v>=0&&v<=255&&String(v)===stationIp.split('.')[i]) ||
+          !(octets[0]===10||(octets[0]===172&&octets[1]>=16&&octets[1]<=31)||
+            (octets[0]===192&&octets[1]===168)))
+        throw new Error('ip_station doit être une adresse IPv4 privée valide');
+    }
     this._config={camera_entity:config.camera_entity||null,camera_numero:number,
-                  titre:title?.trim()||null,ip_station:stationIp};
+                  titre:title?.trim()||null,ip_station:stationIp||undefined};
     if(!this.shadowRoot?.querySelector('ha-card'))this._render();
     this._updateEntityLabel();
     this._updateHeading();
@@ -426,5 +435,5 @@ class SmartAosuC9LiveB146 extends HTMLElement {
 customElements.define('smart-aosu-c9-live-b146',SmartAosuC9LiveB146);
 window.customCards=window.customCards||[];
 window.customCards.push({type:'smart-aosu-c9-live-b146',
-  name:'Smart AOSU — C9 H1L 1 ou 2 + PTZ b145',
+  name:'Smart AOSU — C9 H1L 1 ou 2 + PTZ b146',
   description:'Direct C9 1 ou 2, sans limite fixe, et PTZ conditionnel.'});

@@ -90,16 +90,16 @@ class C9DirectControllerB141:
         if type(camera_numero) is not int or camera_numero!=self.camera_numero or nom_capture!=CAPTURES[camera_numero]:
             return {'etat':'camera_c9_capture_incoherente'}
         from .h1l_local_probe_b103 import _validate_target
-        try:_validate_target(ip_station)
+        try:station_ip=_validate_target(ip_station)
         except (TypeError,ValueError):return {'etat':'adresse_h1l_invalide'}
-        self.ip_station=ip_station
+        self.ip_station=station_ip
         self._stop=threading.Event()
         preview=LivePreview(on_frame=self._frame_thread)
         if not preview.start():
             return {'etat':'ffmpeg_indisponible_ou_echec'}
         self.preview=preview
         self._etat='negociation_c9'
-        args=dict(config_dir=config_dir,nom_capture=nom_capture,ip_station=ip_station,
+        args=dict(config_dir=config_dir,nom_capture=nom_capture,ip_station=station_ip,
             camera_numero=camera_numero,confirmation_capture_personnelle=True,
             confirmation_camera_candidate=True,
             autoriser_reconstitution_oem=autoriser_reconstitution_oem,
@@ -128,9 +128,9 @@ class C9DirectControllerB141:
         if type(camera_numero) is not int or camera_numero!=self.camera_numero:
             return {'etat':'numero_camera_invalide'}
         from .h1l_local_probe_b103 import _validate_target
-        try:_validate_target(ip_station)
+        try:station_ip=_validate_target(ip_station)
         except (ValueError,TypeError):return {'etat':'adresse_h1l_invalide'}
-        self.ip_station=ip_station
+        self.ip_station=station_ip
         self._stop=threading.Event()
         preview=LivePreview(on_frame=self._frame_thread)
         if not preview.start():return {'etat':'ffmpeg_indisponible_ou_echec'}
@@ -141,7 +141,7 @@ class C9DirectControllerB141:
         self._best_control_b150=None
         self._attempt_no_b150=0
         self._progress={'etape':'preparation_autorisations'}
-        args=dict(camera_numero=camera_numero,ip_station=ip_station,
+        args=dict(camera_numero=camera_numero,ip_station=station_ip,
                   autoriser_reconstitution_oem=autoriser_reconstitution_oem,
                   confirmation_envoi_mot_de_passe=confirmation_envoi_mot_de_passe,
                   autoriser_direct_c9_b144=True,preview=preview,stop_event=self._stop)
