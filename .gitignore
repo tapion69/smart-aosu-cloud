@@ -1,4 +1,4 @@
-# Development / Python
+# Python / development caches
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -10,7 +10,7 @@ venv/
 .env.*
 !.env.example
 
-# Private AOSU device captures, firmware and keys
+# Private local captures and camera internals
 *.pcap
 *.pcapng
 *.cap
@@ -21,11 +21,11 @@ venv/
 *.pem
 *.p12
 *.pfx
-smart_aosu_traces/
 *_private*
 *_prive*
+smart_aosu_traces/
 
-# Home Assistant user data and secrets
+# Home Assistant runtime (never commit user configuration)
 .storage/
 secrets.yaml
 home-assistant_v2.db*
@@ -33,8 +33,13 @@ home-assistant.log*
 *.log
 config_entries.json
 
-# Editor / operating system
+# IDE and system files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+
+profile.json
+aosu_vendor_app.apk
+/config/
+/smart_aosu_traces/

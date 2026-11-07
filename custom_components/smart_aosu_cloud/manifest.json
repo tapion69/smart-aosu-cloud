@@ -1,0 +1,11 @@
+{
+  "domain": "smart_aosu_cloud",
+  "name": "Smart AOSU Cloud",
+  "version": "0.8.10",
+  "documentation": "https://www.home-assistant.io/integrations/",
+  "requirements": [],
+  "codeowners": [],
+  "iot_class": "cloud_polling",
+  "config_flow": true,
+  "integration_type": "hub"
+}

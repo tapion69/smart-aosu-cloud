@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Smart AOSU Cloud (experimental)",
+        "description": "First copy your APK and local client profile to /config/smart_aosu_cloud. Unofficial cloud integration. Your password is saved in the Home Assistant config entry.",
+        "data": {
+          "email": "AOSU email address",
+          "password": "AOSU password"
+        }
+      }
+    },
+    "error": {
+      "invalid_input": "Invalid email or password"
+    },
+    "abort": {
+      "already_configured": "This account has already been configured"
+    }
+  },
+  "services": {
+    "inspect_datapoints": {
+      "name": "Inspect device datapoints (experimental)",
+      "description": "Manually request AOSU IoT datapoint names and types; private values and device IDs are omitted."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Refresh interval",
+        "description": "One read request for all four devices per refresh. Frequent calls may be rate-limited by AOSU.",
+        "data": {
+          "scan_interval_seconds": "Time between reads"
+        }
+      }
+    },
+    "error": {
+      "invalid_interval": "Invalid interval"
+    }
+  }
+}

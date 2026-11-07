@@ -1,0 +1,2986 @@
+ptz_maintien_c5l_b83:
+  name: C5L — PTZ maintien et STOP (b83)
+  description: >-
+    Contrôle direct par API Tuya validée pour droite et STOP. Sans préparation,
+    case à cocher, dépendance vidéo ni temporisation de 5 minutes. Les flèches
+    restent appuyées jusqu'au relâchement, avec arrêt logiciel de secours
+    après 12 secondes. Haut/bas/gauche restent à vérifier sur cette caméra.
+    STOP reste utilisable indépendamment de la vidéo. L'exécution physique
+    dépend du réseau et ne peut pas être attestée par la réponse HTTP.
+  fields:
+    action:
+      required: true
+      name: Action
+      selector:
+        select:
+          options: [press, release, stop, status]
+    direction:
+      name: Direction (press uniquement)
+      required: false
+      selector:
+        select:
+          options: [haut, bas, gauche, droite]
+    gesture_id:
+      name: Identifiant aléatoire de l'appui (press/release)
+      required: false
+      selector:
+        text: {}
+
+tester_direction_c5l_b82:
+  name: C5L — essai direction haut, bas ou gauche + STOP auto (b82)
+  description: >-
+    EXPERIMENTAL. Un seul mouvement de 0,35 s (après réponse serveur),
+    STOP DP116 en finally et STOP de secours tenté si nécessaire.
+    Un seul essai toutes les 5 minutes (partagé avec B81).
+    Sans garantie d'arrêt en cas de panne réseau. Ne jamais laisser
+    sans surveillance. Garder l'application AOSU prête pour stopper.
+    Les autres directions ne sont pas encore physiquement validées.
+  fields:
+    direction:
+      name: Direction a tester
+      required: true
+      selector:
+        select:
+          options:
+            - label: Haut (0)
+              value: haut
+            - label: Bas (4)
+              value: bas
+            - label: Gauche (6)
+              value: gauche
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser API OEM et authentification si necessaire
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer qu'il s'agit de ma C5L C5L
+      required: true
+      selector:
+        boolean: {}
+    confirmation_stop_b81_physique:
+      name: Confirmer droite et STOP physiquement testes avec B81
+      required: true
+      selector:
+        boolean: {}
+    confirmation_application_aosu_secours:
+      name: Confirmer application AOSU ouverte pour STOP de secours
+      required: true
+      selector:
+        boolean: {}
+
+inspect_datapoints:
+  name: Inspecter les paramètres des appareils (expérimental)
+  description: >-
+    Effectue un seul appel de lecture vers le service IoT AOSU et renvoie
+    uniquement les noms et types des paramètres. Aucun numéro de série,
+    jeton ou valeur d'appareil n'est communiqué. Maximum une fois par heure.
+
+inspect_cached_metadata:
+  name: Analyser les metadonnees AOSU deja recues (sans reseau)
+  description: >-
+    Retourne uniquement des noms de champs prevalides, des types et des tailles
+    de structures a partir de la derniere liste des appareils deja chargee.
+    Aucun nouvel appel HTTP ni commande camera. Pas de valeurs privees.
+
+audit_global:
+  name: Audit global AOSU (une seule execution)
+  description: >-
+    Diagnostic en lecture seule des 4 appareils, liens vers la base, connexion,
+    energie/Wi-Fi bruts, horodatages et structures disponibles. Une lecture
+    /v1/dev/getList puis au maximum une lecture /v1/dp/getValues. La seconde
+    est limitee a une fois par heure. Aucun numero de serie, nom personnalise,
+    URL de miniature ou jeton n'est renvoye. Aucune commande camera.
+
+audit_objectifs:
+  name: Auditer miniatures et types de detection (v0.8.4)
+  description: >-
+    Une seule action manuelle : au maximum six lectures AOSU d'images/evenements
+    (dont deux requetes ciblees si une camera manque de la liste groupee),
+    ainsi qu'un test de miniature par camera (GET HTTPS et redirections controlees).
+    Renvoie les statuts des images, les eventType et uniformType bruts autorises,
+    ainsi que le nombre d'evenements par camera et le diagnostic cible. Aucun code arbitraire n'est
+    traduit en mouvement ou personne sans preuve. Sans numero
+    de serie, identifiant, lien prive, jeton ni contenu photo. Une fois par
+    heure et par session ; aucune commande video ou PTZ.
+
+audit_transport:
+  name: Verifier branche et reference Tuya des cameras (sans reseau)
+  description: >-
+    Distingue les branches Gz et Tuya selon support.svcType deja recu par
+    /v1/dev/getList et la logique de l'APK Android AOSU 5.10.12.
+    Controle aussi seulement la presence des references cpDeviceId a la racine
+    et sous cpDeviceInfo. Zero requete HTTP, zero mouvement, zero journal prive.
+    Aucun identifiant Tuya ou AOSU ne sera affiche ou conserve.
+
+audit_liaison_tuya:
+  name: Vérifier liaison Tuya et capacités C5L (lecture seule)
+  description: >-
+    Diagnostic manuel limité à une fois par heure. Interroge au maximum
+    /v1/dev/getInfoBySn et /v1/dev/capability pour la C5L uniquement,
+    sans commande PTZ, sans ouverture de vidéo et sans afficher d'identifiant,
+    de numéro de série, de jeton ou de réponse brute. Une clé présente ne
+    constitue pas la preuve d'une liaison Tuya fonctionnelle.
+
+
+audit_oem_uid:
+  name: Vérifier les paramètres UID Tuya déjà reçus (sans réseau)
+  description: >-
+    Ne relance pas de connexion. Vérifie uniquement si la dernière réponse de
+    connexion AOSU contenait countryCode, tuyaUsername et tuyaUid (orthographe JSON exacte).
+    Affiche seulement des booléens, sans identifiants, mot de passe, SID ou token.
+    Ne prouve pas que le serveur Tuya acceptera l'authentification OEM.
+
+
+audit_provider_p2p:
+  name: Diagnostiquer le fournisseur P2P depuis le cache AOSU
+  description: >-
+    Sans aucune requete HTTP supplementaire, verifie la presence des champs
+    sdkProvider, p2pType, isVirtual, devId et communicationId dans le dernier
+    inventaire AOSU. Ne renvoie ni identifiants, ni noms personnalises, ni
+    tokens. Attention, un inventaire AOSU ne prouve pas le DeviceBean Tuya
+    reellement utilise par Android.
+
+
+audit_mqtt_authorisation:
+  name: Vérifier l'autorisation AOSU MQTT AWS (APK confirmé)
+  description: >-
+    Requête manuelle unique /v1/sts/getMultiMqttInfo avec type=aws, valeur
+    vérifiée directement dans classes16.dex de l'APK AOSU 5.10.12.
+    Cible uniquement la C5L. Une tentative maximum par heure et par processus.
+    Réponse uniquement structurelle et anonymisée. Ne lance pas de vidéo.
+    Ce chemin Gz/AWS n'est pas une authentification OEM Tuya (plateforme C5L Ty).
+
+audit_tuya_uid_token:
+  name: Audit Tuya UID token (experimental)
+  description: >
+    One manual token-only Tuya request. Uses the SDK-verified
+    thing.m.user.username.token.get v2.0 with isUid true, the APK and existing
+    AOSU session. Does not send account password or control any camera.
+    TTID and Tuya installation ID are experimental assumptions.
+
+audit_tuya_uid_preflight:
+  name: Diagnostic APK Tuya UID — hors ligne
+  description: >-
+    Controle sans connexion reseau : presence de l APK original ou de l APK leger avec ses ressources OEM,
+    empreinte SHA-256, extraction des composants et decodage natif.
+    Les causes d'arret sont distinguees. Aucune cle ni identifiant expose.
+
+audit_tuya_uid_login:
+  name: Tester le login Tuya OEM UID (envoi du mot de passe chiffre)
+  description: >-
+    Operation sensible et manuelle uniquement. Un jeton Tuya obtenu via
+    thing.m.user.username.token.get v2.0 (isUid vrai) puis
+    un login Tuya OEM seront effectues ; le mot de passe AOSU deja enregistre
+    dans Home Assistant sera transforme en MD5 puis chiffre en RSA, place dans
+    un corps chiffre AES-GCM et envoye via HTTPS au serveur Tuya. Le mot de
+    passe n'est jamais affiche dans la reponse. Au maximum deux requetes, sans
+    mouvement ni video, une tentative par heure. L'algorithme de signature reste
+    experimental ; un refus de login est possible.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: J'autorise l'envoi du mot de passe chiffre au serveur Tuya
+      required: true
+      default: false
+      selector:
+        boolean:
+
+
+audit_tuya_oem_inventory:
+  name: Découvrir les appareils Tuya OEM et préparer RTC (expérimental)
+  description: >-
+    Utilise une session UID Tuya réussie, seulement en mémoire. Après redémarrage
+    de Home Assistant, une nouvelle authentification est nécessaire : elle n'a
+    lieu que si vous autorisez explicitement l'envoi du mot de passe chiffré.
+    Lit la liste des maisons et appareils, sans exposer leurs identifiants,
+    noms, clés ou réponses brutes. Ne lance aucun flux vidéo ni aucune commande.
+    Option RTC : lecture unique de la configuration RTC seulement si la C5L
+    est reconnue sans ambiguïté ou si vous autorisez un candidat caméra unique.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser un nouveau login UID si la session a été perdue
+      description: Envoie le mot de passe AOSU sous forme chiffrée à Tuya, seulement si nécessaire.
+      required: false
+      default: false
+      selector:
+        boolean:
+    tester_rtc:
+      name: Demander la configuration RTC (lecture seule)
+      description: Peut créer une configuration de session provisoire ; ne lit pas la vidéo.
+      required: false
+      default: false
+      selector:
+        boolean:
+    autoriser_candidat_unique:
+      name: Autoriser l'unique caméra candidate non confirmée
+      description: À utiliser uniquement si le diagnostic ne trouve qu'une caméra candidate.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+    autoriser_correspondance_nom_unique:
+      name: Autoriser un appareil dont le nom correspond exactement à celui de la C5L
+      description: >-
+        Option RTC uniquement. Ne sélectionner que si la comparaison privée des noms
+        AOSU/Tuya trouve exactement un appareil. Un nom égal n'est pas une preuve
+        d'identité; n'utiliser que si vous reconnaissez cet appareil.
+      required: false
+      default: false
+      selector:
+        boolean:
+    tester_mqtt:
+      name: Tester la signalisation MQTT Tuya (TLS + abonnement, aucune offre)
+      description: >-
+        Nécessite tester_rtc : true. Après lecture RTC, tente une connexion MQTT
+        TLS authentifiée au serveur UE m1.tuyaeu.com:8883, s'abonne uniquement
+        au canal de signalisation de la C5L candidate, puis se déconnecte.
+        Aucune offre SDP, aucun mouvement, aucune vidéo, aucun secret exposé.
+        Une tentative par dix minutes. Les identifiants MQTT sont dérivés d'une
+        implémentation tierce et restent expérimentaux pour AOSU.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+    tester_offre_mqtt:
+      name: Tester une offre SDP AES/KCP vers la caméra candidate (actif, expérimental)
+      description: >-
+        Nécessite tester_rtc et tester_mqtt ainsi que confirmation_offre_mqtt.
+        Envoie exactement une offre vidéo chiffrée, écoute au plus neuf secondes,
+        puis envoie un message de déconnexion. Une offre peut temporairement
+        réserver la caméra ou interrompre la disponibilité dans l'application.
+        Pas de relay, pas de vidéo, pas de PTZ. Une tentative par 30 minutes.
+      required: false
+      default: false
+      selector:
+        boolean:
+    confirmation_offre_mqtt:
+      name: Je confirme vouloir envoyer une offre active à la C5L candidate
+      description: >-
+        Le nom correspond, mais l'identification matérielle n'est pas prouvée.
+        Confirmer seulement si vous reconnaissez cet appareil et acceptez une
+        éventuelle indisponibilité temporaire de la vidéo dans l'application.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+    tester_relais_tcp:
+      name: Tester le handshake TCP du relais P2P (actif, expérimental)
+      description: >-
+        Nécessite RTC, MQTT, offre SDP, confirmation_offre_mqtt et confirmation_relais_tcp.
+        Après une réponse SDP valide, établit une connexion TCP au relais officiel,
+        vérifie le défi HMAC et clôt la connexion. Aucun média KCP, PTZ, ou vidéo.
+        Peut rendre la caméra temporairement indisponible pendant la négociation.
+      required: false
+      default: false
+      selector:
+        boolean:
+    confirmation_relais_tcp:
+      name: J'autorise une connexion P2P TCP de test pour cette caméra candidate
+      description: >-
+        Une seule tentative; confirme que l'appareil identifié par son nom est le mien.
+      required: false
+      default: false
+      selector:
+        boolean:
+    tester_kcp:
+      name: Tester le tunnel KCP du relais (expérimental, actif)
+      description: >-
+        Nécessite toutes les confirmations MQTT et relais ainsi que confirmation_kcp.
+        Réémet une seule fois l'offre SDP sur la connexion relais authentifiée
+        et acquitte les trames KCP reçues. Aucun canal de contrôle 0, aucune
+        commande de démarrage vidéo, aucun PTZ et aucun enregistrement.
+      required: false
+      default: false
+      selector:
+        boolean:
+    confirmation_kcp:
+      name: Je confirme l'essai actif du tunnel KCP sur cette caméra
+      description: >-
+        Réserver temporairement la caméra est possible; ne pas regarder
+        simultanément le flux dans AOSU. Au plus une tentative par période de 30 min.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+    tester_media:
+      name: Tester le démarrage du canal vidéo (expérimental, actif)
+      description: >-
+        Nécessite toutes les confirmations précédentes et confirmation_media.
+        Lance une fois le canal 0 et observe pendant environ 11 s si des données
+        vidéo KCP arrivent et peuvent être déchiffrées. Aucune commande PTZ.
+        La caméra peut être temporairement réservée. Aucune image n'est sauvegardée.
+      required: false
+      default: false
+      selector:
+        boolean:
+    confirmation_media:
+      name: J'autorise explicitement le démarrage vidéo temporaire sur ma caméra
+      description: >-
+        La caméra est seulement identifiée par son nom. Fermer le direct AOSU.
+        Une seule tentative, sans PTZ ni stockage d'images.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+    capturer_media_localement:
+      name: Enregistrer temporairement les données vidéo déchiffrées (facultatif)
+      description: >-
+        FACULTATIF et sensible : requiert confirmation_capture_locale ET toutes
+        les confirmations de démarrage vidéo. Écrit au maximum 256 Kio de
+        données vidéo brutes dans /config/smart_aosu_cloud/diagnostics/ ;
+        aucune transmission depuis Home Assistant vers un tiers. Les images
+        d'un domicile peuvent être récupérables dans le fichier. À supprimer
+        après analyse ; inclus dans les sauvegardes HA tant que conservé.
+      required: false
+      default: false
+      selector:
+        boolean:
+    confirmation_capture_locale:
+      name: Je consens à stocker temporairement des images potentielles de ma caméra
+      description: >-
+        Confirme explicitement le stockage local d'un court échantillon en clair.
+        Ne communiquer ce fichier qu'en connaissance de son contenu privé.
+        Aucune donnée brute dans les journaux ni la réponse d'action.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+decoder_capture_video_locale:
+  name: Décoder la dernière capture vidéo locale (hors ligne)
+  description: >-
+    Aucun appel réseau, aucune commande caméra. Lit uniquement la dernière capture
+    media_b27_*.aosudump déjà présente dans /config/smart_aosu_cloud/diagnostics.
+    Vérifie HEVC/RTP et tente une image JPEG avec FFmpeg local. Ne retourne jamais
+    de vidéo ni image brute. Un aperçu JPEG privé peut être sauvegardé avec mode 0600
+    uniquement après accord explicite ; ne pas le placer dans /config/www.
+  fields:
+    confirmation_analyse_capture:
+      name: J'autorise l'analyse locale de la capture privée
+      required: true
+      selector:
+        boolean:
+    enregistrer_apercu_prive:
+      name: Conserver une seule image JPEG privée sur Home Assistant
+      required: false
+      default: false
+      selector:
+        boolean:
+
+demarrer_direct_c5l:
+  name: Démarrer le direct C5L P2P (expérimental)
+  description: >-
+    ACTION ACTIVE ET FACULTATIVE. Utilise une unique session P2P cloud Tuya,
+    envoie les sept commandes de démarrage vidéo et publie les JPEG décodés
+    dans une entité camera C5L en mémoire uniquement. Aucun PTZ et aucun
+    enregistrement. Caméra identifiée par son nom, pas par un ID matériel confirmé.
+    Aucun démarrage ni reconnexion automatique. Lecture peut relancer une nouvelle
+    session après Arrêt sans les anciens délais de développement (5/30/60 minutes).
+    Après un véritable refus ou une erreur, un court délai progressif évite les
+    demandes excessives. Arrêt est manuel; 45 secondes sans vidéo ferment la session.
+    Fermer le direct AOSU avant.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: J'autorise si nécessaire le login UID Tuya chiffré
+      required: true
+      selector:
+        boolean:
+    confirmation_camera_c5l:
+      name: Je confirme que la caméra sélectionnée par son nom est bien ma C5L
+      required: true
+      selector:
+        boolean:
+
+arreter_direct_c5l:
+  name: Arrêter immédiatement l'aperçu direct C5L
+  description: >-
+    Demande l'arrêt de la session P2P en cours et la libération du décodeur FFmpeg.
+
+statut_direct_c5l:
+  name: Statut de l'aperçu direct C5L
+  description: >-
+    Retourne uniquement des informations anonymisées de la session, du décodeur
+    et du dernier essai. Ne renvoie ni vidéo, ni clés, ni identifiants.
+
+audit_preparation_autres_cameras:
+  name: Préparer les autres caméras AOSU (sans réseau)
+  description: >-
+    Examine seulement le dernier inventaire local Home Assistant. Compte les
+    caméras et bases H1L, distingue les modèles publics C5L/C9C3CA11 si
+    déclarés, et indique ce qui reste à valider côté P2P/PTZ.
+    Aucun mot de passe, identifiant, numéro de série ou nom privé renvoyé.
+    Aucun appel cloud, aucune ouverture vidéo et aucun mouvement de caméra.
+
+audit_ptz_c5l:
+  name: C5L — diagnostic PTZ et actualisation OEM (sans mouvement)
+  description: >-
+    Sans option, examine les caches locaux. Avec actualiser_cache_oem et
+    confirmation_envoi_mot_de_passe, effectue une lecture seule du catalogue
+    Tuya par des API deja validees. Aucun RTC, MQTT, mouvement ou PTZ.
+  fields:
+    actualiser_cache_oem:
+      name: Actualiser les appareils OEM (lecture seule)
+      description: Interroge explicitement les listes Tuya sans piloter la camera.
+      required: false
+      default: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser login OEM si session expiree
+      description: Peut envoyer le mot de passe chiffre vers Tuya si une nouvelle session est necessaire.
+      required: false
+      default: false
+      selector:
+        boolean: {}
+
+audit_ptz_schema_detaille_c5l:
+  name: C5L — lire la fiche Tuya détaillée (PTZ, sans mouvement)
+  description: >-
+    Lecture seule via thing.m.device.get v4.1, API vérifiée dans l APK AOSU.
+    Actualise si nécessaire le cache OEM puis lit la fiche détaillée, avec deux confirmations.
+    Interroge uniquement l appareil C5L identifié de façon unique dans le cache,
+    n envoie aucune commande de mouvement ou d arrêt et ne renvoie aucune valeur privée.
+    Maximum une tentative toutes les 120 secondes ; à lancer hors direct.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser un login OEM chiffré si nécessaire
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Je confirme que C5L est bien ma C5L
+      required: true
+      selector:
+        boolean: {}
+
+audit_structure_ptz_c5l:
+  name: C5L — forme des datapoints PTZ OEM b44 (sans mouvement)
+  description: >-
+    Lecture seule de la fiche Tuya C5L : indique si les codes ptz_control et
+    ptz_stop sont de simples valeurs/indicateurs ou de vraies definitions de
+    schema. Renvoye uniquement des types, categories et noms de champs connus,
+    jamais les valeurs ni les identifiants. Aucun MQTT, mouvement ou changement
+    video. Utilise l API de lecture thing.m.device.get v4.1. Une lecture toutes
+    les 120 secondes, apres deux confirmations, hors direct.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser login chiffré si nécessaire
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Je confirme que C5L est bien ma C5L
+      required: true
+      selector:
+        boolean: {}
+
+essayer_arret_ptz_c5l:
+  name: C5L C5L — essai de commande PTZ Arrêt uniquement
+  description: >-
+    Essai expérimental d une seule publication Tuya ptz_stop=true, API
+    thing.m.device.dp.publish v2.0 observée dans l APK. Ne transmet aucune
+    direction ni aucun mouvement. N équivaut pas à un arrêt moteur vérifié.
+    Trois confirmations exigées ; actualisation OEM si nécessaire, caméra C5L unique,
+    direct inactif. Une tentative toutes les 120 secondes ; aucun renvoi de secret.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l authentification OEM chiffrée si nécessaire
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Je confirme que C5L est bien ma C5L
+      required: true
+      selector:
+        boolean: {}
+    confirmation_test_arret:
+      name: J autorise un unique ordre PTZ Arrêt, sans déplacement
+      required: true
+      selector:
+        boolean: {}
+
+audit_canal_ptz_direct_c5l:
+  name: C5L — observer le canal PTZ pendant le direct
+  description: >-
+    Analyse en lecture seule du canal de controle KCP de la session video C5L
+    deja active. Ne lance aucune session, ne publie aucun DP et n envoie aucune
+    commande de mouvement ou d arret. Ne conserve aucune charge utile, video,
+    cle, identifiant ni message brut. Marquer le debut permet de comparer les
+    compteurs avant et apres un test via l application officielle.
+  fields:
+    marquer_debut_comparaison:
+      name: Remettre a zero le point de comparaison des compteurs
+      description: Conserve uniquement les compteurs comme point de reference.
+      required: false
+      selector:
+        boolean: {}
+
+audit_mqtt_ptz_direct_c5l:
+  name: C5L — observer le MQTT pendant le direct (PTZ)
+  description: >-
+    Lit uniquement les compteurs des messages MQTT deja recus sur la
+    connexion de signalisation P2P existante, sans seconde connexion,
+    publication de DP, mouvement ou sauvegarde de contenu prive.
+    Les messages de l application AOSU peuvent utiliser une autre session ;
+    une absence de messages ne prouve pas l absence de PTZ via MQTT.
+    Le test n ajoute aucune negociation et ne coupe pas la video.
+  fields:
+    marquer_debut_comparaison:
+      name: Marquer le debut de la comparaison
+      description: Enregistre uniquement des compteurs de trafic comme reference.
+      required: false
+      selector:
+        boolean: {}
+
+
+audit_publication_ptz_c5l:
+  name: C5L — audit de publication PTZ Tuya b43 (sans mouvement)
+  description: >-
+    Verifie en lecture seule les prealables des commandes Tuya en ligne :
+    modele, association OEM de la camera, codes et types des datapoints,
+    declaration des droits d ecriture et etat de session deja en memoire.
+    Aucun appel reseau, aucune connexion MQTT supplementaire, aucune
+    commande PTZ ou STOP et aucune modification du direct video.
+    La connexion MQTT existante sert uniquement a la signalisation video.
+
+essayer_arret_ptz_dp116_c5l:
+  name: C5L C5L — essai STOP numérique DP 116 (expérimental)
+  description: >-
+    Essai manuel strictement limité à une seule publication HTTP Tuya
+    thing.m.device.dp.publish v2.0 avec dps {"116":true}. Contrairement au test
+    b40, utilise l identifiant numérique standard Tuya 116. Il n est PAS
+    confirmé par le schema propre à la C5L et peut être refusé. N envoie
+    jamais de mouvement, ne touche pas à la vidéo HA, sans retry ni alternative,
+    limitation partagée 120 secondes. Quatre confirmations obligatoires.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser une authentification OEM chiffrée si nécessaire
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer que C5L est bien la C5L ciblée
+      required: true
+      selector:
+        boolean: {}
+    confirmation_test_arret:
+      name: Autoriser une commande STOP unique, sans mouvement
+      required: true
+      selector:
+        boolean: {}
+    confirmation_dp_116_experimental:
+      name: Accepter le test de l identifiant 116 non vérifié sur cette C5L
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_encodeur_mqtt_ptz_c5l:
+  name: C5L — prérequis de l encodeur MQTT PTZ b46 (passif)
+  description: >-
+    Analyse seulement l inventaire Tuya OEM déjà en mémoire : identite C5L,
+    version pv, présence localKey, communicationNode et association numerique
+    DP 116/119. Aucun secret, identifiant ou message brut divulgue.
+    Aucun appel reseau, aucune connexion MQTT, aucune commande STOP/PTZ,
+    aucune modification du direct. Si le cache a expire, actualiser via
+    l action audit_ptz_c5l puis relancer dans les dix minutes.
+
+
+audit_sdk_sources_ptz_c5l:
+  name: C5L — comparer les sources SDK Tuya b47 (lecture seule)
+  description: >-
+    Actualise uniquement si necessaire l inventaire OEM, puis consulte une
+    unique fiche detaillee thing.m.device.get v4.1. Indique exclusivement
+    la presence structurelle de pv, localKey, communicationNode, schemaMap et
+    codes numeriques PTZ dans chaque source, sans aucune valeur confidentielle.
+    La lecture detaillee est limitee a une execution par 120 secondes.
+    Direct Home Assistant a arreter. Aucun ordre moteur, MQTT, RTC ou video.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser si necessaire l authentification OEM et les lectures HTTPS
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer la lecture du candidat OEM nomme C5L (identite non certifiee)
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_capacite_produit_ptz_c5l_b78:
+  name: C5L — capacité produit SDK b78 (lecture seule)
+  description: >-
+    Lecture OEM thing.m.product.info.get v1.0 pour le produit de la C5L.
+    Recherche capability=8, condition potentielle de la publication API
+    thing.m.nb.device.dp.publish; cette lecture ne démontre pas le choix runtime.
+    Aucune commande moteur, aucun STOP, aucune publication MQTT ni HTTP.
+    Ne retourne ni identifiants ni secrets. Direct C5L arrêté.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser la lecture OEM et une éventuelle réauthentification
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer la caméra C5L
+      required: true
+      selector:
+        boolean: {}
+
+audit_modele_produit_ptz_c5l:
+  name: C5L — modèle produit Tuya b51 (lecture seule)
+  description: >-
+    Recherche la définition des datapoints dans le modèle produit Tuya,
+    selon l API thing.m.product.thing.model v1.0 identifiée dans l APK.
+    Nécessite productId et productVersion pour la caméra C5L sélectionnée.
+    Au plus une lecture du modèle après rafraîchissement OEM si nécessaire.
+    Ne retourne aucun identifiant, secret ni contenu brut. Direct arrêté.
+    Aucune commande PTZ, STOP, MQTT ou RTC et aucun changement vidéo.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser la lecture HTTPS OEM et éventuelle réauthentification
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer la lecture du modèle produit de la caméra C5L
+      required: true
+      selector:
+        boolean: {}
+
+audit_transport_mqtt_ptz_c5l:
+  name: C5L — validation du transport MQTT b53 (sans publication)
+  description: >-
+    Une seule connexion TLS 8883 vers le broker Tuya, MQTT CONNECT et
+    abonnement au topic de controle construit depuis le communicationNode
+    OEM de la camera C5L. Aucun message MQTT publie et aucune commande
+    de camera. L'abonnement ne valide pas les droits de publication.
+    Necessite un cache OEM recent et une session UID deja active.
+  fields:
+    confirmation_connexion_mqtt:
+      name: Autoriser une nouvelle connexion MQTT TLS et un abonnement
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer le choix C5L pour l'abonnement passif
+      required: true
+      selector:
+        boolean: {}
+
+essayer_arret_mqtt_ptz_c5l_b54:
+  name: C5L — STOP MQTT expérimental b54 (sans mouvement)
+  description: >-
+    Une unique publication MQTT expérimentale STOP 116=true, utilisant un
+    candidat de trame Tuya 2.2/protocol 4. Aucun mouvement ni changement vidéo.
+    Les PUBACK ne prouvent pas l'arrêt du moteur. Quatre confirmations nécessaires.
+    Rate-limit de 10 minutes et aucun nouvel essai automatique.
+  fields:
+    confirmation_publication_mqtt:
+      name: Autoriser une publication MQTT unique
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer le choix de la caméra C5L
+      required: true
+      selector:
+        boolean: {}
+    confirmation_test_stop:
+      name: Autoriser uniquement une commande STOP
+      required: true
+      selector:
+        boolean: {}
+    confirmation_mapping_experimental:
+      name: Accepter le mapping 116 et le protocole 4 non certifiés sur C5L
+      required: true
+      selector:
+        boolean: {}
+
+ptz_live_c5l_b56:
+  name: C5L - PTZ live experimental b56
+  description: >-
+    Commande PTZ experimentale. press envoie un DP119 suivi automatiquement d'un
+    STOP DP116 au relachement ou apres 0,75 s maximum. Le PUBACK broker ne prouve
+    PAS l'execution physique. Direct C5L requis. Test sur votre propre camera seulement.
+  fields:
+    action:
+      name: Action
+      required: true
+      selector:
+        select:
+          options: [arm, press, release, status]
+    direction:
+      name: Direction pour press
+      required: false
+      selector:
+        select:
+          options: [up, down, left, right]
+    gesture_id:
+      name: Identifiant de l'appui (12-64 caracteres alphanumeriques)
+      required: false
+      selector:
+        text:
+    confirmation_test_moteur:
+      name: J'autorise le test de mouvement non valide physiquement
+      required: false
+      default: false
+      selector:
+        boolean:
+
+
+audit_mqtt_ptz_app_b61:
+  name: C5L - Comparaison passive des topics MQTT AOSU b61
+  description: >-
+    Ecoute pendant 14 secondes quatre canaux MQTT de la C5L pendant une
+    commande effectuée dans l'application officielle AOSU. Aucun ordre de
+    mouvement ni STOP envoyé par Home Assistant. Données et identifiants masqués.
+  fields:
+    confirmation_ecoute_mqtt:
+      name: J'autorise une connexion et un abonnement MQTT de lecture seule
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Je confirme ma camera C5L
+      required: true
+      selector:
+        boolean: {}
+
+audit_taille_mqtt_ptz_c5l_b69:
+  name: C5L — tailles MQTT face aux PCAP (b69, hors ligne)
+  description: >-
+    Simule avec des identifiants et une cle purement fictifs les tailles des
+    trames MQTT QoS1 du controleur b68. Compare leurs tailles theoriques TLS
+    1.2 AES-GCM aux candidats de 149 octets dans les PCAPdroid du 30 octobre.
+    Aucun appel reseau, aucune cle reelle lue, aucun mouvement ni STOP moteur.
+    Requiert un inventaire OEM recent (moins de 10 minutes).
+
+
+essayer_arret_api_alternative_c5l_b79:
+  name: C5L — STOP expérimental API alternative b79
+  description: >-
+    Expérimentation d'UN SEUL ordre STOP, sans direction, via
+    thing.m.nb.device.dp.publish v1.0, route repérée dans l'APK Android.
+    Le DP 116 reste un candidat non certifié pour cette C5L. Aucun déplacement
+    n'est autorisé, pas de repli MQTT ni de deuxième essai automatique.
+    L'acceptation HTTP ne prouve pas l'exécution par la caméra. Ne pas utiliser
+    pendant une utilisation PTZ ; arrêter le direct Home Assistant avant.
+    Quatre confirmations manuelles obligatoires et délai de 10 minutes.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l'API OEM et, si nécessaire, une réauthentification
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer qu'il s'agit de ma caméra C5L
+      required: true
+      selector:
+        boolean: {}
+    confirmation_commande_arret:
+      name: Autoriser un unique ordre d'arrêt PTZ sans direction
+      required: true
+      selector:
+        boolean: {}
+    confirmation_dp116_experimental:
+      name: Accepter l'identifiant STOP 116 encore non certifié pour la C5L
+      required: true
+      selector:
+        boolean: {}
+
+
+observer_etat_ptz_c5l_b80:
+  name: C5L — comparer états PTZ avant/après (b80)
+  description: >-
+    Lecture seule de la fiche device OEM, en deux phases. Lancez d'abord "avant",
+    faites un bref mouvement avec l'application AOSU officielle, puis "apres"
+    dans les trois minutes. Aucun ordre PTZ, STOP ni publication n'est émis par
+    Home Assistant. Ne renvoie jamais les valeurs des DP, seulement les changements
+    détectables. Même une variation ne prouve pas la commande ou l'arrêt physique.
+    Nécessite un inventaire OEM récent et le direct HA arrêté.
+  fields:
+    phase:
+      name: Étape de la comparaison
+      required: true
+      selector:
+        select:
+          options:
+            - label: Avant mouvement
+              value: avant
+            - label: Après mouvement
+              value: apres
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l'API OEM et une réauthentification éventuelle
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer ma caméra C5L
+      required: true
+      selector:
+        boolean: {}
+
+
+tester_mouvement_droite_c5l_b81:
+  name: C5L — essai unique déplacement droite + STOP auto (b81)
+  description: >-
+    EXPERIMENTAL: ordre DP119 valeur "2" (droite), 0,35 s apres acceptation,
+    STOP DP116 dans tous les cas, watchdog STOP de secours à 1,5 s.
+    Pas de mouvement permanent ni autres directions; 5 minutes entre essais.
+    Le controle moteur n'est pas encore valide. En cas de problème, utiliser
+    immédiatement l'application AOSU officielle, et couper l'alimentation
+    si nécessaire. Arreter le direct Home Assistant avant le test.
+    Quatre confirmations explicites obligatoires.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l'API OEM et une re-authentification si necessaire
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer que la camera cible est ma C5L C5L
+      required: true
+      selector:
+        boolean: {}
+    confirmation_stop_b79_physique:
+      name: Confirmer avoir observe un STOP effectif avec B79
+      required: true
+      selector:
+        boolean: {}
+    confirmation_application_aosu_secours:
+      name: Confirmer que l'application AOSU est prete pour stopper le mouvement
+      required: true
+      selector:
+        boolean: {}
+
+
+arret_urgence_c5l_b81:
+  name: C5L — STOP urgence manuel, sans temporisation (b81)
+  description: >-
+    Un seul STOP DP116 via API alternative, sans direction et sans blocage
+    par le delai de 10 minutes des anciens essais. Necessite cependant un
+    cache OEM recent et un acces reseau. Si la camera bouge encore, utiliser
+    l'application officielle AOSU ou couper l'alimentation. Aucun STOP
+    reseau ne garantit un arret physique.
+  fields:
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser API OEM et re-authentification si necessaire
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_c5l:
+      name: Confirmer qu'il s'agit de ma camera C5L C5L
+      required: true
+      selector:
+        boolean: {}
+    confirmation_stop_urgence:
+      name: Confirmer cet ordre d'arret
+      required: true
+      selector:
+        boolean: {}
+
+audit_structure_c9_h1l_b99:
+  name: C9 / H1L — structure d'identité OEM (B99)
+  description: >-
+    Lecture locale des inventaires AOSU et Tuya OEM deja en memoire.
+    Indique uniquement la presence des champs d'identification, des egalites
+    exactes et des liens internes de station, avec numerotation anonyme.
+    Aucun HTTP, login, RTC, P2P, video ou PTZ. Ne retourne ni nom, ni ID,
+    ni numero de serie, ni cle locale. Les noms similaires sont seulement
+    des indices et n'autorisent pas l'ouverture d'une video.
+
+
+audit_fiches_oem_c9_h1l_b100:
+  name: C9 / H1L — fiches detaillees Tuya (B100)
+  description: >-
+    Lecture explicite, non destructive, de 1 a 8 fiches OEM des appareils deja
+    en cache via thing.m.device.get v4.1. Necessite un inventaire OEM recent
+    et une session OEM existante ; aucun login ni mot de passe n'est envoye.
+    Au maximum une execution toutes les 5 minutes. Aucun RTC, P2P, MQTT,
+    video ni PTZ ; aucun identifiant ou contenu prive affiche.
+    Refuse l'execution lorsqu'un direct C5L est en cours.
+  fields:
+    confirmation_lecture_fiches:
+      name: Autoriser les lectures HTTPS des fiches OEM existantes
+      required: true
+      selector:
+        boolean: {}
+
+audit_rtc_c9_candidate_b101:
+  name: C9 / H1L — configuration RTC candidate (B101)
+  description: >-
+    Un seul appel HTTP pour lire la configuration RTC d'une C9 candidate.
+    Selection conditionnelle a quatre noms uniques et concordants, sans preuve
+    d'identite par numero de serie. Le numero 1 ou 2 correspond au classement
+    AOSU de l'audit, pas a un identifiant Tuya permanent. L'action peut
+    preparer une session sur le serveur mais ne lance pas MQTT, P2P, video,
+    PTZ ni aucune commande de mouvement. Requiert une session OEM valide,
+    un cache frais, et le direct C5L arrete. Deux confirmations explicites.
+    Limitation a une lecture RTC toutes les cinq minutes. Les identifiants,
+    noms, secrets et valeurs RTC ne sont pas retournes.
+  fields:
+    numero_camera_aosu:
+      name: Numero de la camera C9 dans l'inventaire AOSU
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+          mode: box
+    confirmation_candidat_non_prouve:
+      name: Confirmer que la camera est une candidate non prouvee
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_rtc:
+      name: Autoriser une demande HTTPS de configuration RTC a Tuya
+      required: true
+      selector:
+        boolean: {}
+
+audit_rtc_c9_topologie_b102:
+  name: C9 / H1L — topologie RTC et cle locale (B102)
+  description: >-
+    Configuration RTC d'une C9 candidate avec une lecture HTTP autorisee.
+    Retourne seulement des codes de strategie P2P, la presence de champs
+    parent/noeud, et la provenance de cles en booleens. Aucune cle n'est
+    transmise au navigateur ou utilisee pour creer un flux. L'association
+    par nom ne constitue pas une preuve d'identite. Direct C5L stoppe,
+    cache OEM authentifie non expire et confirmations explicites requis.
+    Temporisation RTC partagee de cinq minutes avec les anciens diagnostics.
+  fields:
+    numero_camera_aosu:
+      name: Numero de la C9 dans l'inventaire AOSU
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+          mode: box
+    confirmation_candidat_non_prouve:
+      name: Accepter la correspondance encore non prouvee
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_rtc:
+      name: Autoriser une lecture RTC HTTPS chez Tuya
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_reseau_local_h1l_b103:
+  name: C9 / H1L — verifier acces local STUN/UDP et TCP (B103)
+  description: >-
+    Une requete STUN Binding sans secret vers une IP privee fournie manuellement
+    (UDP 9396), et une connexion TCP sans echange de donnees vers 6668 si autorisee.
+    N'ouvre pas de session video, ne fait pas de login, ne communique aucune cle
+    et n'envoie pas de commande a la camera. L'absence de reponse STUN ne prouve
+    PAS une panne : l'authentification ICE peut etre requise. Pas de scan IP,
+    une execution toutes les 45 secondes, et refus si direct C5L actif.
+  fields:
+    ip_station:
+      name: Adresse IPv4 locale de la station presume H1L
+      required: true
+      selector:
+        text: {}
+    confirmation_test_reseau_local:
+      name: Autoriser un paquet STUN sur le reseau local
+      required: true
+      selector:
+        boolean: {}
+    tester_tcp_6668:
+      name: Tester aussi l'etablissement TCP sur 6668 (aucune donnee envoyee)
+      required: false
+      default: true
+      selector:
+        boolean: {}
+
+
+audit_auth_locale_h1l_b104:
+  name: C9 / H1L — valider authentification Tuya locale sans video (B104)
+  description: >-
+    Apres confirmation explicite, utilise uniquement en RAM la cle locale du candidat
+    station H1L present dans l'inventaire OEM Tuya. Un challenge Tuya 3.4 sur
+    TCP 6668 vers une adresse privee permet de verifier la concordance
+    cryptographique. Aucun mouvement, requete DP, lecture video, offre MQTT ou
+    scan reseau. Ne prouve pas l'identite AOSU par numero de serie. Limite 5 min.
+    Inventaire OEM frais requis, direct C5L arrete.
+  fields:
+    ip_station:
+      name: IP locale de la station H1L candidate
+      required: true
+      selector:
+        text: {}
+    confirmation_station_candidate_non_prouvee:
+      name: Confirmer que l'association avec H1L reste basee sur les noms
+      required: true
+      selector:
+        boolean: {}
+    confirmation_authentification_locale:
+      name: Autoriser une seule negociation Tuya 3.4 locale sur TCP 6668
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_rtc_station_h1l_b105:
+  name: C9 / H1L — lire RTC de la station candidate (B105)
+  description: >-
+    Effectue au plus une requete HTTPS thing.m.rtc.config.get pour la station
+    candidate du cache OEM apres double confirmation. Les quatre correspondances
+    de noms doivent etre uniques et les deux C9 associees a H1L. La verification
+    locale B104 a montre que la cle de station fonctionne sur le reseau local,
+    mais la correspondance du numero de serie n'est pas prouvee. La lecture RTC
+    peut preparer une session cote serveur. Aucune offre, video, P2P ni PTZ;
+    aucun identifiant ni secret renvoye. Requiert session OEM recente et respecte
+    le delai partage de 5 minutes entre lectures RTC. Arreter direct C5L.
+  fields:
+    confirmation_station_candidate:
+      name: J'accepte que la station soit identifiee par les noms et B104, pas par son SN
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_rtc_station:
+      name: Autoriser une demande de configuration RTC HTTPS pour la station H1L
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_ipc_config_c9_h1l_b106:
+  name: C9 / H1L — configuration IPC camera (B106)
+  description: >-
+    Une requete HTTPS thing.m.ipc.config.get v2.0 pour une C9 candidate,
+    apres accord explicite. Cherche p2pConfig et le lien subDic
+    entre appareil C9 et station H1L. Aucun ID, cle ou nom prive retourne.
+    Ne lance ni video, ni MQTT, ni STUN, ni P2P, ni PTZ.
+    Exige un inventaire OEM frais et partage la temporisation RTC de 5 minutes.
+    Arreter le direct C5L pendant le test.
+  fields:
+    numero_camera_aosu:
+      name: Numero de la C9 dans l'inventaire AOSU
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+          mode: box
+    confirmation_candidat_non_prouve:
+      name: Accepter la correspondance non prouvee par noms
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_config_ipc:
+      name: Autoriser UNE demande de configuration IPC HTTPS chez Tuya
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_statut_local_h1l_b107:
+  name: C9 / H1L — lecture d'etat locale Tuya 3.4 (B107)
+  description: >-
+    Reproduit uniquement les messages 0x03, 0x05 et 0x10 vus dans la capture
+    PCAP de l'application AOSU, sur TCP 6668. Le 0x10 est une lecture DP_QUERY_NEW.
+    Une seule requete, sans commande de modification, video ni PTZ. Authentifie
+    cryptographiquement la station candidate puis n'affiche que le nombre de
+    DP et la presence eventuelle de champs de sous-appareils, jamais leurs
+    noms, identifiants ou valeurs. Cache OEM RAM de moins de 12 h reutilisable,
+    sans nouveau login cloud. Refuse si C5L active. Limite 5 minutes.
+  fields:
+    ip_station:
+      name: Adresse IPv4 locale de la H1L
+      required: true
+      selector:
+        text: {}
+    confirmation_station_candidate_non_prouvee:
+      name: Accepter que l'association AOSU/Tuya par nom ne soit pas une preuve SN
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_statut_lan:
+      name: Autoriser une lecture de l'etat local de la station (commande 0x10)
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_statut_local_h1l_b108:
+  name: C9 / H1L — renouvellement OEM autorise + lecture locale (B108)
+  description: >-
+    Si le cache OEM Tuya est vide apres redemarrage, peut reconstituer l'inventaire
+    dans la meme action APRES autorisation explicite de renouvellement et de
+    transmission eventuelle du mot de passe AOSU a Tuya via HTTPS. Respecte les
+    limites OEM existantes; n'enregistre jamais la cle sur disque. Ensuite,
+    seule commande Tuya 3.4 DP_QUERY_NEW 0x10, sans PTZ ni video.
+    Refuse pendant le live C5L et utilise la limitation locale de 5 minutes.
+  fields:
+    ip_station:
+      name: Adresse IPv4 locale de la H1L
+      required: true
+      selector:
+        text: {}
+    confirmation_station_candidate_non_prouvee:
+      name: Accepter que le choix de la station reste une correspondance par noms
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_statut_lan:
+      name: Autoriser une seule lecture de l'etat local 0x10
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser a reconstituer l'inventaire Tuya uniquement si le cache est absent
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l'envoi possible du mot de passe AOSU a Tuya via HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+audit_statut_local_h1l_b109:
+  name: C9 / H1L — renouvellement OEM autorise + lecture locale (B109)
+  description: >-
+    Si le cache OEM Tuya est vide apres redemarrage, peut reconstituer l'inventaire
+    dans la meme action APRES autorisation explicite de renouvellement et de
+    transmission eventuelle du mot de passe AOSU a Tuya via HTTPS. Respecte les
+    limites OEM existantes; n'enregistre jamais la cle sur disque. Ensuite,
+    seule commande Tuya 3.4 DP_QUERY_NEW 0x10, sans PTZ ni video.
+    Refuse pendant le live C5L et utilise la limitation locale de 5 minutes.
+  fields:
+    ip_station:
+      name: Adresse IPv4 locale de la H1L
+      required: true
+      selector:
+        text: {}
+    confirmation_station_candidate_non_prouvee:
+      name: Accepter que le choix de la station reste une correspondance par noms
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_statut_lan:
+      name: Autoriser une seule lecture de l'etat local 0x10
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser a reconstituer l'inventaire Tuya uniquement si le cache est absent
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l'envoi possible du mot de passe AOSU a Tuya via HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+
+audit_statut_local_h1l_b110:
+  name: C9 / H1L — lecture locale JSON Tuya 3.4 corrigee (B110)
+  description: >-
+    Apres une authentification Tuya 3.4, envoie une seule requete
+    de lecture DP_QUERY_NEW 0x10 avec l'objet JSON vide {},
+    au lieu du corps vide des B107-B109. Conserve les confirmations,
+    limitations de 5 minutes, l'eventuel inventaire OEM avec consentement,
+    et l'exigence d'une reponse signee par la cle de session.
+    N'envoie aucune commande video, PTZ ou de modification.
+  fields:
+    ip_station:
+      name: Adresse IPv4 locale de la H1L
+      required: true
+      selector:
+        text: {}
+    confirmation_station_candidate_non_prouvee:
+      name: Confirmer le choix de la station candidate par concordance de noms
+      required: true
+      selector:
+        boolean: {}
+    confirmation_lecture_statut_lan:
+      name: Autoriser une seule requete de lecture d'etat 0x10
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser si necessaire la reconstitution de l'inventaire OEM Tuya
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser le possible envoi du mot de passe AOSU a Tuya via HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+
+audit_capture_h1l_b111:
+  name: C9 / H1L — analyse PCAP locale hors ligne (B111)
+  description: >-
+    Analyse en lecture seule une capture PCAP fournie par l'utilisateur
+    dans /config/smart_aosu_traces/. Derive la cle de session Tuya 3.4
+    en RAM depuis la cle OEM de station, verifie les messages 0x20 et renvoie
+    uniquement des compteurs et des noms de champs autorises. Aucune
+    commande locale, video, MQTT ou PTZ n'est envoyee. Autorisation distincte
+    pour l'eventuelle reconstitution de l'inventaire OEM Tuya via HTTPS.
+  fields:
+    nom_capture:
+      name: Fichier PCAP dans /config/smart_aosu_traces (nom seul)
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: Adresse IPv4 de la station vue dans la capture
+      required: true
+      selector:
+        text: {}
+    confirmation_analyse_capture:
+      name: Confirmer l'analyse hors ligne de cette capture personnelle
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser si necessaire l'inventaire Tuya
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser si necessaire l'envoi du mot de passe AOSU a Tuya via HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+
+essai_negociation_lan_c9_b119:
+  name: C9 n°2 — premier essai actif de négociation SDP locale (B119)
+  description: >-
+    EXPERIMENTAL. Une seule offre LAN Tuya 0x20 après authentification TCP 6668 et
+    lecture 0x10, en réutilisant uniquement la structure d'un PCAP PERSONNEL
+    déjà authentifié. Nouveaux secrets ICE, média et session; jamais les anciens.
+    Une caméra C9 n°2 candidate doit être explicitement confirmée malgré l'absence
+    de preuve par numéro de série. Une tentative par 15 minutes, délai limité,
+    aucune commande vidéo/PTZ, aucun démarrage KCP, aucun secret renvoyé.
+    Le direct C5L doit être arrêté avant tout test.
+  fields:
+    nom_capture:
+      name: Nom du PCAP de la deuxième C9 déjà présent dans /config/smart_aosu_traces
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: IP H1L déjà authentifiée
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Numéro de C9 (2 uniquement pour cette capture)
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      name: Confirmer que cette capture appartient à ma deuxième C9
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: Accepter le ciblage provisoire de la C9 basé sur les noms, non les séries
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      name: J'autorise UNE offre SDP locale à la station H1L (commande 0x20)
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser si besoin le renouvellement du cache OEM
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser si besoin l'envoi du mot de passe AOSU à Tuya par HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+essai_negociation_lan_c9_b120:
+  name: C9 n°2 — diagnostic réponse à une offre SDP locale (B120)
+  description: >-
+    EXPERIMENTAL. Une seule offre LAN Tuya 0x20 après authentification TCP 6668 et
+    lecture 0x10, en réutilisant uniquement la structure d'un PCAP PERSONNEL
+    déjà authentifié. Nouveaux secrets ICE, média et session; jamais les anciens.
+    Une caméra C9 n°2 candidate doit être explicitement confirmée malgré l'absence
+    de preuve par numéro de série. Une tentative par 15 minutes, délai limité,
+    aucune commande vidéo/PTZ, aucun démarrage KCP, aucun secret renvoyé. Classification anonyme des réponses SDP/ACK.
+    Le direct C5L doit être arrêté avant tout test.
+  fields:
+    nom_capture:
+      name: Nom du PCAP de la deuxième C9 déjà présent dans /config/smart_aosu_traces
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: IP H1L déjà authentifiée
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Numéro de C9 (2 uniquement pour cette capture)
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      name: Confirmer que cette capture appartient à ma deuxième C9
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: Accepter le ciblage provisoire de la C9 basé sur les noms, non les séries
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      name: J'autorise UNE offre SDP locale à la station H1L (commande 0x20)
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser si besoin le renouvellement du cache OEM
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser si besoin l'envoi du mot de passe AOSU à Tuya par HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+essai_negociation_lan_c9_b121:
+  name: C9 n°2 — diagnostic réponse à une offre SDP locale (B121)
+  description: >-
+    EXPERIMENTAL. Une offre LAN Tuya 0x20 et UN candidat ICE host régénéré après authentification TCP 6668 et
+    lecture 0x10, en réutilisant uniquement la structure d'un PCAP PERSONNEL
+    déjà authentifié. Nouveaux secrets ICE, média et session; jamais les anciens.
+    Une caméra C9 n°2 candidate doit être explicitement confirmée malgré l'absence
+    de preuve par numéro de série. Une tentative par 15 minutes, observation UDP passive, délai limité,
+    aucune commande vidéo/PTZ, aucun envoi UDP/STUN, aucun démarrage KCP, aucun secret renvoyé. Classification anonyme des réponses SDP/ACK et STUN reçus.
+    Le direct C5L doit être arrêté avant tout test.
+  fields:
+    nom_capture:
+      name: Nom du PCAP de la deuxième C9 déjà présent dans /config/smart_aosu_traces
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: IP H1L déjà authentifiée
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Numéro de C9 (2 uniquement pour cette capture)
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      name: Confirmer que cette capture appartient à ma deuxième C9
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: Accepter le ciblage provisoire de la C9 basé sur les noms, non les séries
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      name: J'autorise UNE offre SDP locale à la station H1L (commande 0x20)
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser si besoin le renouvellement du cache OEM
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser si besoin l'envoi du mot de passe AOSU à Tuya par HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+essai_negociation_lan_c9_b122:
+  name: C9 n°2 — diagnostic réponse à une offre SDP locale (B122)
+  description: >-
+    EXPERIMENTAL. Une offre LAN Tuya 0x20 et UN candidat ICE host reconstruit avec filtrage des champs inconnus après authentification TCP 6668 et
+    lecture 0x10, en réutilisant uniquement la structure d'un PCAP PERSONNEL
+    déjà authentifié. Nouveaux secrets ICE, média et session; jamais les anciens.
+    Une caméra C9 n°2 candidate doit être explicitement confirmée malgré l'absence
+    de preuve par numéro de série. Une tentative par 15 minutes, observation UDP passive, délai limité,
+    aucune commande vidéo/PTZ, aucun envoi UDP/STUN, aucun démarrage KCP, aucun secret renvoyé. Classification anonyme des réponses SDP/ACK et STUN reçus.
+    Le direct C5L doit être arrêté avant tout test.
+  fields:
+    nom_capture:
+      name: Nom du PCAP de la deuxième C9 déjà présent dans /config/smart_aosu_traces
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: IP H1L déjà authentifiée
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Numéro de C9 (2 uniquement pour cette capture)
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      name: Confirmer que cette capture appartient à ma deuxième C9
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: Accepter le ciblage provisoire de la C9 basé sur les noms, non les séries
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      name: J'autorise UNE offre SDP locale à la station H1L (commande 0x20)
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser si besoin le renouvellement du cache OEM
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser si besoin l'envoi du mot de passe AOSU à Tuya par HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+
+audit_ecarts_offre_video_c9_b124:
+  name: C9 n°2 — analyse des champs de négociation perdus (B124)
+  description: >-
+    Analyse en mémoire du PCAP authentifié et compare la forme de l'offre
+    d'origine avec sa reconstruction B122 : jetons omis, champs d'en-tête,
+    structure de trace_id, sessionid et topic. Aucune valeur secrète ou
+    identifiant n'est révélé. Aucun TCP 0x20, UDP, STUN, MQTT, vidéo ou PTZ envoyé.
+    Le renouvellement OEM HTTPS, si nécessaire, requiert deux autorisations.
+  fields:
+    nom_capture:
+      name: Capture C9 personnelle dans /config/smart_aosu_traces
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: IP de la station H1L
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Deuxième C9
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      name: Je confirme que la capture concerne mes équipements
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: J'accepte l'identification provisoire par les noms
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Renouveler le cache OEM si nécessaire
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser si nécessaire l'envoi du mot de passe à Tuya par HTTPS
+      required: false
+      selector:
+        boolean: {}
+
+audit_preparation_video_c9_b123:
+  name: C9 n°2 — comparaison de préparation vidéo (B123)
+  description: >-
+    Analyse hors ligne d'une capture personnelle déjà authentifiée.
+    Compare les rôles d'identité, le topic, les paramètres SDP et le type
+    des candidats ICE avec la préparation B122. AUCUN paquet TCP/UDP,
+    aucun MQTT, STUN, flux vidéo ni commande PTZ envoyé. Si le cache OEM
+    est absent, les deux autorisations facultatives permettent sa reconstitution HTTPS.
+    Ne restitue aucun identifiant, secret, SDP ou candidate brut.
+  fields:
+    nom_capture:
+      name: Capture C9 personnelle dans /config/smart_aosu_traces
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: IP station H1L (LAN)
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Deuxième C9
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      name: Je confirme que la capture concerne mes équipements
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: J'accepte l'identification provisoire par les noms
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Renouveler le cache OEM si nécessaire
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser une connexion OEM par HTTPS si nécessaire
+      required: false
+      selector:
+        boolean: {}
+
+essai_negociation_lan_c9_b125:
+  name: C9 n°2 — nouvelle offre locale avec jetons RTC récents (B125)
+  description: >-
+    EXPÉRIMENTAL. Une lecture HTTPS RTC autorisée pour la deuxième C9 puis, SI
+    les jetons ICE et relais TCP reçus correspondent à la forme de l'offre
+    authentifiée, envoi d'une offre locale 0x20 et d'un candidat host vers H1L.
+    Le PCAP ne sert qu'au format; aucun jeton périmé n'est rejoué. L'essai
+    n'active pas vidéo, PTZ, MQTT, STUN ou KCP et ne révèle aucun secret.
+    Si les données RTC ne conviennent pas, aucune offre n'est envoyée.
+  fields:
+    nom_capture:
+      name: PCAP C9 n°2 déjà présent dans /config/smart_aosu_traces
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: IP de la station H1L
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Deuxième C9
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      name: J'atteste que la capture concerne ma caméra
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: Je confirme le ciblage provisoire par concordance des noms
+      required: true
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      name: J'autorise une nouvelle demande HTTPS de paramètres RTC
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      name: J'autorise une offre LAN 0x20 et un candidat host à ma station
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: Autoriser le renouvellement OEM si nécessaire
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: Autoriser l'authentification AOSU HTTPS si nécessaire
+      required: false
+      selector:
+        boolean: {}
+
+essai_connectivite_ice_c9_b126:
+  name: B126 - Vérifier ICE/STUN local C9 via H1L
+  description: >
+    Avec autorisation explicite, négocie une nouvelle SDP avec la deuxième C9,
+    conserve la connexion TCP, attend un candidat host de H1L et effectue
+    au maximum un contrôle STUN authentifié vers son adresse locale confirmée.
+    Répond uniquement aux demandes STUN authentifiées provenant de H1L.
+    N'envoie ni commandes vidéo ni PTZ; ne révèle aucun secret.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+essai_connectivite_ice_c9_b127:
+  name: B127 - ICE contrôlé et nomination H1L pour C9
+  description: >
+    Avec autorisation explicite, négocie une nouvelle SDP avec la deuxième C9,
+    conserve la connexion TCP, attend un candidat host de H1L et effectue
+    au maximum un contrôle STUN au rôle ICE-controlled vers la station H1L.
+    Vérifie les demandes ICE-controlling, la nomination USE-CANDIDATE et compte
+    passivement les éventuelles trames KCP sans lire leur contenu.
+    N'envoie ni commande vidéo ni PTZ et ne révèle aucun secret.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+
+audit_bootstrap_kcp_c9_b128:
+  name: C9 n°2 — audit des six commandes KCP initiales B128
+  description: >-
+    Analyse exclusivement hors ligne la capture personnelle C9 afin de
+    vérifier les six trames de contrôle qui précèdent le flux vidéo.
+    Aucune commande, offre TCP, requête STUN ou paquet KCP envoyé.
+    Aucun identifiant, secret ni contenu de paquet n'est retourné.
+    Le renouvellement éventuel du cache OEM HTTPS exige autorisation.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+essai_transport_kcp_c9_b129:
+  name: C9 n°2 — premier test du transport KCP B129
+  description: >-
+    Une seule sonde KCP WASK authentifiée de 44 octets est envoyée à la
+    station H1L sélectionnée, uniquement après validation SDP et nomination
+    ICE avec réponse STUN authentifiée. Pas de commande de caméra/vidéo,
+    PTZ, replay de capture, stockage des paquets ni révélation de secrets.
+    Exige le consentement actif explicite et respecte les limitations RTC.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+audit_auth_kcp_c9_b130:
+  name: C9 n°2 — profil d'authentification KCP B130 (lecture seule)
+  description: >-
+    Déchiffre dans la RAM la première commande KCP de la capture personnelle
+    et compare la structure à des identifiants OEM actuels sans jamais les
+    dévoiler. Aucun UDP, KCP ni offre active envoyé.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+essai_authentification_kcp_c9_b130:
+  name: C9 n°2 — authentification KCP B130 (conditionnelle)
+  description: >-
+    Après un contrôle hors ligne du profil C9, une sonde KCP WASK puis
+    éventuellement une seule authentification KCP PUSH fraîche sont envoyées à la
+    station H1L sélectionnée, uniquement après validation SDP et nomination
+    ICE avec réponse STUN authentifiée. Pas de commande de caméra/vidéo,
+    PTZ, rejeu de secrets de la capture, stockage des paquets ni révélation de secrets.
+    Exige le consentement actif explicite et respecte les limitations RTC.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+    autoriser_auth_kcp_active:
+      required: true
+      selector:
+        boolean: {}
+
+audit_details_auth_kcp_c9_b131:
+  name: C9 n°2 — identification des champs auth KCP B131 (lecture seule)
+  description: >-
+    Vérifie l'emplacement et la structure des champs auth sans afficher les
+    données, compare la formule MD5 avec les sources OEM et le mot de passe
+    de compte actuel, et compare facultativement les deux captures personnelles.
+    Aucune session réseau active, aucune commande vidéo ni PTZ.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+audit_correspondances_auth_c9_b132:
+  name: C9 n°2 — correspondances anonymisées des extensions auth KCP B132
+  description: >-
+    Compare les deux champs texte de l'authentification KCP C9 aux identifiants
+    connus (UID compte, caméra, H1L, références OEM et capture) sans afficher
+    aucun identifiant, mot de passe, empreinte, paquet ou secret.
+    Aucune commande active SDP, STUN, KCP, vidéo ou PTZ.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+audit_schema_auth_c9_b133:
+  name: C9 n°2 — vérifier la structure auth 296 octets B133
+  description: Analyse hors ligne des champs station et caméra, sans aucun échange LAN ni secret retourné.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+essai_auth_rtc_c9_b133:
+  name: C9 n°2 — essai expérimental d'authentification KCP RTC B133
+  description: Une seule tentative KCP après SDP, ICE et WINS, avec mot de passe RTC récent et clé locale C9 ; aucune commande vidéo/PTZ. Formule MD5 expérimentale, confirmation supplémentaire obligatoire.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_auth_kcp_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_auth_experimentale_b133:
+      required: true
+      selector:
+        boolean: {}
+
+
+audit_cle_h1l_c9_b134:
+  name: C9 n°2 — audit clé de station H1L B134
+  description: Vérification hors ligne du rattachement H1L/C9 et de la clé station. N'envoie pas de SDP, STUN ni KCP.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+essai_auth_station_c9_b134:
+  name: C9 n°2 — authentification KCP expérimentale clé H1L B134
+  description: Après SDP/ICE/WINS, envoie au maximum une authentification KCP avec mot de passe RTC récent et clé H1L courante. Hypothèse NON confirmée ; aucune vidéo/PTZ.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_auth_kcp_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_essai_cle_station_b134:
+      required: true
+      selector:
+        boolean: {}
+
+audit_commandes_kcp_c9_b135:
+  name: C9 n°2 — audit des cinq commandes KCP après authentification B135
+  description: Lecture hors ligne des cinq commandes après l’authentification, sans valeurs privées ni trafic réseau local.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+audit_champs_commandes_c9_b136:
+  name: C9 n°2 — audit des champs KCP après authentification B136
+  description: Analyse uniquement la structure des cinq commandes et compare facultativement la seconde capture, sans envoyer de paquets locaux.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+audit_profil_demarrage_c9_b137:
+  name: C9 n°2 — vérifier le profil de démarrage vidéo B137
+  description: Analyse hors ligne uniquement des cinq commandes C9 et vérification de leur reconstruction à partir de l’inventaire OEM actuel. Aucun paquet LAN.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+essai_demarrage_video_c9_b137:
+  name: C9 n°2 — essai de démarrage vidéo local B137
+  description: Test actif expérimental sur la station H1L, seulement après SDP, ICE, WINS, ACK auth et consentement explicite. Aucune commande PTZ.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_auth_kcp_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_essai_cle_station_b134:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_commandes_video_c9_b137:
+      required: true
+      selector:
+        boolean: {}
+
+
+essai_analyse_media_c9_b138:
+  name: C9 n°2 — diagnostic vidéo KCP/H.265 B138
+  description: Test actif borné avec cinq commandes B137 reconstruites, acquittement KCP avec UNA, comptage des doublons et reconnaissance H.265. Aucun flux enregistré ou retourné, aucun PTZ.
+  fields:
+    nom_capture:
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+          mode: box
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_auth_kcp_active:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_essai_cle_station_b134:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_commandes_video_c9_b137:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_analyse_media_c9_b138:
+      required: true
+      selector:
+        boolean: {}
+
+
+demarrer_direct_c9_b139:
+  name: C9 H1L - lancer direct LAN experimente B139
+  description: >-
+    Demarre uniquement sur autorisation explicite un direct C9 n2 vers une entite
+    camera Home Assistant MJPEG, reutilisant le decodeur HEVC C5L.
+    Premiere version experimentale limitee a 100 secondes au total, sans PTZ
+    et sans stockage video sur disque. Un seul direct a la fois.
+  fields:
+    nom_capture:
+      name: Nom de la capture personnelle C9
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: Adresse IPv4 locale H1L
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Numero de la C9 (2)
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 2
+          step: 1
+    confirmation_capture_personnelle:
+      name: Confirmation capture personnelle
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: Confirmation camera numero 2
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: autoriser reconstitution oem
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: confirmation envoi mot de passe
+      required: false
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      name: autoriser configuration rtc
+      required: false
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      name: autoriser offre lan active
+      required: false
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      name: autoriser test ice actif
+      required: false
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      name: autoriser test kcp actif
+      required: false
+      selector:
+        boolean: {}
+    autoriser_auth_kcp_active:
+      name: autoriser auth kcp active
+      required: false
+      selector:
+        boolean: {}
+    autoriser_essai_cle_station_b134:
+      name: autoriser essai cle station b134
+      required: false
+      selector:
+        boolean: {}
+    autoriser_commandes_video_c9_b137:
+      name: autoriser commandes video c9 b137
+      required: false
+      selector:
+        boolean: {}
+    autoriser_direct_c9_b139:
+      name: autoriser direct c9 b139
+      required: false
+      selector:
+        boolean: {}
+
+statut_direct_c9_b139:
+  name: C9 H1L - statut direct B139
+  description: Etat et compteurs de decodage sans secrets ni images brutes.
+
+arreter_direct_c9_b139:
+  name: C9 H1L - arreter direct B139
+  description: Arrete la session C9 et libere le processus FFmpeg.
+
+demarrer_direct_c9_b141:
+  name: C9 H1L - lancer direct LAN experimente B139
+  description: >-
+    Demarre uniquement sur autorisation explicite un direct C9 1 ou 2 vers une entite
+    camera Home Assistant MJPEG, reutilisant le decodeur HEVC C5L.
+    Direct persistant sans limite totale de temps ni temporisation de 15 min.
+    Arret manuel, nettoyage a la fermeture, reconnexion avec temporisation courte.
+    Video non enregistree.
+  fields:
+    nom_capture:
+      name: Nom de la capture personnelle C9
+      required: true
+      selector:
+        text: {}
+    ip_station:
+      name: Adresse IPv4 locale H1L
+      required: true
+      selector:
+        text: {}
+    camera_numero:
+      name: Numero de la C9 (2)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    confirmation_capture_personnelle:
+      name: Confirmation capture personnelle
+      required: true
+      selector:
+        boolean: {}
+    confirmation_camera_candidate:
+      name: Confirmation camera selectionnee
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      name: autoriser reconstitution oem
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      name: confirmation envoi mot de passe
+      required: false
+      selector:
+        boolean: {}
+    autoriser_configuration_rtc:
+      name: autoriser configuration rtc
+      required: false
+      selector:
+        boolean: {}
+    autoriser_offre_lan_active:
+      name: autoriser offre lan active
+      required: false
+      selector:
+        boolean: {}
+    autoriser_test_ice_actif:
+      name: autoriser test ice actif
+      required: false
+      selector:
+        boolean: {}
+    autoriser_test_kcp_actif:
+      name: autoriser test kcp actif
+      required: false
+      selector:
+        boolean: {}
+    autoriser_auth_kcp_active:
+      name: autoriser auth kcp active
+      required: false
+      selector:
+        boolean: {}
+    autoriser_essai_cle_station_b134:
+      name: autoriser essai cle station b134
+      required: false
+      selector:
+        boolean: {}
+    autoriser_commandes_video_c9_b137:
+      name: autoriser commandes video c9 b137
+      required: false
+      selector:
+        boolean: {}
+    autoriser_direct_c9_b139:
+      name: autoriser direct c9 b139
+      required: false
+      selector:
+        boolean: {}
+
+
+statut_direct_c9_b141:
+  name: C9 H1L - etat du direct persistant
+  description: Etat du direct de la camera C9 choisie, sans secrets.
+  fields:
+    camera_numero:
+      name: Numero C9
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+
+arreter_direct_c9_b141:
+  name: C9 H1L - arreter le direct persistant
+  description: Ferme uniquement la session choisie et son FFmpeg.
+  fields:
+    camera_numero:
+      name: Numero C9
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+
+statut_ptz_c9_b141:
+  name: C9 - statut des commandes PTZ experimentees
+  description: Verification sans mouvement de la presence OEM direction et STOP.
+  fields:
+    camera_numero:
+      name: Numero C9
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+
+appui_ptz_c9_b141:
+  name: C9 - appui direction PTZ (protege)
+  description: Mouvement experimental uniquement si les DP sont presentes. STOP automatique sur relachement ou watchdog.
+  fields:
+    camera_numero:
+      name: Numero C9
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    direction:
+      name: Direction
+      required: true
+      selector:
+        select:
+          options: [haut, bas, gauche, droite]
+    geste_id:
+      name: Identifiant du geste
+      required: true
+      selector:
+        text: {}
+
+relache_ptz_c9_b141:
+  name: C9 - relacher et stopper mouvement
+  description: Arrete la direction du geste en cours.
+  fields:
+    camera_numero:
+      name: Numero C9
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    geste_id:
+      name: Identifiant du geste
+      required: true
+      selector:
+        text: {}
+
+stop_ptz_c9_b141:
+  name: C9 - STOP PTZ de secours
+  description: Tente un STOP independant (arret reel non mesure).
+  fields:
+    camera_numero:
+      name: Numero C9
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+
+
+audit_preparation_sans_capture_c9_b144:
+  name: C9 H1L — Vérifier la préparation sans PCAP (B144)
+  description: >-
+    Vérifie l'identité C9/H1L depuis l'inventaire OEM et les paramètres
+    connus du protocole. Ne lance pas la vidéo ni de négociation LAN.
+    Un rafraîchissement OEM HTTPS reste facultatif et explicitement autorisé.
+  fields:
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+demarrer_direct_c9_b144:
+  name: C9 H1L — Démarrer le direct sans PCAP (B144)
+  description: >-
+    Démarre un direct C9 autonome expérimental avec identifiants OEM actuels,
+    session RTC récente et profil IMM/KCP reconstruit. Aucune capture PCAP
+    personnelle n'est nécessaire. Déclenche les connexions LAN/HTTPS uniquement
+    après autorisation explicite. Arrêt et statut via services B141 existants.
+  fields:
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_direct_c9_b144:
+      required: true
+      selector:
+        boolean: {}
+
+
+demarrer_direct_c9_b145:
+  name: C9 H1L — Démarrer et suivre les étapes sans PCAP (B145)
+  description: >-
+    Démarrage explicite et expérimental. Retourne les étapes de la liaison
+    H1L, de l'identité OEM et de la vidéo, sans identifiant ni secret.
+    Arrête automatiquement les répétitions d'échec avant offre 0x20.
+  fields:
+    camera_numero:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_direct_c9_b145:
+      required: true
+      selector:
+        boolean: {}
+
+
+tester_port_tcp_h1l_b146:
+  name: H1L — Tester le port 6668 depuis Home Assistant (B146)
+  description: >-
+    Ouvre puis referme une seule connexion TCP depuis le processus Home Assistant Core,
+    sans identifiant, commande vidéo, PTZ ou message Tuya.
+  fields:
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    confirmation_test_tcp_h1l:
+      required: true
+      selector:
+        boolean: {}
+
+comparer_profil_video_c9_b147:
+  name: C9 H1L — Comparer le profil vidéo capturé au modèle sans PCAP (B147)
+  description: >-
+    Comparaison locale et facultative de cinq commandes de la C9 n°2
+    déjà validée. Aucun envoi LAN ni donnée sensible retournée.
+    Aucune capture requise pour le fonctionnement normal des caméras.
+  fields:
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    confirmation_capture_personnelle:
+      required: true
+      selector:
+        boolean: {}
+    autoriser_reconstitution_oem:
+      required: false
+      selector:
+        boolean: {}
+    confirmation_envoi_mot_de_passe:
+      required: false
+      selector:
+        boolean: {}
+
+
+audit_routage_c9_h1l_b151:
+  name: C9 H1L — Audit des identifiants et profils PCAP (B151)
+  description: >-
+    Diagnostic hors ligne uniquement. Vérifie les deux identités OEM en cache et,
+    si présentes dans /config/smart_aosu_traces/, compare les anciennes captures
+    personnelles de développement. Ne lance aucune commande, aucune connexion,
+    aucun déchiffrement inventé lorsque l'offre SDP de capture est absente.
+    Les PCAP ne sont jamais requis pour le direct normal.
+  fields:
+    ip_station:
+      required: true
+      selector:
+        text: {}
+    confirmation_captures_personnelles:
+      required: true
+      selector:
+        boolean: {}
+
+autoriser_essai_ptz_c9_b159:
+  name: C9 H1L - autoriser un essai PTZ temporaire (B159)
+  description: >-
+    Autorise pendant 120 secondes des mouvements PTZ experimentaux sur une C9
+    dont le direct affiche deja des images. Identite OEM verifiee sans PCAP,
+    aucun mouvement automatique. Les commandes 119/116 ont ete utilisees sur
+    la C5L mais ne sont pas certifiees pour la C9. STOP et watchdog tentent
+    un arret sans pouvoir verifier physiquement le moteur. Garder AOSU pret.
+  fields:
+    camera_numero:
+      name: Numero C9
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    confirmation_deplacement:
+      name: J'autorise un essai de mouvement physique de cette C9
+      required: true
+      selector:
+        boolean: {}
+    confirmation_stop_disponible:
+      name: Je peux ouvrir AOSU immediatement si le STOP ne fonctionne pas
+      required: true
+      selector:
+        boolean: {}
+
+autoriser_ptz_c9_stable:
+  name: C9 H1L - valider definitivement le PTZ (0.8.9)
+  description: >-
+    Enregistre dans Home Assistant une autorisation permanente pour une C9
+    identifiee sans PCAP. Requiert une image du direct et la confirmation que
+    cette camera a deja ete deplacee et qu'elle s'est physiquement arretee au
+    relachement. Aucune commande de mouvement n'est envoyee par cette action.
+    L'autorisation est liee a l'identite OEM de cette camera, et ne s'applique
+    pas automatiquement a la deuxieme C9. Le STOP et le watchdog restent actifs.
+  fields:
+    camera_numero:
+      name: Numero de la camera C9 (1 ou 2)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1
+    confirmation_camera_correcte:
+      name: Je confirme que je vois la bonne camera dans son direct
+      required: true
+      selector:
+        boolean: {}
+    confirmation_deplacement_et_stop:
+      name: Je confirme le mouvement et l'arret physique apres relachement
+      required: true
+      selector:
+        boolean: {}
+
+retirer_ptz_c9_stable:
+  name: C9 H1L - retirer l'autorisation PTZ (0.8.9)
+  description: >-
+    Retire l'autorisation permanente de cette camera uniquement, sans toucher
+    aux autres cameras. Si un mouvement est en cours, STOP est demande.
+  fields:
+    camera_numero:
+      name: Numero de la camera C9 (1 ou 2)
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2
+          step: 1

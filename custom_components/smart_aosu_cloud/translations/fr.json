@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion Smart AOSU Cloud (expérimental)",
+        "description": "Copiez d'abord votre APK et le profil local dans /config/smart_aosu_cloud. Connexion cloud non officielle. Le mot de passe est conservé dans la configuration Home Assistant.",
+        "data": {
+          "email": "Adresse e-mail AOSU",
+          "password": "Mot de passe AOSU"
+        }
+      }
+    },
+    "error": {
+      "invalid_input": "Adresse e-mail ou mot de passe invalide"
+    },
+    "abort": {
+      "already_configured": "Ce compte est déjà configuré"
+    }
+  },
+  "services": {
+    "inspect_datapoints": {
+      "name": "Inspecter les paramètres (expérimental)",
+      "description": "Lire manuellement les noms et types des paramètres IoT ; aucune valeur ni identifiant privé affiché."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fréquence d’actualisation",
+        "description": "Une requête de lecture pour les quatre appareils à chaque actualisation. Des appels trop fréquents peuvent être limités par AOSU.",
+        "data": {
+          "scan_interval_seconds": "Intervalle entre deux lectures"
+        }
+      }
+    },
+    "error": {
+      "invalid_interval": "Intervalle non autorisé"
+    }
+  }
+}
