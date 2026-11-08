@@ -304,6 +304,10 @@ _READ_ACTIONS = {
     'm.life.home.space.list': '1.0',
     'm.life.my.group.device.list': '2.2',
     'thing.m.rtc.config.get': '1.0',
+    # C9C beta14 read-only RTC probe: Tuya IPC P2P clients use this
+    # precise action with API v1.0 and a single devId. Never enabled for
+    # the existing live video or PTZ paths.
+    'm.ipc.v4.rtc.config.get': '1.0',
     # Official Tuya Smart App SDK IPC configuration; v2.0, devId only.
     'thing.m.ipc.config.get': '2.0',
     'thing.m.device.get': '4.1',

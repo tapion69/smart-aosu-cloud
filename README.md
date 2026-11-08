@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta13 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta14 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -86,3 +86,11 @@ Le bouton manuel **Observer MQTT** conserve le fonctionnement passif de la bêta
 Le direct officiel a produit 18 trames MQTT déchiffrables, dont un `answer` SDP AES/KCP et des `candidate` (protocole 302), émises par la cible Tuya et dirigées vers l'utilisateur. Le moteur de direct expérimental n'obtient toujours aucune réponse SDP. Il utilise actuellement la méthode RTC `thing.m.rtc.config.get`, alors que des clients IPC indépendants utilisent `m.ipc.v4.rtc.config.get`.
 
 Ajout d'un bouton **Comparer RTC IPC** : une lecture expresse de `m.ipc.v4.rtc.config.get` sur la C9C autonome **sans MQTT, sans offre, sans vidéo ni PTZ**. La réponse n'est pas conservée : seuls les drapeaux de validité/présence ICE, TURN, relais TCP/UDP, clé locale, session et `moto_id` sont retournés. Les limitations d'inventaire/login/RTC restent actives. Aucun changement de méthode RTC dans le direct, ni dans la C5L ou le H1L. L'identité AOSU/Tuya reste non définitivement confirmée, malgré la signalisation officielle observée.
+
+## 0.8.13-beta14 — correction de la lecture RTC IPC-v4
+
+Le bouton **Comparer RTC IPC** de la beta13 renvoyait `erreur_api_tuya`, non pas parce que la C9C ou Tuya avait rejeté l'appel, mais parce que notre garde-fou `do_oem_read` refusait localement l'action `m.ipc.v4.rtc.config.get` absente de sa liste autorisée. **Aucune requête réseau RTC-v4 n'avait pu être émise.**
+
+Cette correction ajoute exclusivement cette lecture (`v=1.0`, `{"devId":"..."}`) à la liste autorisée ; seuls les diagnostics manuels C9C l'appellent, jamais le direct C5L/H1L, ni le PTZ. L'éventuel nouveau refus affiche uniquement une origine déterminée parmi `validation_locale`, `reponse_http_invalide`, `reseau_ou_dechiffrement`, `refus_du_serveur` ou `erreur_inconnue`. Aucun texte brut de réponse, code inconnu ou identifiant privé n'est retourné.
+
+**Test** : mettre à jour, redémarrer et cliquer **Comparer RTC IPC**, après expiration de la protection de 5 minutes. Ne pas lancer le direct depuis Home Assistant pendant ce test.

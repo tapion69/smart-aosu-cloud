@@ -546,8 +546,32 @@ async def async_setup(hass,config):
             'erreur_api_tuya','erreur_execution_sans_details',
             'audit_rtc_v4_c9c_lecture_seule_uniquement')
         state=report.get('etat')
+        # Backend errors are fixed local codes or raw vendor refusals.
+        # Never echo untrusted reasons to the browser, only fixed categories.
+        reason=report.get('raison')
+        if state=='configuration_rtc_refusee':
+            origine_echec='refus_du_serveur'
+        elif state=='erreur_api_tuya':
+            if reason in (
+                'api_lecture_non_autorisee','parametres_lecture_invalides',
+                'version_api_invalide','destination_non_autorisee',
+                'identite_installation_invalide','session_tuya_absente'):
+                origine_echec='validation_locale'
+            elif reason in (
+                'http_non_200','reponse_non_chiffree_ou_absente',
+                'reponse_trop_volumineuse'):
+                origine_echec='reponse_http_invalide'
+            elif reason=='reseau_ou_reponse_invalide':
+                origine_echec='reseau_ou_dechiffrement'
+            else:
+                origine_echec='erreur_inconnue'
+        elif state=='configuration_rtc_obtenue':
+            origine_echec='aucune'
+        else:
+            origine_echec='non_determinee'
         return {
-            'diagnostic':'aosu_c9c_rtc_v4_passif_b13',
+            'diagnostic':'aosu_c9c_rtc_v4_passif_b14',
+            'origine_echec':origine_echec,
             'etat':state if state in allowed_status else 'autre',
             'rtc_ipc_v4_accepte':report.get('configuration_rtc_acceptee') is True,
             'configuration_media_complete':report.get('media_v4_pret') is True,

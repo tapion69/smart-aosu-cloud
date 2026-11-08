@@ -215,6 +215,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       if(!d||typeof d.etat!=='string')return;
       if(d.etat!=='configuration_rtc_obtenue'){
         this._message('RTC IPC-v4 : '+d.etat+
+          ' ; origine : '+String(d.origine_echec||'non_determinee')+
           '. Aucun message MQTT, vidéo ou PTZ envoyé.');
         return;
       }

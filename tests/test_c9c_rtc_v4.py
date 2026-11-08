@@ -18,6 +18,13 @@ class V4AuditSafetyTests(unittest.TestCase):
         self.assertIn("or standalone_c9c_v4_rtc_audit):",INV)
         self.assertIn("client._tuya_oem_media_bootstrap=None",INV)
 
+    def test_v4_action_whitelisted_with_correct_api_version(self):
+        gateway=(ROOT/"tuya_uid_gateway.py").read_text(encoding="utf-8")
+        self.assertIn("'m.ipc.v4.rtc.config.get': '1.0'",gateway)
+        self.assertIn("if action not in _READ_ACTIONS:",gateway)
+        self.assertIn("api_version=_READ_ACTIONS[action]",gateway)
+        self.assertIn("'orig"+"ine_echec':origine_echec",INIT)
+
     def test_service_does_not_send_offer(self):
         self.assertIn("async def comparer_rtc_ipc_v4_c9c_autonome(call):",INIT)
         self.assertIn("standalone_c9c_v4_rtc_audit=True,tester_mqtt=False",INIT)
