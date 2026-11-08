@@ -335,7 +335,12 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       ' ; commande envoyée : '+(wake.wake_envoye===true?'oui':'non')+
       ' ; acquittée MQTT : '+(wake.puback_wake===true?'oui':'non')+
       ' ; DP149 true : '+count(wake.dp149_vrai)+
-      ' ; offre autorisée : '+(wake.offre_autorisee===true?'oui':'non') : '';
+      ' ; offre autorisée : '+(wake.offre_autorisee===true?'oui':'non')+
+      ' ; même connexion MQTT : '+(wake.socket_reutilisee===true?'oui':'non')+
+      ' ; offre envoyée : '+(wake.offre_effectuee===true?'oui':'non')+
+      ' ; ACK offre : '+(wake.puback_offre===true?'oui':'non')+
+      ' ; délai réveil : '+count(wake.delai_reveil_confirme_ms)+' ms'+
+      ' ; délai confirmation/offre : '+count(wake.delai_confirmation_offre_ms)+' ms' : '';
     const extra=(sig.reponses_302_hors_session_answer!==undefined
       ? ' ; hors session 302 réponse/candidat : '+
         count(sig.reponses_302_hors_session_answer)+'/'+count(sig.reponses_302_hors_session_candidate)+

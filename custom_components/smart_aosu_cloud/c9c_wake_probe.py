@@ -133,6 +133,95 @@ def _attempt(auth: Any, uid: str, device_id: str, local_key: str) -> dict:
     return base
 
 
+def try_wake_c9c_on_open_socket(client: Any, session: Any,
+                                media: PrivateMediaBootstrap, sock: Any,
+                                auth_topic: str, *, stop_event: Any = None) -> dict:
+    """Wake C9C on caller's already authenticated + subscribed MQTT socket.
+
+    Owns neither CONNECT nor SUBSCRIBE nor DISCONNECT. The same 10-minute
+    cooldown protects this path and the separate manual wake button.
+    """
+    result = {
+        "etat": "non_lance", "socket_reutilisee": True,
+        "wake_envoye": False, "puback_wake": False,
+        "dp149_vrai": 0, "dp149_faux": 0,
+        "messages_appareil": 0, "messages_dechiffres": 0,
+        "delai_reveil_confirme_ms": None,
+        "identifiants_retournes": False, "secrets_retournes": False,
+    }
+    if not _WAKE_LOCK.acquire(blocking=False):
+        return {**result, "etat": "test_reveil_deja_en_cours"}
+    try:
+        now = time.monotonic()
+        if now < _LAST_WAKE.get(id(client), 0):
+            return {**result, "etat": "limite_reveil_dix_minutes"}
+        if not isinstance(media, PrivateMediaBootstrap) or not media.is_fresh():
+            return {**result, "etat": "configuration_rtc_expiree"}
+        if media.owner_uid != getattr(session, "uid", None):
+            return {**result, "etat": "session_tuya_incoherente"}
+        if not isinstance(auth_topic, str) or not auth_topic:
+            return {**result, "etat": "preparation_reveil_invalide"}
+        try:
+            topic, payload = build_wake_packet(media.device_id, media.local_key)
+            key = media.local_key.encode("utf-8")
+        except (ValueError, TypeError, AttributeError):
+            return {**result, "etat": "preparation_reveil_invalide"}
+        _LAST_WAKE[id(client)] = now + _COOLDOWN_S
+        started = time.monotonic()
+        try:
+            # Wake QoS1 packet id 2 differs from SDP offer packet id 11.
+            sock.sendall(_mqtt_publish(topic, payload, 2))
+            result["wake_envoye"] = True
+            deadline = started + _WAIT_S
+            while time.monotonic() < deadline:
+                if stop_event is not None and stop_event.is_set():
+                    result["etat"] = "arret_demande"
+                    return result
+                sock.settimeout(max(0.2, min(1.5, deadline - time.monotonic())))
+                try:
+                    typ, msg = _mqtt_read(sock)
+                except (socket.timeout, TimeoutError):
+                    continue
+                if typ == 0x40:
+                    if msg == b"\x00\x02":
+                        result["puback_wake"] = True
+                    if result["puback_wake"] and result["dp149_vrai"]:
+                        break
+                    continue
+                if typ & 0xF0 != 0x30:
+                    continue
+                recv_topic, raw, packet_id = _incoming_pub(typ, msg)
+                if packet_id is not None:
+                    sock.sendall(b"\x40\x02" + struct.pack("!H", packet_id))
+                if recv_topic != auth_topic or typ & 0x01:
+                    continue
+                result["messages_appareil"] += 1
+                flags = classify_observed_signal(
+                    raw, key=key, device_id=media.device_id,
+                    uid=session.uid, decoder=_decode_signal)
+                if flags["decoded"]:
+                    result["messages_dechiffres"] += 1
+                    if flags["dp149_present"]:
+                        result["dp149_vrai"] += int(flags["dp149_true"])
+                        result["dp149_faux"] += int(flags["dp149_false"])
+                if result["puback_wake"] and result["dp149_vrai"]:
+                    break
+            result["etat"] = "observation_terminee"
+            if result["puback_wake"] and result["dp149_vrai"]:
+                result["delai_reveil_confirme_ms"] = max(
+                    0, min(60000, int((time.monotonic() - started) * 1000)))
+            return result
+        except (socket.timeout, TimeoutError):
+            result["etat"] = "delai_mqtt_depasse"
+        except (OSError, ssl.SSLError, ConnectionError):
+            result["etat"] = "reseau_mqtt_indisponible"
+        except (ValueError, TypeError, EOFError, KeyError):
+            result["etat"] = "trame_mqtt_invalide"
+        return result
+    finally:
+        _WAKE_LOCK.release()
+
+
 def try_wake_c9c_once(client: Any, identity: Any, signer: Any,
                       session: Any, install_id: str,
                       media: PrivateMediaBootstrap) -> dict:

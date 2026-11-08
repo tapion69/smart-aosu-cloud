@@ -230,7 +230,8 @@ def _observe_mqtt_while_video(sock, *, auth_topic: str, key: bytes,
 
 def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bool=False, tester_kcp:bool=False,tester_media:bool=False,
               local_capture_directory:str|None=None,live_preview=None,
-              use_moto_id:bool=False)->dict[str,object]:
+              use_moto_id:bool=False, wake_before_offer:bool=False,
+              wake_client:Any=None, wake_session:Any=None)->dict[str,object]:
     """One connection, one sig-query, one offer, bounded read, best-effort disconnect."""
     result={
         'connexion_tls_validee':False,'connack_accepte':False,
@@ -326,9 +327,42 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                     result['abonnement_signalisation_accepte']=True
                     diag['etape']='abonnement_confirme'
                     diag['abonnement_confirme']=True
+                    confirmed_at = None
+                    if wake_before_offer:
+                        from .c9c_wake_probe import try_wake_c9c_on_open_socket
+                        wake = try_wake_c9c_on_open_socket(
+                            wake_client, wake_session, media, sock, auth.topic,
+                            stop_event=getattr(live_preview, '_stop', None))
+                        awake = (wake.get('wake_envoye') is True
+                                 and wake.get('puback_wake') is True
+                                 and type(wake.get('dp149_vrai')) is int
+                                 and wake['dp149_vrai'] > 0)
+                        result['reveil_et_video'] = {
+                            'etat': wake.get('etat', 'non_disponible'),
+                            'socket_reutilisee': True,
+                            'wake_envoye': wake.get('wake_envoye') is True,
+                            'puback_wake': wake.get('puback_wake') is True,
+                            'dp149_vrai': min(100, wake.get('dp149_vrai', 0))
+                                if type(wake.get('dp149_vrai')) is int else 0,
+                            'delai_reveil_confirme_ms':
+                                wake.get('delai_reveil_confirme_ms'),
+                            'offre_autorisee': awake, 'offre_effectuee': False,
+                            'puback_offre': False,
+                            'delai_confirmation_offre_ms': None,
+                            'secrets_retournes': False,
+                        }
+                        if not awake:
+                            result['etat'] = 'reveil_non_confirme_offre_non_envoyee'
+                            return result
+                        confirmed_at = time.monotonic()
                     _send_once(sock,key,pubtopic,source,1,10,22,{'reqType':'sigQry'})
                     result['mqtt_messages_publies']=1
                     _send_once(sock,key,pubtopic,source,2,11,302,offer)
+                    if wake_before_offer:
+                        result['reveil_et_video']['offre_effectuee'] = True
+                        result['reveil_et_video']['delai_confirmation_offre_ms'] = (
+                            max(0, min(60000, int(
+                                (time.monotonic() - confirmed_at) * 1000))))
                     sent_offer=True
                     result['offre_sdp_envoyee']=True
                     diag['etape']='offre_envoyee'
@@ -374,6 +408,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             if int.from_bytes(p,'big')==11:
                                 result['ack_offre_mqtt']=True
                                 diag['puback_offre']=True
+                                if wake_before_offer:
+                                    result['reveil_et_video']['puback_offre']=True
                             continue
                         if t&0xF0!=0x30:continue
                         result['mqtt_messages_lus']+=1
@@ -528,13 +564,17 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
 def run_tuya_mqtt_offer(client:Any, identity:Any, signer:Any, session:Any,
                         install_id:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bool=False, tester_kcp:bool=False,tester_media:bool=False,
               local_capture_directory:str|None=None,live_preview=None,interactive_live:bool=False,
-              use_standalone_c9c_moto_id:bool=False)->dict[str,object]:
+              use_standalone_c9c_moto_id:bool=False,
+              wake_before_offer:bool=False)->dict[str,object]:
     """Call only from the explicitly confirmed b18 inventory action."""
     outcome={'diagnostic':'aosu_tuya_mqtt_offer_b18','offre_sdp_envoyee':False,
              'session_video_creee':False,'secrets_retournes':False,
              'commande_camera':0,'mot_de_passe_AOSU_envoye':False}
     interactive_live = (interactive_live is True and live_preview is not None
                         and tester_relais_tcp and tester_kcp and tester_media)
+    if wake_before_offer and not (interactive_live
+                                  and use_standalone_c9c_moto_id is True):
+        return {**outcome,'etat':'reveil_video_non_autorise'}
     if not _OFFER_LOCK.acquire(blocking=False):
         return {**outcome,'etat':'offre_deja_en_cours'}
     try:
@@ -553,6 +593,8 @@ def run_tuya_mqtt_offer(client:Any, identity:Any, signer:Any, session:Any,
             _OFFER_NEXT_ALLOWED[id(client)]=now+1800
         return {**outcome,**_probe(credentials,session.uid,media,tester_relais_tcp=tester_relais_tcp,tester_kcp=tester_kcp,tester_media=tester_media,
              local_capture_directory=local_capture_directory,live_preview=live_preview,
-             use_moto_id=(interactive_live and use_standalone_c9c_moto_id is True))}
+             use_moto_id=(interactive_live and use_standalone_c9c_moto_id is True),
+             wake_before_offer=wake_before_offer, wake_client=client,
+             wake_session=session)}
     finally:
         _OFFER_LOCK.release()

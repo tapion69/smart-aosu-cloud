@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta20 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta21 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -150,3 +150,19 @@ Nouveau bouton manuel **Réveil + vidéo** (distinct de **Essayer la vidéo**). 
 Ceci est un essai P2P actif, **réservé au clic explicite sur la carte C9C autonome**, et non une automatisation. L'ancienne commande « Essayer la vidéo » conserve son comportement et aucun contrôleur C5L/H1L, PTZ, codec ou transport n'a été modifié. Le direct peut échouer malgré un réveil confirmé si l'offre MQTT est incompatible. Aucune clé, adresse, identifiant, SDP ni message brut n'est affiché ou publié dans le dépôt.
 
 **Test** : attendre au minimum 10 minutes depuis la dernière commande de réveil, mettre à jour et redémarrer Home Assistant. Ne pas ouvrir l'application AOSU, cliquer une seule fois sur **Réveil + vidéo**, attendre la fin de la session, puis consulter `dernier_resultat.reveil_et_video` et `dernier_resultat.signalisation_b89`.
+
+
+## 0.8.13-beta21 — même connexion MQTT pour le réveil et la vidéo
+
+Le bouton **Réveil + vidéo** sur une unique C9C autonome conserve la même
+connexion MQTT/TLS authentifiée, sans nouvelle connexion entre le réveil et
+la publication de l'offre SDP. Après PUBACK du réveil et DP149=true,
+une seule offre vidéo est envoyée dans la même session. Si le réveil
+n'est pas confirmé sous 25 secondes, aucune offre n'est envoyée.
+Une tentative manuelle et dix minutes de pause entre deux réveils restent
+obligatoires. La C5L et les C9/H1L ne sont pas modifiées.
+
+Le diagnostic distingue réveil, PUBACK du réveil, envoi et PUBACK de l'offre
+vidéo, ainsi que les délais de réveil et de publication après confirmation.
+Un PUBACK ne prouve jamais que la caméra a accepté l'offre SDP.
+Cette bêta nécessite encore un essai réel sur la caméra externe.
