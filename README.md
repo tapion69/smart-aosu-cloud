@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta8 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta9 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -52,3 +52,11 @@ Bouton manuel **Fiche AOSU** sur la carte C9C autonome. Une seule requête HTTPS
 ## 0.8.13-beta8 — diagnostic RTC C9C autonome, sans vidéo
 
 Le PCAPdroid fourni pour la C9C autonome montre une réception distante par TURN/UDP et KCP, sans prouver le protocole de signalisation dans le TLS. Le bouton **Examiner RTC** fait une lecture volontaire et limitée de la configuration RTC pour l'unique candidat Tuya (qui reste **non confirmé**). Il affiche uniquement la présence des paramètres ICE, TURN, relais TCP/UDP, `moto_id` et la version `pv` si reconnue (2.2/2.3). Aucun identifiant, URL, clé, SDP ni contenu privé n'est retourné, enregistré ou publié. L'action peut demander une authentification au service Tuya. Elle **n'envoie aucune offre MQTT, ne lance aucune vidéo ni PTZ**. Un résultat RTC positif n'établit pas que la cible Tuya est bien la C9C. Les contrôleurs C5L/H1L sont inchangés.
+
+## 0.8.13-beta9 — essai moto_id sur C9C autonome
+
+D'après la documentation officielle Tuya WebRTC, `moto_id` est un champ facultatif de signalisation, renvoyé par la configuration lorsqu'il est pris en charge. La 0.8.13-beta8 indiquait un `moto_id` présent quelque part dans le RTC mais le moteur d'essai envoyait un champ vide dans l'offre.
+
+En bêta9, **uniquement après un clic sur « Essayer la vidéo » pour une unique C9C autonome**, l'intégration recherche `moto_id` dans des champs prédéfinis de la *même* réponse RTC fraîche ; s'il existe une valeur unique et valide, elle est mise dans l'offre MQTT et les messages de session associés (candidate/disconnect). Si la valeur est absente ou ambiguë, elle reste vide. Le rapport affiche seulement la source anonymisée et un booléen, jamais le `moto_id` lui-même. Les contrôleurs vidéo/PTZ des C5L et H1L restent inchangés.
+
+**Important :** la correspondance AOSU/Tuya de la C9C autonome reste non prouvée ; l'acceptation de la configuration RTC et une PUBACK MQTT ne prouvent pas la réception de l'offre par la caméra. L'essai doit être manuel, une seule tentative, sans PTZ.

@@ -125,7 +125,7 @@ def _incoming_pub(header:int,body:bytes)->tuple[str,bytes,int|None]:
     return topic,body[pos:],packet_id
 
 
-def _media_payload(media:PrivateMediaBootstrap, uid:str)->tuple[bytes,dict]:
+def _media_payload(media:PrivateMediaBootstrap, uid:str, *, use_moto_id:bool=False)->tuple[bytes,dict]:
     local=media.local_key.encode('utf-8')
     if len(local) not in (16,24,32):raise ValueError('local key length unsupported')
     if not media.is_fresh():raise ValueError('rtc expired')
@@ -135,9 +135,11 @@ def _media_payload(media:PrivateMediaBootstrap, uid:str)->tuple[bytes,dict]:
     rendezvous=f'{media.device_id}{int(time.time())}{secrets.token_hex(4)}'
     tcp=dict(media.relay);tcp['sessionId']=rendezvous
     trace=f'{media.trace_id}_{media.device_id}_{int(time.time()*1000)}'
+    moto=(media.moto_id if use_moto_id and
+          isinstance(media.moto_id,str) and 1<=len(media.moto_id)<=128 else '')
     header={
         'type':'offer','from':uid,'to':media.device_id,
-        'sessionid':media.session_id,'moto_id':'','path':'mqtt',
+        'sessionid':media.session_id,'moto_id':moto,'path':'mqtt',
         'trace_id':trace,'is_pre':0,'p2p_skill':1635,'security_level':3,
     }
     offer={'header':header,'msg':{'sdp':media.sdp_offer,'preconnect':True,
@@ -145,9 +147,9 @@ def _media_payload(media:PrivateMediaBootstrap, uid:str)->tuple[bytes,dict]:
     return local,offer
 
 
-def _disconnect(uid:str,media:PrivateMediaBootstrap)->dict:
+def _disconnect(uid:str,media:PrivateMediaBootstrap,*, moto_id:str='')->dict:
     return {'header':{'type':'disconnect','from':uid,'to':media.device_id,
-        'sessionid':media.session_id,'moto_id':'','path':'mqtt'},
+        'sessionid':media.session_id,'moto_id':moto_id,'path':'mqtt'},
         'msg':{'close_reason':4,'close_reason_local':0}}
 
 
@@ -226,7 +228,8 @@ def _observe_mqtt_while_video(sock, *, auth_topic: str, key: bytes,
 
 
 def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bool=False, tester_kcp:bool=False,tester_media:bool=False,
-              local_capture_directory:str|None=None,live_preview=None)->dict[str,object]:
+              local_capture_directory:str|None=None,live_preview=None,
+              use_moto_id:bool=False)->dict[str,object]:
     """One connection, one sig-query, one offer, bounded read, best-effort disconnect."""
     result={
         'connexion_tls_validee':False,'connack_accepte':False,
@@ -237,8 +240,9 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         'commande_ptz':0,'session_video_creee':False,'secrets_retournes':False,
     }
     try:
-        key,offer=_media_payload(media,uid)
+        key,offer=_media_payload(media,uid,use_moto_id=use_moto_id)
         result['signalisation_chiffree_preparee']=True
+        result['moto_id_applique']=bool(offer['header']['moto_id'])
     except (ValueError,AttributeError,TypeError):
         result['etat']='rtc_ou_cle_locale_incompatible'
         return result
@@ -319,7 +323,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             candidate_msg={
                                 'header':{
                                     'type':'candidate','from':uid,'to':media.device_id,
-                                    'sessionid':media.session_id,'moto_id':'',
+                                    'sessionid':media.session_id,
+                                    'moto_id':offer['header']['moto_id'],
                                     'path':'mqtt'},
                                 'msg':{'candidate':ice_candidate},
                             }
@@ -456,7 +461,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                         try:
                             # Best-effort release: a published offer may reserve the camera.
                             _send_once(sock,key,pubtopic,source,4 if ice_candidate else 3,
-                                       13 if ice_candidate else 12,302,_disconnect(uid,media))
+                                       13 if ice_candidate else 12,302,_disconnect(
+                                           uid,media,moto_id=offer['header']['moto_id']))
                             result['mqtt_messages_publies']+=1
                             result['deconnexion_signalee']=True
                         except (OSError,ValueError,ssl.SSLError):pass
@@ -471,7 +477,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
 
 def run_tuya_mqtt_offer(client:Any, identity:Any, signer:Any, session:Any,
                         install_id:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bool=False, tester_kcp:bool=False,tester_media:bool=False,
-              local_capture_directory:str|None=None,live_preview=None,interactive_live:bool=False)->dict[str,object]:
+              local_capture_directory:str|None=None,live_preview=None,interactive_live:bool=False,
+              use_standalone_c9c_moto_id:bool=False)->dict[str,object]:
     """Call only from the explicitly confirmed b18 inventory action."""
     outcome={'diagnostic':'aosu_tuya_mqtt_offer_b18','offre_sdp_envoyee':False,
              'session_video_creee':False,'secrets_retournes':False,
@@ -495,6 +502,7 @@ def run_tuya_mqtt_offer(client:Any, identity:Any, signer:Any, session:Any,
         if not interactive_live:
             _OFFER_NEXT_ALLOWED[id(client)]=now+1800
         return {**outcome,**_probe(credentials,session.uid,media,tester_relais_tcp=tester_relais_tcp,tester_kcp=tester_kcp,tester_media=tester_media,
-             local_capture_directory=local_capture_directory,live_preview=live_preview)}
+             local_capture_directory=local_capture_directory,live_preview=live_preview,
+             use_moto_id=(interactive_live and use_standalone_c9c_moto_id is True))}
     finally:
         _OFFER_LOCK.release()

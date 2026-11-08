@@ -16,6 +16,7 @@ from .tuya_mqtt_signaling import run_tuya_mqtt_signalisation
 from .tuya_mqtt_offer import run_tuya_mqtt_offer
 from .camera_topology import select_tuya_standalone_target
 from .c9c_rtc_schema import summarize_c9c_rtc_schema
+from .c9c_moto_signal import resolve_rtc_moto_id
 
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
@@ -380,6 +381,15 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 out['rtc_c9c_schema']=summarize_c9c_rtc_schema(rtc, all_devices[target])
             media,private=inspect_rtc_media(rtc,target,all_devices[target].get('localKey',''),session.uid)
             out['media_bootstrap']=media
+            if standalone_c9c_video_test:
+                # Only this manual video mode may consume the resolved RTC
+                # moto_id. The C5L / H1L paths stay bit-for-bit unchanged.
+                moto_value, moto_source=resolve_rtc_moto_id(rtc)
+                out['moto_id_source_rtc']=moto_source
+                out['moto_id_rtc_exploitable']=bool(moto_value)
+                if private is not None:
+                    private.moto_id=moto_value
+
             # Retain only briefly in RAM. RTC sessions are minted per request; never persist.
             if private is not None:
                 client._tuya_oem_media_bootstrap=private
@@ -390,7 +400,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     client,identity,signer,session,install_id,private,
                     tester_relais_tcp=tester_relais_tcp,tester_kcp=tester_kcp, tester_media=tester_media,
                     local_capture_directory=(repertoire_capture_locale if capturer_media_localement else None),
-                    live_preview=live_preview, interactive_live=interactive_live)
+                    live_preview=live_preview, interactive_live=interactive_live,
+                    use_standalone_c9c_moto_id=(standalone_c9c_video_test is True))
                 # A startup burst is a camera command; report it honestly, unlike read-only stages.
                 try:
                     media_result=(out['signalisation_mqtt'].get('relais_tcp') or {}).get('kcp',{}).get('media_start',{})

@@ -682,6 +682,12 @@ class LiveController:
                 'inventaire_cache_utilise':report.get('inventaire_cache_utilise'),
                 'configuration_rtc_acceptee':report.get('configuration_rtc_acceptee'),
                 'rtc_parametres_presents':bool((report.get('rtc') or {}).get('reponse_non_vide')),
+                'moto_id_source_rtc':report.get('moto_id_source_rtc','non_applicable')
+                    if self._standalone_video_test_mode else 'non_applicable',
+                'moto_id_rtc_exploitable':bool(report.get('moto_id_rtc_exploitable'))
+                    if self._standalone_video_test_mode else False,
+                'moto_id_applique':bool(mqtt.get('moto_id_applique'))
+                    if self._standalone_video_test_mode else False,
                 'etat_mqtt':mqtt.get('etat','non_disponible'),
                 'signalisation_b89': mqtt.get('signalisation_b89'),
                 'etat_relais':(mqtt.get('relais_tcp') or {}).get('etat','non_disponible'),

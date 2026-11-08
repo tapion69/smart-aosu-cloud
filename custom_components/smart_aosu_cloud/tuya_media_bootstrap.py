@@ -29,6 +29,7 @@ class PrivateMediaBootstrap:
     log_config: dict = field(default_factory=dict, repr=False)
     trace_id: str = field(default='', repr=False)
     device_password: str = field(default='', repr=False)
+    moto_id: str = field(default='', repr=False)  # C9C manual opt-in only
     created_at: float = field(default_factory=time.monotonic, repr=False)
 
     def is_fresh(self) -> bool:
