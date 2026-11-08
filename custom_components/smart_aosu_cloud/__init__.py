@@ -544,7 +544,7 @@ async def async_setup(hass,config):
             x=watch.get(field)
             return min(100,max(0,x)) if type(x) is int else 0
         return {
-            'diagnostic':'aosu_c9c_mqtt_passif_b10',
+            'diagnostic':'aosu_c9c_mqtt_passif_b11',
             'etat':state if state in safe_status else 'non_lance',
             'preparation':report.get('etat') if report.get('etat') in
                 ('configuration_rtc_obtenue','limite_rtc_cinq_minutes',
@@ -558,6 +558,22 @@ async def async_setup(hass,config):
             'messages_appareil':count('messages_appareil'),
             'messages_moto':count('messages_moto'),
             'messages_autres':count('messages_autres'),
+            'trames_pv22':count('trames_pv22'),
+            'trames_autres':count('trames_autres'),
+            'decodages_ok':count('decodages_ok'),
+            'decodages_echec':count('decodages_echec'),
+            'protocoles_22':count('protocoles_22'),
+            'protocoles_302':count('protocoles_302'),
+            'protocoles_autres':count('protocoles_autres'),
+            'types_offer':count('types_offer'),
+            'types_answer':count('types_answer'),
+            'types_candidate':count('types_candidate'),
+            'types_disconnect':count('types_disconnect'),
+            'types_autres':count('types_autres'),
+            'origine_appareil_confirmee':count('origine_appareil_confirmee'),
+            'destinataire_appareil_confirme':count('destinataire_appareil_confirme'),
+            'origine_utilisateur_confirmee':count('origine_utilisateur_confirmee'),
+            'destinataire_utilisateur_confirme':count('destinataire_utilisateur_confirme'),
             'offres_envoyees':0, 'video_lancee':False,'commandes_ptz':0,
             'identifiants_retournes':False,'secrets_retournes':False,
             'payloads_conserves':False,

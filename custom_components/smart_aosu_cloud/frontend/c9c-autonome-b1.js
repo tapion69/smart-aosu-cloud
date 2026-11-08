@@ -216,8 +216,16 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; moto abonné : '+(d.abonnement_moto===true?'oui':'non')+
         ' ; messages appareil : '+String(d.messages_appareil??'?')+
         ' ; messages moto : '+String(d.messages_moto??'?')+
+        ' ; trames 2.2 : '+String(d.trames_pv22??'?')+
+        ' ; déchiffrées : '+String(d.decodages_ok??'?')+
+        ' ; échecs décodage : '+String(d.decodages_echec??'?')+
+        ' ; protocole 22/302/autres : '+String(d.protocoles_22??'?')+'/'+
+              String(d.protocoles_302??'?')+'/'+String(d.protocoles_autres??'?')+
+        ' ; types offre/réponse/candidat : '+String(d.types_offer??'?')+'/'+
+              String(d.types_answer??'?')+'/'+String(d.types_candidate??'?')+
+        ' ; source appareil confirmée : '+String(d.origine_appareil_confirmee??'?')+
         ' ; préparation : '+String(d.preparation||'?')+
-        '. Zéro offre/commande vidéo envoyée ; résultat indicatif uniquement.');
+        '. Aucune offre vidéo ou commande PTZ envoyée.');
     }finally{
       this._busy=false;
       if(btn)btn.disabled=false;

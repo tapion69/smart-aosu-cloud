@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta10 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta11 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -66,3 +66,11 @@ En bêta9, **uniquement après un clic sur « Essayer la vidéo » pour une uniq
 La C9C autonome n'a toujours répondu à aucune offre SDP depuis HA, même avec le moto_id fourni par RTC. Un bouton **Observer MQTT** teste uniquement les abonnements aux canaux existants `smart/mb/in` et `/av/u`, pendant 20 secondes **sans aucune publication**, vidéo ou PTZ. Ouvrir le direct officiel dans AOSU sur le téléphone pendant l'observation. Seuls les statuts d'abonnement et les nombres de messages sont affichés. Aucun contenu chiffré, identifiant, jeton ou métadonnée privée ne quitte la mémoire. Cette observation ne prouve pas une correspondance de caméra et zéro message n'exclut pas d'autres chemins de signalisation. Cible : un seul modèle C9C autonome sans station. Pour éviter une interruption du direct HA, l'écoute refuse de démarrer si un direct HA est déjà actif.
 
 Le compte Tuya peut être authentifié et l'inventaire/RTC lu, mais aucune commande n'est envoyée aux caméras. Garder en tête les limitations d'inventaire (30 min), d'RTC (5 min) et d'écoute (10 min). La vidéo/PTZ des caméras déjà validées n'est pas modifiée.
+
+## 0.8.13-beta11 — classifier les messages MQTT C9C reçus
+
+Le test externe a obtenu 19 messages sur le sujet `smart/mb/in/<appareil>`, aucun sur `/av/u/<uid>`, pendant le direct officiel AOSU. Cela montre une activité MQTT mais **ne prouve pas** qu'il s'agit de messages vidéo.
+
+Cette version conserve le bouton **Observer MQTT**, la fenêtre de 20 secondes et les sujets existants. Elle vérifie **uniquement en mémoire** le format chiffré `2.2`, la possibilité de déchiffrer avec la clé locale déjà disponible, les protocoles `22`/`302`, et les types `offer`/`answer`/`candidate`/`disconnect` ainsi que les correspondances d'identifiants exacts. Les sorties ne contiennent **que des compteurs** : aucun identifiant, clé, nom, IP, sujet réel, trame, SDP ou contenu de message n'est enregistré ou retourné. Le déchiffrement est une observation ; il ne modifie aucun paquet.
+
+La C9C demeure une cible expérimentale non confirmée. Aucun changement aux contrôleurs vidéo C5L, C9/H1L, ni aux commandes PTZ. Une trame non déchiffrable n'établit ni l'absence de vidéo ni une mauvaise identité : le format ou la clé peuvent être différents.
