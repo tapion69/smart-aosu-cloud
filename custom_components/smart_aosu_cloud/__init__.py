@@ -582,6 +582,48 @@ async def async_setup(hass,config):
             'selection_non_confirmee':True,
         }
 
+    async def comparer_ipc_v2_c9c_autonome_b24(call):
+        """Read a second OEM IPC config method for ONE standalone C9C."""
+        if call.data.get('confirmation_lecture_ipc_v2') is not True:
+            raise ServiceValidationError('Confirmer la lecture IPC v2')
+        entries=[e for e in hass.config_entries.async_entries(DOMAIN)
+                 if getattr(e,'runtime_data',None)]
+        if len(entries)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU requise')
+        runtime=entries[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une seule C9C autonome sans station requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct HA avant le diagnostic')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,tester_rtc=True,
+            standalone_c9c_ipc_v2_audit=True,
+            tester_mqtt=False,tester_offre_mqtt=False,
+            tester_relais_tcp=False,tester_kcp=False,tester_media=False))
+        flags=('moto_id_present','auth_present','msid_present','msid_ambigu',
+               'webrtc_declare','webrtc_refuse_explicitement',
+               'p2p_config_present','serveurs_ice_presents',
+               'rtc_session_presente')
+        raw=report.get('ipc_v2_b24')
+        raw=raw if isinstance(raw,dict) else {}
+        allowed=('ipc_v2_obtenue','ipc_v2_refusee',
+                 'rtc_non_lance_c9c_non_identifiee',
+                 'limite_inventaire_30_minutes','limite_login_une_heure',
+                 'limite_rtc_cinq_minutes','login_UID_non_reussi',
+                 'test_deja_en_cours','session_AOSU_ou_profil_absent',
+                 'preflight_OEM_invalide','lecture_maisons_refusee',
+                 'groupes_non_identifies','erreur_api_tuya',
+                 'erreur_execution_sans_details','ipc_v2_lecture_seule_uniquement')
+        return {'diagnostic':'aosu_c9c_ipc_v2_b24',
+                'etat':report.get('etat') if report.get('etat') in allowed else 'autre',
+                'api_acceptee':report.get('ipc_v2_acceptee') is True,
+                'schema':{key:raw.get(key) is True for key in flags},
+                'offres_envoyees':0,'publications_mqtt':0,
+                'commandes_camera':0,'commandes_ptz':0,
+                'video_lancee':False,'identifiants_retournes':False,
+                'secrets_retournes':False,'payloads_conserves':False}
+
     async def comparer_webrtc_c9c_autonome_b23(call):
         """Read IPC-v4 RTC WebRTC metadata and optionally subscribe, never publish."""
         if call.data.get('confirmation_lecture_webrtc') is not True:
@@ -2154,6 +2196,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'comparer_rtc_ipc_v4_c9c_autonome',
                                  comparer_rtc_ipc_v4_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'comparer_ipc_v2_c9c_autonome_b24',
+                                 comparer_ipc_v2_c9c_autonome_b24,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'comparer_webrtc_c9c_autonome_b23',
                                  comparer_webrtc_c9c_autonome_b23,

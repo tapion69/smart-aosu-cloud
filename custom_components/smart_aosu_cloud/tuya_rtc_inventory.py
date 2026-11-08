@@ -194,7 +194,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                            standalone_c9c_wake_only:bool=False,
                            standalone_c9c_wake_then_video:bool=False,
                            standalone_c9c_webrtc_audit:bool=False,
-                           standalone_c9c_webrtc_channel:bool=False):
+                           standalone_c9c_webrtc_channel:bool=False,
+                           standalone_c9c_ipc_v2_audit:bool=False):
     """Explicitly consented camera stream, or conservative manual one-shot diagnostic.
 
     interactive_live is an internal flag: it is accepted only with the real
@@ -265,6 +266,17 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
     if standalone_c9c_webrtc_channel and not standalone_c9c_webrtc_audit:
         return {'etat':'canal_webrtc_requiert_audit',
+                'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
+    if standalone_c9c_ipc_v2_audit and (
+        standalone_c9c_video_test or standalone_c9c_wake_then_video
+        or standalone_c9c_wake_only or standalone_c9c_rtc_audit
+        or standalone_c9c_mqtt_watch or standalone_c9c_v4_rtc_audit
+        or standalone_c9c_webrtc_audit or standalone_c9c_webrtc_channel
+        or interactive_live or tester_rtc is not True
+        or confirmation_envoi_mot_de_passe is not True
+        or tester_mqtt or tester_offre_mqtt or tester_relais_tcp or tester_kcp
+        or tester_media or capturer_media_localement):
+        return {'etat':'ipc_v2_lecture_seule_uniquement',
                 'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
     out={'diagnostic':'aosu_tuya_oem_inventory_b27','session_tuya_authentifiee':False,
          'appel_reseau':0,'mot_de_passe_envoye':False,
@@ -403,7 +415,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 and item['name'].strip().casefold()==getattr(client,'_c5l_name').strip().casefold()]
             if (standalone_c9c_video_test or standalone_c9c_rtc_audit
                     or standalone_c9c_mqtt_watch or standalone_c9c_v4_rtc_audit
-                    or standalone_c9c_wake_only or standalone_c9c_webrtc_audit):
+                    or standalone_c9c_wake_only or standalone_c9c_webrtc_audit
+                    or standalone_c9c_ipc_v2_audit):
                 # The C5L-specific selector is intentionally NOT reused here:
                 # any unrelated C5L match must never override a C9C selection.
                 target, selection = select_tuya_standalone_target(
@@ -441,6 +454,26 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
             # The IPC-v4 call is used ONLY for the explicitly confirmed manual
             # standalone-C9C live test or its read-only v4 diagnostic.
             # Generic C5L video and all H1L logic keep the previous API.
+            if standalone_c9c_ipc_v2_audit:
+                # Approved OEM method; explicit one-off read, no RTC/MQTT/P2P.
+                ipc,ipc_safe=read('thing.m.ipc.config.get',{'devId':target})
+                out['ipc_v2_acceptee']=ipc_safe['serveur_accepte']
+                if not ipc_safe['serveur_accepte'] or ipc_safe['rejet_explicite']:
+                    return {**out,'etat':'ipc_v2_refusee'}
+                webrtc,_unused_msid=inspect_webrtc_hints(ipc,{})
+                ipc_schema=summarize_c9c_rtc_schema(ipc,{})
+                out['ipc_v2_b24']={
+                    'moto_id_present':webrtc['moto_id_present'],
+                    'auth_present':webrtc['auth_webrtc_present'],
+                    'msid_present':webrtc['msid_explicite_present'],
+                    'msid_ambigu':webrtc['msid_ambigu'],
+                    'webrtc_declare':webrtc['webrtc_declare_oui'],
+                    'webrtc_refuse_explicitement':webrtc['webrtc_declare_non'],
+                    'p2p_config_present':ipc_schema['p2p_config_presente'],
+                    'serveurs_ice_presents':ipc_schema['serveurs_ice_presents'],
+                    'rtc_session_presente':ipc_schema['session_presente'],
+                }
+                return {**out,'etat':'ipc_v2_obtenue'}
             rtc_ipc_v4 = (standalone_c9c_video_test is True or
                           standalone_c9c_v4_rtc_audit is True or
                           standalone_c9c_wake_only is True or

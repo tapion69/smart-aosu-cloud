@@ -38,7 +38,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play(false));
@@ -50,6 +50,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('rtc').addEventListener('click',()=>void this._rtc());
     this.shadowRoot.getElementById('v4rtc').addEventListener('click',()=>void this._v4rtc());
     this.shadowRoot.getElementById('webrtcaudit').addEventListener('click',()=>void this._webrtc(false));
+    this.shadowRoot.getElementById('ipcv2b24').addEventListener('click',()=>void this._ipcV2B24());
     this.shadowRoot.getElementById('webrtcchannel').addEventListener('click',()=>void this._webrtc(true));
     this.shadowRoot.getElementById('observe').addEventListener('click',()=>void this._observe());
     this.shadowRoot.getElementById('wake').addEventListener('click',()=>void this._wake());
@@ -239,6 +240,37 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; pv : '+String(x.version_mqtt_pv_connue||'non_identifiee')+
         '. Aucun direct ni PTZ envoyé. Identité AOSU/Tuya non définitivement prouvée.');
     } finally {
+      this._busy=false;
+      if(btn)btn.disabled=false;
+    }
+  }
+  async _ipcV2B24() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('ipcv2b24');
+    if(btn)btn.disabled=true;
+    this._message('Lecture du second schéma IPC v2 (sans vidéo)…');
+    try {
+      const response=await this._service('comparer_ipc_v2_c9c_autonome_b24',{
+        confirmation_lecture_ipc_v2:true
+      });
+      const data=response?.response||response;
+      if(!data||typeof data.etat!=='string')return;
+      if(data.etat!=='ipc_v2_obtenue'){
+        this._message('IPC v2 : '+data.etat+'. Aucun réveil, MQTT, SDP ni PTZ envoyé.');
+        return;
+      }
+      const x=data.schema||{},yn=v=>v===true?'oui':'non';
+      this._message('IPC v2 : acceptée ; moto_id : '+yn(x.moto_id_present)+
+        ' ; auth : '+yn(x.auth_present)+
+        ' ; msid : '+yn(x.msid_present)+
+        ' ; msid ambigu : '+yn(x.msid_ambigu)+
+        ' ; WebRTC déclaré : '+yn(x.webrtc_declare)+
+        ' ; P2P : '+yn(x.p2p_config_present)+
+        ' ; ICE : '+yn(x.serveurs_ice_presents)+
+        ' ; session RTC : '+yn(x.rtc_session_presente)+
+        '. Aucune offre, réveil ni vidéo envoyée. Compatibilité non confirmée.');
+    }finally{
       this._busy=false;
       if(btn)btn.disabled=false;
     }

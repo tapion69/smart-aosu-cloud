@@ -3085,6 +3085,20 @@ comparer_rtc_ipc_v4_c9c_autonome:
       selector:
         boolean: {}
 
+comparer_ipc_v2_c9c_autonome_b24:
+  name: C9C autonome — lire IPC v2 (sans vidéo)
+  description: >-
+    Requête HTTPS manuelle thing.m.ipc.config.get v2.0 sur la caméra C9C
+    autonome sélectionnée. Résultat anonymisé pour WebRTC, moto_id, auth
+    et msid. Aucune commande, MQTT, SDP, vidéo ou PTZ.
+    Temporisation de cinq minutes partagée avec les lectures RTC.
+  fields:
+    confirmation_lecture_ipc_v2:
+      name: Autoriser cette lecture IPC v2
+      required: true
+      selector:
+        boolean: {}
+
 comparer_webrtc_c9c_autonome_b23:
   name: C9C autonome — diagnostiquer le canal WebRTC sans vidéo
   description: >-

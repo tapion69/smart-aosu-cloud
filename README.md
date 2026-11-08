@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta23 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta24 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -191,3 +191,15 @@ actuel ne les fournit pas. Les API Jarvis d'une autre intégration Tuya ne sont
 pas appelées car leur compatibilité AOSU n'est pas vérifiée. Cette bêta
 ne démarre ni vidéo ni PTZ par son nouveau diagnostic, et ne modifie pas
 le fonctionnement C5L/H1L. Les limites de fréquence RTC restent actives.
+
+
+## 0.8.13-beta24 — lecture IPC v2 sur C9C autonome
+
+Nouveau bouton Examiner IPC v2 : une seule lecture HTTPS de
+thing.m.ipc.config.get v2.0, une API déjà autorisée par Smart AOSU.
+Réutilise strictement la sélection de la caméra autonome, la session
+Tuya et la temporisation RTC (cinq minutes). Le diagnostic n'affiche
+que des booléens anonymes sur WebRTC, moto_id, auth, msid et ICE.
+Il n'envoie aucun réveil, MQTT, SDP, vidéo ou PTZ. La prise en charge
+WebRTC ne peut pas être affirmée sur les seuls indicateurs reçus.
+Les moteurs C5L et H1L restent inchangés.
