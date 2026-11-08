@@ -62,6 +62,7 @@ class TestSdkMqttB25(unittest.TestCase):
         self.assertEqual(MOD["ORIGINAL_SIZE"],200265946)
         self.assertEqual(len(MOD["ORIGINAL_SHA"]),64)
         self.assertEqual(len(MOD["LITE_SHA"]),64)
+        self.assertIn('Aosu_5.10.12_original.apks.apk',MOD['ORIGINAL_NAMES'])
         class Missing: apk_path="/nonexistent/test.apk"
         report=MOD["audit_apk_sdk_c9c"](Missing())
         self.assertEqual(report["etat"],"apk_introuvable")

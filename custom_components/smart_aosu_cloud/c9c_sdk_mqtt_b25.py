@@ -18,7 +18,9 @@ ORIGINAL_SIZE = 200265946
 ORIGINAL_SHA = 'ec176ce3bdd000cd514371137fff6d8b2141bbde061c3fb2ab3892d7a72b52d7'
 LITE_SIZE = 1690990
 LITE_SHA = '6a3692aa0dc2385f9d988ffbcf7a703249d426b022f78857d2b380748e790be1'
-ORIGINAL_NAME = 'Aosu_5.10.12_21839.apks.apk'
+ORIGINAL_NAMES = ('Aosu_5.10.12_original.apks.apk',
+                  'Aosu_5.10.12_21839_original.apks.apk',
+                  'Aosu_5.10.12_21839.apks.apk')
 _MAX_BASE = 230 * 1024 * 1024
 _MAX_DEX = 32 * 1024 * 1024
 _MAX_TOTAL_DEX = 256 * 1024 * 1024
@@ -153,13 +155,16 @@ def audit_apk_sdk_c9c(client: Any) -> dict[str, object]:
         selected = configured
         original = size == ORIGINAL_SIZE
         if not original:
-            sibling = configured.parent / ORIGINAL_NAME
-            if sibling.is_file():
+            for filename in ORIGINAL_NAMES:
+                sibling = configured.parent / filename
+                if sibling == configured or not sibling.is_file():
+                    continue
                 try:
                     original_size, original_sha = _fingerprint(sibling)
                     if (original_size, original_sha) == (ORIGINAL_SIZE, ORIGINAL_SHA):
                         selected = sibling
                         original = True
+                        break
                 except (OSError, ValueError):
                     pass
         _ALLOWED[key] = now + _COOLDOWN

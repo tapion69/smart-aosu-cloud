@@ -9,7 +9,7 @@ la présence de littéraux SDK Android sans réseau et sans tenter WebRTC.
   taille et SHA256, sans sauvegarder ni divulguer des chaînes.
 - Recherche seulement les signatures statiques Jarvis MQTT/config,
   msid, canaux /av/u et /av/moto, domaines MQTT et SDK caméra.
-- Si le gros APK original est disponible à côté de l'APK léger installé,
+- Si le gros APK original est disponible à côté de l'APK léger installé sous le nom Aosu_5.10.12_original.apks.apk,
   il est préféré. Si seul l'APK léger est présent, le diagnostic indique
   explicitement que l'analyse est partielle et non concluante.
 - Protection contre les archives anormales (taille, nombre de DEX),

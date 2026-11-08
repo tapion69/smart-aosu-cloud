@@ -214,7 +214,7 @@ appel réseau ni commande caméra. Une protection de 15 minutes limite les
 analyses manuelles. Les sources vérifiées sont l'APK original de 200 Mo
 et la version allégée de 1,69 Mo ; toutes deux sont contrôlées par SHA256
 avant toute lecture. L'APK original exact, si présent dans le même
-répertoire que l'APK configuré sous le nom Aosu_5.10.12_21839.apks.apk,
+répertoire que l'APK configuré sous le nom Aosu_5.10.12_original.apks.apk,
 est préféré. Le script n'écrit jamais ce fichier ni aucune extraction.
 
 L'APK léger ne comporte qu'une fraction des DEX originaux : un résultat
