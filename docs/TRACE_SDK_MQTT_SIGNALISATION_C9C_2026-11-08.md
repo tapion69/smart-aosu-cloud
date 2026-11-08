@@ -87,7 +87,35 @@ séquence n'emprunte pas les mêmes appels.
 dans la forme binaire nécessaire pour la C9C. Les noms `S/O/Sn`
 et le seul ACK MQTT ne suffisent pas à conclure à un bug.
 
-## 4. Décision de développement
+## 4. Preuve supplémentaire — compteur SandO (classes7.dex)
+
+Une analyse ciblée des instructions Dalvik de
+`Lcom/thingclips/smart/interior/device/confusebean/SandO;`
+dans **classes7.dex** a permis de reconstituer les constantes :
+
+- Le constructeur initialise le champ `S` à **2**.
+- Il appelle `java.lang.Math.random()`, multiplie par
+  **1 000 000**, convertit en entier et ajoute **1 000** pour le champ `O`.
+  La valeur de `O` est donc pseudo-aléatoire dans l'intervalle
+  **[1 000, 1 000 999]**.
+- La méthode `SAdd` incrémente `S` de **1**.
+- Le chemin `classes6.dex` `qqpddqd.publish` appelle `SAdd`
+  avant de transmettre `SandO.getS` et `SandO.getO`
+  au `MqttControlBuilder`, qui les fait passer au moteur d'encodage.
+
+Il s'agit d'une propriété **observée dans le bytecode statique du SDK**,
+pas d'une mesure sur la caméra. On ne sait pas encore si les champs du
+`MqttControlBuilder` deviennent, octet pour octet, les deux entiers
+placés dans l'enveloppe 2.2. Le code Python met à leur place
+`sequence=1/2` et une source aléatoire de 4 octets. Cet écart est
+désormais une hypothèse **testable hors réseau**.
+
+**Prochaine vérification indispensable avant toute modification** :
+reconstituer comment le codec interne `publishDevice` sérialise
+`O/S/Sn` et comparer la trame produite sur un message synthétique.
+Aucune émission caméra avant cette comparaison.
+
+## 5. Décision de développement
 
 **Ne pas remplacer le protocole par Jarvis et ne pas fabriquer un MSID.**
 Les résultats beta22 prouvent le réveil `DP149=true`,
