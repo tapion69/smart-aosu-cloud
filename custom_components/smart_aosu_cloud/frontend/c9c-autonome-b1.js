@@ -38,10 +38,11 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
-    this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play());
+    this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play(false));
+    this.shadowRoot.getElementById('wakeplay').addEventListener('click',()=>void this._play(true));
     this.shadowRoot.getElementById('stop').addEventListener('click',()=>void this._stop());
     this.shadowRoot.getElementById('state').addEventListener('click',()=>void this._state());
     this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
@@ -70,18 +71,21 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     try {return await this._hass.callService('smart_aosu_cloud',name,data,undefined,false,true);}
     catch(_) {this._message('Service Home Assistant indisponible. Vérifier les journaux expurgés.');return null;}
   }
-  async _play() {
+  async _play(wakeFirst=false) {
     if(this._busy)return;
     const url=this._tokenUrl();
     if(!url){this._message('Entité vidéo C9C ou jeton caméra absent. Vérifier la configuration de cette carte.');return;}
     this._busy=true;
     this.shadowRoot.getElementById('play').disabled=true;
+    this.shadowRoot.getElementById('wakeplay').disabled=true;
     try {
-      this._message('Essai manuel de négociation vidéo P2P…');
+      this._message(wakeFirst?'Réveil expérimental puis négociation vidéo (une tentative)…':
+        'Essai manuel de négociation vidéo P2P…');
       const response=await this._service('demarrer_video_c9c_autonome_beta',{
         confirmation_camera_c9c_autonome:true,
         confirmation_essai_video:true,
-        confirmation_envoi_mot_de_passe:true
+        confirmation_envoi_mot_de_passe:true,
+        confirmation_reveil_et_video:wakeFirst===true
       });
       const result=response?.response||response;
       if(!['demarrage_demande','direct_deja_en_cours','reprise_direct_existant'].includes(result?.etat)){
@@ -99,6 +103,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     } finally {
       this._busy=false;
       this.shadowRoot.getElementById('play').disabled=false;
+      this.shadowRoot.getElementById('wakeplay').disabled=false;
     }
   }
   async _stop() {
@@ -325,6 +330,12 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     const sig=last.signalisation_b89||{};
     const count=(v)=>Number.isInteger(v)?v:'?';
     const noSdp=last.etat_mqtt==='offre_envoyee_sans_reponse_sdp';
+    const wake=last.reveil_et_video||null;
+    const wakeStatus=wake ? ' ; réveil : '+String(wake.etat||'inconnu')+
+      ' ; commande envoyée : '+(wake.wake_envoye===true?'oui':'non')+
+      ' ; acquittée MQTT : '+(wake.puback_wake===true?'oui':'non')+
+      ' ; DP149 true : '+count(wake.dp149_vrai)+
+      ' ; offre autorisée : '+(wake.offre_autorisee===true?'oui':'non') : '';
     const extra=(sig.reponses_302_hors_session_answer!==undefined
       ? ' ; hors session 302 réponse/candidat : '+
         count(sig.reponses_302_hors_session_answer)+'/'+count(sig.reponses_302_hors_session_candidate)+
@@ -343,7 +354,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       (stage==='rtc_non_lance_c9c_non_identifiee'
         ? ' ; identification : '+selection+' ; caméras Tuya : '+cams+' / appareils Tuya : '+total+'. Ne pas relancer sans correction.'
         : ' ; sélection RTC : '+selection+' ; config RTC : '+String(last.configuration_rtc_acceptee===true?'acceptée':last.configuration_rtc_acceptee===false?'refusée':'inconnue')+
-          (noSdp ? ' ; MQTT : sigQry='+count(sig.reponses_sigqry)+', autres='+count(sig.reponses_protocole_inattendu)+', 302 inconnu='+count(sig.messages_302_autres_types)+', 302 invalide='+count(sig.messages_302_format_invalide)+' ; SDP absente.'+extra+motoInfo : '.'+motoInfo)));
+          (noSdp ? ' ; MQTT : sigQry='+count(sig.reponses_sigqry)+', autres='+count(sig.reponses_protocole_inattendu)+', 302 inconnu='+count(sig.messages_302_autres_types)+', 302 invalide='+count(sig.messages_302_format_invalide)+' ; SDP absente.'+extra+motoInfo+wakeStatus : '.'+motoInfo+wakeStatus)));
   }
 }
 if(!customElements.get('smart-aosu-c9c-autonome-b1'))

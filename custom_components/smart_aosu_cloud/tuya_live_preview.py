@@ -512,6 +512,7 @@ class LiveController:
         self._start_refusal_count = 0
         self._starts_accepted = 0
         self._standalone_video_test_mode = False
+        self._standalone_wake_then_video = False
         self._listeners=[]
 
     @property
@@ -589,9 +590,12 @@ class LiveController:
         return result
 
     def start(self, *, password_confirmed:bool, candidate_confirmed:bool,
-              standalone_c9c_video_test:bool=False)->dict[str,Any]:
+              standalone_c9c_video_test:bool=False,
+              standalone_c9c_wake_then_video:bool=False)->dict[str,Any]:
         if not password_confirmed or not candidate_confirmed:
             return self._deny_start('autorisations_expresse_requises')
+        if standalone_c9c_wake_then_video and not standalone_c9c_video_test:
+            return self._deny_start('reveil_c9c_reserve_au_test_video')
         if self.running:
             # The previous worker may still be releasing the relay even after
             # STOP was clicked. Never claim that session is a fresh playable
@@ -631,6 +635,7 @@ class LiveController:
         self._starts_accepted += 1
         self._last_result={}
         self._standalone_video_test_mode = standalone_c9c_video_test is True
+        self._standalone_wake_then_video = standalone_c9c_wake_then_video is True
         self._status='demarrage'
         import asyncio
         self._task=asyncio.create_task(self._run(),
@@ -662,7 +667,8 @@ class LiveController:
                 confirmation_kcp=True,tester_media=True,
                 confirmation_media=True,live_preview=preview,
                 interactive_live=True,
-                standalone_c9c_video_test=self._standalone_video_test_mode))
+                standalone_c9c_video_test=self._standalone_video_test_mode,
+                standalone_c9c_wake_then_video=self._standalone_wake_then_video))
             mqtt=report.get('signalisation_mqtt') or {}
             kcp=((mqtt.get('relais_tcp') or {}).get('kcp') or {})
             media=kcp.get('media_start') or {}
@@ -690,6 +696,8 @@ class LiveController:
                     if self._standalone_video_test_mode else False,
                 'moto_id_applique':bool(mqtt.get('moto_id_applique'))
                     if self._standalone_video_test_mode else False,
+                'reveil_et_video':report.get('reveil_et_video')
+                    if self._standalone_wake_then_video else None,
                 'etat_mqtt':mqtt.get('etat','non_disponible'),
                 'signalisation_b89': mqtt.get('signalisation_b89'),
                 'etat_relais':(mqtt.get('relais_tcp') or {}).get('etat','non_disponible'),

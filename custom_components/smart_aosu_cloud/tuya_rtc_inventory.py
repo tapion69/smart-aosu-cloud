@@ -189,7 +189,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                            standalone_c9c_rtc_audit:bool=False,
                            standalone_c9c_mqtt_watch:bool=False,
                            standalone_c9c_v4_rtc_audit:bool=False,
-                           standalone_c9c_wake_only:bool=False):
+                           standalone_c9c_wake_only:bool=False,
+                           standalone_c9c_wake_then_video:bool=False):
     """Explicitly consented camera stream, or conservative manual one-shot diagnostic.
 
     interactive_live is an internal flag: it is accepted only with the real
@@ -238,6 +239,16 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
         return {'etat':'test_reveil_c9c_manuel_uniquement',
                 'appel_reseau':0,'commande_camera':0,
                 'secrets_retournes':False}
+    if standalone_c9c_wake_then_video and (
+        standalone_c9c_video_test is not True or interactive_live is not True
+        or standalone_c9c_wake_only or standalone_c9c_rtc_audit
+        or standalone_c9c_mqtt_watch or standalone_c9c_v4_rtc_audit
+        or tester_rtc is not True or tester_mqtt is not True
+        or tester_offre_mqtt is not True or tester_media is not True
+        or confirmation_envoi_mot_de_passe is not True
+        or confirmation_offre_mqtt is not True):
+        return {'etat':'reveil_video_c9c_manuel_uniquement',
+                'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
     out={'diagnostic':'aosu_tuya_oem_inventory_b27','session_tuya_authentifiee':False,
          'appel_reseau':0,'mot_de_passe_envoye':False,
          'commande_camera':0,'session_video_creee':False,'secrets_retournes':False,
@@ -447,7 +458,45 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 client._tuya_oem_media_bootstrap=private
             else:
                 client._tuya_oem_media_bootstrap=None
+            if standalone_c9c_wake_then_video:
+                # Use the same freshly obtained RTC bootstrap for wake and
+                # offer. Never enter the video offer path unless an awake
+                # indication was seen on the user's explicit wake attempt.
+                if private is None:
+                    out['etat']='reveil_video_rtc_incompatible'
+                    return out
+                wake=try_wake_c9c_once(
+                    client,identity,signer,session,install_id,private)
+                wake_state=wake.get('etat')
+                allowed_wake_states=(
+                    'observation_terminee','mqtt_connexion_refusee',
+                    'mqtt_abonnement_refuse','identite_reveil_invalide',
+                    'certificat_tls_invalide','delai_mqtt_depasse',
+                    'reseau_mqtt_indisponible','trame_mqtt_invalide',
+                    'test_reveil_deja_en_cours','limite_reveil_dix_minutes',
+                    'configuration_rtc_expiree','session_tuya_incoherente',
+                    'preparation_reveil_invalide')
+                wake_count=wake.get('dp149_vrai')
+                wake_count=min(100,max(0,wake_count)) if type(wake_count) is int else 0
+                awake=bool(wake.get('wake_envoye') is True
+                           and wake.get('puback_wake') is True
+                           and wake_count > 0)
+                out['reveil_et_video']={
+                    'etat':wake_state if wake_state in allowed_wake_states else 'non_disponible',
+                    'wake_envoye':wake.get('wake_envoye') is True,
+                    'puback_wake':wake.get('puback_wake') is True,
+                    'dp149_vrai':wake_count,
+                    'offre_autorisee':awake,
+                    'offre_effectuee':False,
+                    'commandes_reveil':1 if wake.get('wake_envoye') is True else 0,
+                    'identifiants_retournes':False,'secrets_retournes':False,
+                }
+                if not awake:
+                    out['etat']='reveil_non_confirme_offre_non_envoyee'
+                    return out
             if tester_offre_mqtt is True and private is not None:
+                if standalone_c9c_wake_then_video:
+                    out['reveil_et_video']['offre_effectuee']=True
                 out['signalisation_mqtt']=run_tuya_mqtt_offer(
                     client,identity,signer,session,install_id,private,
                     tester_relais_tcp=tester_relais_tcp,tester_kcp=tester_kcp, tester_media=tester_media,

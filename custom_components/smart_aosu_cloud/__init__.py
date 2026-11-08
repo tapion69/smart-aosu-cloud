@@ -778,7 +778,9 @@ async def async_setup(hass,config):
             raise ServiceValidationError('Identite C9C non disponible: actualiser l inventaire')
         return runtime.live_controller.start(
             password_confirmed=True,candidate_confirmed=True,
-            standalone_c9c_video_test=True)
+            standalone_c9c_video_test=True,
+            standalone_c9c_wake_then_video=(
+                call.data.get('confirmation_reveil_et_video') is True))
 
     async def arreter_direct_c5l(call):
         return _loaded_direct_controller().stop()

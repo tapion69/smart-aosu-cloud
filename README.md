@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta19 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta20 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -140,3 +140,13 @@ Le mode exige la cible C9C unique, une session utilisateur et une configuration 
 ### Test
 
 Mettre à jour, redémarrer HA, ne pas ouvrir la vidéo AOSU et cliquer **Tester le réveil** une fois. Envoyer uniquement le statut expurgé. N'effectuer aucun test vidéo en parallèle.
+
+## 0.8.13-beta20 — réveil et offre vidéo en une seule opération
+
+La C9C autonome a répondu par un état `DP149=true` à la commande de réveil expérimentale du bouton séparé en bêta19, mais l'essai vidéo lancé manuellement ensuite n'a toujours pas reçu de SDP. Ce signal de réveil n'est pas une preuve absolue que la caméra acceptera le direct.
+
+Nouveau bouton manuel **Réveil + vidéo** (distinct de **Essayer la vidéo**). Il demande une seule configuration RTC IPC-v4, envoie **une** commande MQTT de réveil, attend la confirmation technique `PUBACK` et l'observation `DP149=true` (maximum 25 secondes), puis, seulement si les deux signaux sont présents, utilise **la même configuration RTC** pour envoyer l'offre vidéo. Le délai entre la réception du réveil et l'offre est réduit aux opérations réseau nécessaires. Si l'état réveillé n'est pas observé, aucune offre vidéo n'est envoyée : le motif est indiqué dans `dernier_resultat.reveil_et_video`. Le bouton de réveil précédent et sa protection de 10 minutes restent en vigueur ; aucune répétition automatique n'est programmée.
+
+Ceci est un essai P2P actif, **réservé au clic explicite sur la carte C9C autonome**, et non une automatisation. L'ancienne commande « Essayer la vidéo » conserve son comportement et aucun contrôleur C5L/H1L, PTZ, codec ou transport n'a été modifié. Le direct peut échouer malgré un réveil confirmé si l'offre MQTT est incompatible. Aucune clé, adresse, identifiant, SDP ni message brut n'est affiché ou publié dans le dépôt.
+
+**Test** : attendre au minimum 10 minutes depuis la dernière commande de réveil, mettre à jour et redémarrer Home Assistant. Ne pas ouvrir l'application AOSU, cliquer une seule fois sur **Réveil + vidéo**, attendre la fin de la session, puis consulter `dernier_resultat.reveil_et_video` et `dernier_resultat.signalisation_b89`.
