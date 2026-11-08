@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta22 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta23 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -175,3 +175,19 @@ une exception KeyError arrêtait le parcours avant toute commande MQTT.
 Ce résultat est désormais lu seulement après l'appel run_tuya_mqtt_offer.
 Un test hors réseau exécute la branche RTC/MQTT avec une réponse simulée.
 La connexion partagée et les chemins C5L/H1L restent inchangés.
+
+
+## 0.8.13-beta23 — comparaison WebRTC et souscription passive
+
+Deux nouveaux boutons pour une C9C autonome : Comparer WebRTC et Tester canal
+WebRTC. Le premier lit la réponse RTC IPC-v4 et vérifie seulement la présence
+des champs moto_id, auth et msid, sans exposer leurs valeurs. Le second ne
+tente de souscription MQTT au canal /av/u/<msid> que si le champ msid apparaît
+explicitement dans cette réponse et est unique. Il ne publie aucun message.
+
+Cette méthode de signalisation est différente du canal AES/KCP déjà testé.
+Une vraie offre WebRTC exige un SDP et un jeton auth appropriés ; le moteur
+actuel ne les fournit pas. Les API Jarvis d'une autre intégration Tuya ne sont
+pas appelées car leur compatibilité AOSU n'est pas vérifiée. Cette bêta
+ne démarre ni vidéo ni PTZ par son nouveau diagnostic, et ne modifie pas
+le fonctionnement C5L/H1L. Les limites de fréquence RTC restent actives.

@@ -3085,6 +3085,27 @@ comparer_rtc_ipc_v4_c9c_autonome:
       selector:
         boolean: {}
 
+comparer_webrtc_c9c_autonome_b23:
+  name: C9C autonome — diagnostiquer le canal WebRTC sans vidéo
+  description: >-
+    Vérifie les métadonnées RTC IPC-v4 autorisées pour une C9C autonome :
+    moto_id, auth WebRTC, msid explicite, sans retourner leurs valeurs.
+    Si confirmation_ecoute_webrtc est vraie et un msid unique existe, tente
+    UNIQUEMENT une souscription MQTT au canal WebRTC. Aucun PUBLISH, SDP,
+    réveil, vidéo ou PTZ. Conserve les limitations RTC et 10 minutes pour
+    le test de souscription. Ne devine jamais un msid depuis l'UID.
+  fields:
+    confirmation_lecture_webrtc:
+      name: Autoriser la lecture RTC IPC-v4
+      required: true
+      selector:
+        boolean: {}
+    confirmation_ecoute_webrtc:
+      name: Autoriser le test de souscription MQTT sans envoi
+      required: false
+      selector:
+        boolean: {}
+
 tester_reveil_c9c_autonome:
   name: C9C autonome — tester le réveil expérimental
   description: >-

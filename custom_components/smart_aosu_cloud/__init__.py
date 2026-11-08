@@ -582,6 +582,68 @@ async def async_setup(hass,config):
             'selection_non_confirmee':True,
         }
 
+    async def comparer_webrtc_c9c_autonome_b23(call):
+        """Read IPC-v4 RTC WebRTC metadata and optionally subscribe, never publish."""
+        if call.data.get('confirmation_lecture_webrtc') is not True:
+            raise ServiceValidationError('Confirmer la lecture WebRTC')
+        listen=call.data.get('confirmation_ecoute_webrtc') is True
+        entries=[e for e in hass.config_entries.async_entries(DOMAIN)
+                 if getattr(e,'runtime_data',None)]
+        if len(entries)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU requise')
+        runtime=entries[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une C9C autonome unique sans H1L requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct HA avant ce diagnostic')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,tester_rtc=True,
+            standalone_c9c_webrtc_audit=True,
+            standalone_c9c_webrtc_channel=listen,
+            tester_mqtt=False,tester_offre_mqtt=False,
+            tester_relais_tcp=False,tester_kcp=False,tester_media=False))
+        raw=report.get('webrtc_b23')
+        raw=raw if isinstance(raw,dict) else {}
+        fields=('moto_id_present','auth_webrtc_present','msid_explicite_present',
+                'msid_ambigu','webrtc_declare_oui','webrtc_declare_non',
+                'webrtc_declaration_ambigue','ipc_aes_kcp_present',
+                'offre_webrtc_preparee','signalisation_webrtc_confirmee',
+                'abonnement_mqtt_possible')
+        schema={key:raw.get(key) is True for key in fields}
+        chan=report.get('webrtc_canal_b23')
+        chan=chan if isinstance(chan,dict) else {}
+        allowed_states=('configuration_rtc_obtenue','rtc_non_lance_c9c_non_identifiee',
+                'configuration_rtc_refusee','limite_inventaire_30_minutes',
+                'limite_login_une_heure','limite_rtc_cinq_minutes',
+                'login_UID_non_reussi','test_deja_en_cours',
+                'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+                'lecture_maisons_refusee','groupes_non_identifies',
+                'erreur_api_tuya','erreur_execution_sans_details',
+                'audit_webrtc_c9c_lecture_seule_uniquement')
+        channel_states=('msid_explicite_manquant','test_deja_en_cours',
+                'limite_dix_minutes','cible_invalide','identite_mqtt_indisponible',
+                'connexion_refusee','suback_invalide','abonnement_accepte',
+                'abonnement_refuse','certificat_tls_invalide','mqtt_timeout',
+                'reseau_mqtt_indisponible','trame_mqtt_invalide')
+        return {
+            'diagnostic':'aosu_c9c_webrtc_b23',
+            'etat':report.get('etat') if report.get('etat') in allowed_states else 'autre',
+            'rtc_acceptee':report.get('configuration_rtc_acceptee') is True,
+            'schema':schema,
+            'test_canal_demande':listen,
+            'canal':{
+                'etat':(chan.get('etat') if chan.get('etat') in channel_states
+                        else 'non_teste' if not listen else 'inconnu'),
+                'mqtt_tls':chan.get('mqtt_tls') is True,
+                'mqtt_connack':chan.get('mqtt_connack') is True,
+                'abonnement_accepte':chan.get('abonnement_accepte') is True,
+            },
+            'offres_envoyees':0,'commandes_camera':0,'commandes_ptz':0,
+            'video_lancee':False,'identifiants_retournes':False,
+            'secrets_retournes':False,
+        }
+
     async def tester_reveil_c9c_autonome(call):
         """Explicit experimental wake packet; does not start preview or PTZ."""
         if call.data.get('confirmation_reveil_experimental') is not True:
@@ -2092,6 +2154,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'comparer_rtc_ipc_v4_c9c_autonome',
                                  comparer_rtc_ipc_v4_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'comparer_webrtc_c9c_autonome_b23',
+                                 comparer_webrtc_c9c_autonome_b23,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'tester_reveil_c9c_autonome',
                                  tester_reveil_c9c_autonome,

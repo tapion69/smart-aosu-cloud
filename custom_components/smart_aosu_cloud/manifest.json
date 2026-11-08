@@ -1,7 +1,7 @@
 {
   "domain": "smart_aosu_cloud",
   "name": "Smart AOSU Cloud",
-  "version": "0.8.13-beta22",
+  "version": "0.8.13-beta23",
   "documentation": "https://github.com/tapion69/smart-aosu-cloud",
   "requirements": [],
   "codeowners": [],

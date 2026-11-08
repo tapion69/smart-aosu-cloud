@@ -38,7 +38,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play(false));
@@ -49,6 +49,8 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('detail').addEventListener('click',()=>void this._detail());
     this.shadowRoot.getElementById('rtc').addEventListener('click',()=>void this._rtc());
     this.shadowRoot.getElementById('v4rtc').addEventListener('click',()=>void this._v4rtc());
+    this.shadowRoot.getElementById('webrtcaudit').addEventListener('click',()=>void this._webrtc(false));
+    this.shadowRoot.getElementById('webrtcchannel').addEventListener('click',()=>void this._webrtc(true));
     this.shadowRoot.getElementById('observe').addEventListener('click',()=>void this._observe());
     this.shadowRoot.getElementById('wake').addEventListener('click',()=>void this._wake());
     this.shadowRoot.getElementById('screen').addEventListener('click',()=>{
@@ -236,6 +238,42 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; moto_id : '+yn(x.moto_id_present)+
         ' ; pv : '+String(x.version_mqtt_pv_connue||'non_identifiee')+
         '. Aucun direct ni PTZ envoyé. Identité AOSU/Tuya non définitivement prouvée.');
+    } finally {
+      this._busy=false;
+      if(btn)btn.disabled=false;
+    }
+  }
+  async _webrtc(testChannel=false) {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById(testChannel?'webrtcchannel':'webrtcaudit');
+    if(btn)btn.disabled=true;
+    this._message(testChannel?'Test de souscription WebRTC sans publication MQTT…':
+      'Vérification WebRTC IPC-v4 en lecture seule…');
+    try {
+      const response=await this._service('comparer_webrtc_c9c_autonome_b23',{
+        confirmation_lecture_webrtc:true,
+        confirmation_ecoute_webrtc:testChannel===true
+      });
+      const d=response?.response||response;
+      if(!d||typeof d.etat!=='string')return;
+      if(d.etat!=='configuration_rtc_obtenue'){
+        this._message('WebRTC : '+d.etat+'. Aucun réveil, SDP, vidéo ni PTZ envoyé.');
+        return;
+      }
+      const s=d.schema||{}, ch=d.canal||{}, yn=v=>v===true?'oui':'non';
+      this._message('WebRTC : RTC accepté ; moto_id : '+yn(s.moto_id_present)+
+        ' ; auth : '+yn(s.auth_webrtc_present)+
+        ' ; msid explicite : '+yn(s.msid_explicite_present)+
+        ' ; msid ambigu : '+yn(s.msid_ambigu)+
+        ' ; WebRTC déclaré : '+yn(s.webrtc_declare_oui)+
+        ' ; ancien AES/KCP : '+yn(s.ipc_aes_kcp_present)+
+        ' ; offre WebRTC prête : '+yn(s.offre_webrtc_preparee)+
+        ' ; canal testé : '+(testChannel?'oui':'non')+
+        ' ; résultat : '+String(ch.etat||'non_teste')+
+        ' ; MQTT CONNACK : '+yn(ch.mqtt_connack)+
+        ' ; SUBACK accepté : '+yn(ch.abonnement_accepte)+
+        '. Aucun réveil, SDP, vidéo ni PTZ envoyé. Compatibilité non confirmée.');
     } finally {
       this._busy=false;
       if(btn)btn.disabled=false;
