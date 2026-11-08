@@ -19,6 +19,11 @@ def classify_observed_signal(raw: bytes, *, key: bytes | None,
         "sessionid_present": False, "moto_id_present": False,
         "answer_sdp_present": False, "answer_aes_kcp": False,
         "candidate_ice_present": False, "answer_to_user": False,
+        "offer_sdp_present": False, "offer_aes_kcp": False,
+        "offer_trace_present": False, "offer_is_pre_zero": False,
+        "offer_p2p_skill_1635": False, "offer_security_level_3": False,
+        "offer_preconnect_true": False, "offer_token_present": False,
+        "offer_tcp_token_present": False, "offer_log_present": False,
     }
     if not isinstance(raw, bytes) or len(raw) < 3 or len(raw) > 32768:
         return result
@@ -58,9 +63,25 @@ def classify_observed_signal(raw: bytes, *, key: bytes | None,
         moto = header.get("moto_id")
         result["sessionid_present"] = isinstance(sessionid,str) and bool(sessionid)
         result["moto_id_present"] = isinstance(moto,str) and bool(moto)
+        if result["protocol"]=="302" and result["type"]=="offer":
+            result["offer_trace_present"] = (
+                isinstance(header.get("trace_id"),str) and bool(header["trace_id"]))
+            result["offer_is_pre_zero"] = type(header.get("is_pre")) is int and header["is_pre"]==0
+            result["offer_p2p_skill_1635"] = (
+                type(header.get("p2p_skill")) is int and header["p2p_skill"]==1635)
+            result["offer_security_level_3"] = (
+                type(header.get("security_level")) is int and header["security_level"]==3)
     msg = payload.get("msg")
     if isinstance(msg,dict) and result["protocol"]=="302":
-        if result["type"]=="answer":
+        if result["type"]=="offer":
+            sdp=msg.get("sdp")
+            result["offer_sdp_present"]=isinstance(sdp,str) and bool(sdp)
+            result["offer_aes_kcp"]=isinstance(sdp,str) and "AES/KCP" in sdp
+            result["offer_preconnect_true"]=msg.get("preconnect") is True
+            result["offer_token_present"]=isinstance(msg.get("token"),(list,dict)) and bool(msg["token"])
+            result["offer_tcp_token_present"]=isinstance(msg.get("tcp_token"),dict) and bool(msg["tcp_token"])
+            result["offer_log_present"]=isinstance(msg.get("log"),dict)
+        elif result["type"]=="answer":
             sdp = msg.get("sdp")
             result["answer_sdp_present"] = isinstance(sdp,str) and bool(sdp)
             result["answer_aes_kcp"] = (

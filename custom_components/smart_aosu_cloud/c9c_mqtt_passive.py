@@ -35,11 +35,23 @@ def _subscribe(topic:str,packet_id:int)->bytes:
 
 
 def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
-    """Own TLS client, two exact topics. No MQTT PUBLISH is ever sent."""
+    """Own TLS client, three exact topics. No MQTT PUBLISH is ever sent."""
     base={
         "etat":"non_lance", "abonnement_appareil":False,
-        "abonnement_moto":False,
+        "abonnement_moto":False, "abonnement_sortant":False,
         "messages_appareil":0, "messages_moto":0, "messages_autres":0,
+        "messages_sortants":0, "sortants_pv22":0,
+        "sortants_dechiffres":0, "sortants_echecs":0,
+        "sortants_offer":0, "sortants_candidate":0,
+        "sortants_302_autres":0, "sortants_offre_depuis_utilisateur":0,
+        "sortants_offre_vers_appareil":0,
+        "sortants_offre_sdp":0, "sortants_offre_aes_kcp":0,
+        "sortants_offre_sessionid":0, "sortants_offre_moto_id":0,
+        "sortants_offre_path_mqtt":0,
+        "sortants_offre_trace":0, "sortants_offre_is_pre_zero":0,
+        "sortants_offre_p2p_skill":0, "sortants_offre_security_3":0,
+        "sortants_offre_preconnect":0, "sortants_offre_token":0,
+        "sortants_offre_tcp_token":0, "sortants_offre_log":0,
         "offres_envoyees":0, "commandes_camera":0, "commandes_ptz":0,
         "video_lancee":False, "identifiants_retournes":False,
         "secrets_retournes":False, "payloads_conserves":False,
@@ -59,7 +71,11 @@ def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
     local=local if len(local) in (16,24,32) else None
     if not isinstance(uid,str) or not 1<=len(uid)<=256 or any(c in uid for c in "#+\r\n\x00"):
         return {**base,"etat":"uid_indisponible"}
-    channels=[("appareil",auth.topic),("moto","/av/u/"+uid)]
+    if (not isinstance(device_id,str) or not 1<=len(device_id)<=256
+            or any(c in device_id for c in "#+\r\n\x00")):
+        return {**base,"etat":"device_id_indisponible"}
+    channels=[("appareil",auth.topic),("moto","/av/u/"+uid),
+              ("sortant","smart/mb/out/"+device_id)]
     ctx=ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
     ctx.verify_mode=ssl.CERT_REQUIRED
     ctx.check_hostname=True
@@ -77,7 +93,7 @@ def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
                     if t!=0x90 or len(p)!=3 or int.from_bytes(p[:2],"big")!=n:
                         return {**base,"etat":"abonnement_inattendu"}
                     base["abonnement_"+label]=p[2] in (0,1,2)
-                if not base["abonnement_appareil"] and not base["abonnement_moto"]:
+                if not base["abonnement_appareil"] and not base["abonnement_moto"] and not base["abonnement_sortant"]:
                     return {**base,"etat":"aucun_abonnement_accepte"}
                 deadline=time.monotonic()+_DURATION
                 while time.monotonic()<deadline:
@@ -127,9 +143,46 @@ def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
                             base["trames_autres"]+=1
                     elif topic==channels[1][1]:
                         base["messages_moto"]+=1
+                    elif topic==channels[2][1]:
+                        # Ignore retained frames: not evidence of this live.
+                        if t & 0x01:
+                            continue
+                        base["messages_sortants"]+=1
+                        outbound=classify_observed_signal(
+                            raw,key=local,device_id=device_id,uid=uid,
+                            decoder=_decode_signal)
+                        base["sortants_pv22"]+=int(outbound["pv22"])
+                        if outbound["pv22"] and not outbound["decoded"]:
+                            base["sortants_echecs"]+=1
+                        if outbound["decoded"]:
+                            base["sortants_dechiffres"]+=1
+                            if outbound["protocol"]=="302":
+                                if outbound["type"]=="offer":
+                                    base["sortants_offer"]+=1
+                                    for counter,flag in (
+                                        ("sortants_offre_depuis_utilisateur","from_user"),
+                                        ("sortants_offre_vers_appareil","to_device"),
+                                        ("sortants_offre_sdp","offer_sdp_present"),
+                                        ("sortants_offre_aes_kcp","offer_aes_kcp"),
+                                        ("sortants_offre_sessionid","sessionid_present"),
+                                        ("sortants_offre_moto_id","moto_id_present"),
+                                        ("sortants_offre_path_mqtt","path_mqtt"),
+                                        ("sortants_offre_trace","offer_trace_present"),
+                                        ("sortants_offre_is_pre_zero","offer_is_pre_zero"),
+                                        ("sortants_offre_p2p_skill","offer_p2p_skill_1635"),
+                                        ("sortants_offre_security_3","offer_security_level_3"),
+                                        ("sortants_offre_preconnect","offer_preconnect_true"),
+                                        ("sortants_offre_token","offer_token_present"),
+                                        ("sortants_offre_tcp_token","offer_tcp_token_present"),
+                                        ("sortants_offre_log","offer_log_present")):
+                                        base[counter]+=int(outbound[flag] is True)
+                                elif outbound["type"]=="candidate":
+                                    base["sortants_candidate"]+=1
+                                else:
+                                    base["sortants_302_autres"]+=1
                     else:
                         base["messages_autres"]+=1
-                    if sum(base[k] for k in ("messages_appareil","messages_moto","messages_autres"))>=100:
+                    if sum(base[k] for k in ("messages_appareil","messages_moto","messages_sortants","messages_autres"))>=100:
                         break
                 base["etat"]="ecoute_terminee"
                 base["fenetre_observation_s"]=_DURATION
@@ -151,7 +204,7 @@ def observe_mqtt_for_c9c(client:Any, identity:Any, signer:Any,
                          session:Any, install_id:str,
                          media:PrivateMediaBootstrap)->dict:
     """One manual observation per ten minutes, no P2P or camera commands."""
-    base={"diagnostic":"aosu_c9c_mqtt_passif_b12",
+    base={"diagnostic":"aosu_c9c_mqtt_passif_b16",
           "etat":"non_lance","commandes_camera":0,"commandes_ptz":0,
           "offres_envoyees":0,"video_lancee":False,
           "identifiants_retournes":False,"secrets_retournes":False,

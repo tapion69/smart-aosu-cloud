@@ -614,13 +614,13 @@ async def async_setup(hass,config):
                      'trame_mqtt_inattendue','erreur_reseau_mqtt',
                      'ecoute_deja_en_cours','limite_ecoute_dix_minutes',
                      'rtc_expire','session_incoherente',
-                     'identite_mqtt_indisponible'}
+                     'identite_mqtt_indisponible','device_id_indisponible'}
         state=watch.get('etat')
         def count(field):
             x=watch.get(field)
             return min(100,max(0,x)) if type(x) is int else 0
         return {
-            'diagnostic':'aosu_c9c_mqtt_passif_b12',
+            'diagnostic':'aosu_c9c_mqtt_passif_b16',
             'etat':state if state in safe_status else 'non_lance',
             'preparation':report.get('etat') if report.get('etat') in
                 ('configuration_rtc_obtenue','limite_rtc_cinq_minutes',
@@ -631,9 +631,32 @@ async def async_setup(hass,config):
             'selection':selection if selection in permitted else 'non_confirmee',
             'abonnement_appareil':watch.get('abonnement_appareil') is True,
             'abonnement_moto':watch.get('abonnement_moto') is True,
+            'abonnement_sortant':watch.get('abonnement_sortant') is True,
             'messages_appareil':count('messages_appareil'),
             'messages_moto':count('messages_moto'),
             'messages_autres':count('messages_autres'),
+            'messages_sortants':count('messages_sortants'),
+            'sortants_pv22':count('sortants_pv22'),
+            'sortants_dechiffres':count('sortants_dechiffres'),
+            'sortants_echecs':count('sortants_echecs'),
+            'sortants_offer':count('sortants_offer'),
+            'sortants_candidate':count('sortants_candidate'),
+            'sortants_302_autres':count('sortants_302_autres'),
+            'sortants_offre_depuis_utilisateur':count('sortants_offre_depuis_utilisateur'),
+            'sortants_offre_vers_appareil':count('sortants_offre_vers_appareil'),
+            'sortants_offre_sdp':count('sortants_offre_sdp'),
+            'sortants_offre_aes_kcp':count('sortants_offre_aes_kcp'),
+            'sortants_offre_sessionid':count('sortants_offre_sessionid'),
+            'sortants_offre_moto_id':count('sortants_offre_moto_id'),
+            'sortants_offre_path_mqtt':count('sortants_offre_path_mqtt'),
+            'sortants_offre_trace':count('sortants_offre_trace'),
+            'sortants_offre_is_pre_zero':count('sortants_offre_is_pre_zero'),
+            'sortants_offre_p2p_skill':count('sortants_offre_p2p_skill'),
+            'sortants_offre_security_3':count('sortants_offre_security_3'),
+            'sortants_offre_preconnect':count('sortants_offre_preconnect'),
+            'sortants_offre_token':count('sortants_offre_token'),
+            'sortants_offre_tcp_token':count('sortants_offre_tcp_token'),
+            'sortants_offre_log':count('sortants_offre_log'),
             'trames_pv22':count('trames_pv22'),
             'trames_autres':count('trames_autres'),
             'decodages_ok':count('decodages_ok'),

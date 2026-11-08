@@ -266,8 +266,16 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; path mqtt/autres : '+String(d.path_mqtt??'?')+'/'+String(d.path_autre??'?')+
         ' ; sessionid présent : '+String(d.sessionid_present??'?')+
         ' ; moto_id présent : '+String(d.moto_id_present??'?')+
+        ' ; canal offre officiel abonné : '+(d.abonnement_sortant===true?'oui':'non')+
+        ' ; messages sortants : '+String(d.messages_sortants??'?')+
+        ' ; offres officielles : '+String(d.sortants_offer??'?')+
+        ' ; offres AES/KCP : '+String(d.sortants_offre_aes_kcp??'?')+
+        ' ; origine utilisateur / destinataire appareil : '+String(d.sortants_offre_depuis_utilisateur??'?')+'/'+String(d.sortants_offre_vers_appareil??'?')+
+        ' ; sessionid / moto_id : '+String(d.sortants_offre_sessionid??'?')+'/'+String(d.sortants_offre_moto_id??'?')+
+        ' ; trace / skill / sécurité : '+String(d.sortants_offre_trace??'?')+'/'+String(d.sortants_offre_p2p_skill??'?')+'/'+String(d.sortants_offre_security_3??'?')+
+        ' ; préconnexion / token / tcp_token : '+String(d.sortants_offre_preconnect??'?')+'/'+String(d.sortants_offre_token??'?')+'/'+String(d.sortants_offre_tcp_token??'?')+
         ' ; préparation : '+String(d.preparation||'?')+
-        '. Aucune offre vidéo ou commande PTZ envoyée.');
+        '. Observation seule : aucune offre vidéo ni PTZ envoyé depuis HA.');
     }finally{
       this._busy=false;
       if(btn)btn.disabled=false;

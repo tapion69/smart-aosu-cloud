@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta15 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta16 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -104,3 +104,11 @@ Sur une installation externe, `m.ipc.v4.rtc.config.get` a répondu positivement 
 Le diagnostic `statut_direct_c5l` contient un nouveau champ **`dernier_resultat.rtc_api_source`** (`ipc_v4` ou `thing_rtc`) sans identité privée. La carte affiche également cette méthode après la fin de l'essai. Le PTZ C9C reste désactivé.
 
 **Attention :** obtenir la configuration RTC ne garantit pas l'arrivée d'une SDP ni d'une vidéo ; le relais TURN/UDP/KCP reste un chantier distinct. Une seule tentative manuelle, puis inspection du diagnostic, sans répétition automatique. Aucun compte, token, PCAP, APK ou configuration d'installation n'est distribué.
+
+## 0.8.13-beta16 — observation de l'offre MQTT officielle (lecture seule)
+
+Le direct C9C autonome ne reçoit toujours pas de SDP, même avec RTC IPC-v4 et `moto_id`. Les sessions vidéo de l'application officielle donnent bien des messages de réponse MQTT `302` déchiffrables dans `smart/mb/in`, mais pas encore le contenu structurel des offres initiales.
+
+Le bouton existant **Observer MQTT** tente maintenant de s'abonner, en plus des deux canaux précédents, à `smart/mb/out/<appareil>` (canal sortant). Cet abonnement peut être interdit par le broker : le résultat le précise et **les deux abonnements précédents continuent normalement**. Pendant le direct officiel, la sonde classe les seules offres `302` dans la mémoire volatile (SDP AES/KCP, `path`, `sessionid`, `moto_id`, `trace_id`, `p2p_skill`, `security_level`, tokens, préconnexion), sans exposer aucune valeur. Les offres retained MQTT sont ignorées.
+
+La sonde ne publie aucun MQTT PUBLISH, n'envoie aucune offre, ne démarre ni session vidéo ni PTZ et ne conserve ni trame, ni clé, ni adresse, ni identifiant. Zéro offre observée ne prouve pas l'absence d'offre : le serveur peut refuser ou ne pas retransmettre le canal sortant. Aucun changement à la vidéo C5L/H1L ni au moteur C9C ; seule la sonde passive est étendue.

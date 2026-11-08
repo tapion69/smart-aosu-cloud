@@ -10,6 +10,7 @@ class PassiveMQTTTests(unittest.TestCase):
         ast.parse(SRC)
         self.assertIn('("appareil",auth.topic)', SRC)
         self.assertIn('("moto","/av/u/"+uid)',SRC)
+        self.assertIn('("sortant","smart/mb/out/"+device_id)',SRC)
         self.assertNotIn('send302',SRC)
         self.assertNotIn('_send_once',SRC)
         self.assertNotIn('_mqtt_publish',SRC)
