@@ -3069,3 +3069,18 @@ observer_mqtt_c9c_autonome:
       required: true
       selector:
         boolean: {}
+
+comparer_rtc_ipc_v4_c9c_autonome:
+  name: C9C autonome — comparer la configuration RTC IPC-v4
+  description: >-
+    Essai volontaire en lecture cloud sur m.ipc.v4.rtc.config.get pour
+    l'unique C9C autonome expérimentale. Vérifie si Tuya accepte
+    l'API RTC spécifique aux caméras IPC et fournit un bootstrap média.
+    Aucune offre MQTT, session vidéo, capture ou commande PTZ.
+    Les limites de lecture RTC existantes sont conservées.
+  fields:
+    confirmation_lecture_rtc_v4:
+      name: Autoriser la lecture RTC IPC-v4
+      required: true
+      selector:
+        boolean: {}

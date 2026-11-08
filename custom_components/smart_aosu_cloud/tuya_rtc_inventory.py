@@ -185,7 +185,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                            repertoire_capture_locale:str|None=None,live_preview=None, interactive_live:bool=False,
                            standalone_c9c_video_test:bool=False,
                            standalone_c9c_rtc_audit:bool=False,
-                           standalone_c9c_mqtt_watch:bool=False):
+                           standalone_c9c_mqtt_watch:bool=False,
+                           standalone_c9c_v4_rtc_audit:bool=False):
     """Explicitly consented camera stream, or conservative manual one-shot diagnostic.
 
     interactive_live is an internal flag: it is accepted only with the real
@@ -215,6 +216,14 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
         or tester_offre_mqtt or tester_relais_tcp or tester_kcp or tester_media
         or capturer_media_localement):
         return {'etat':'observer_mqtt_c9c_lecture_seule_uniquement',
+                'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
+    if standalone_c9c_v4_rtc_audit and (
+        standalone_c9c_video_test or standalone_c9c_rtc_audit or standalone_c9c_mqtt_watch
+        or interactive_live or tester_rtc is not True
+        or confirmation_envoi_mot_de_passe is not True
+        or tester_mqtt or tester_offre_mqtt or tester_relais_tcp or tester_kcp
+        or tester_media or capturer_media_localement):
+        return {'etat':'audit_rtc_v4_c9c_lecture_seule_uniquement',
                 'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
     out={'diagnostic':'aosu_tuya_oem_inventory_b27','session_tuya_authentifiee':False,
          'appel_reseau':0,'mot_de_passe_envoye':False,
@@ -351,7 +360,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 and isinstance(getattr(client,'_c5l_name',None),str)
                 and getattr(client,'_c5l_name').strip()
                 and item['name'].strip().casefold()==getattr(client,'_c5l_name').strip().casefold()]
-            if standalone_c9c_video_test or standalone_c9c_rtc_audit or standalone_c9c_mqtt_watch:
+            if (standalone_c9c_video_test or standalone_c9c_rtc_audit
+                    or standalone_c9c_mqtt_watch or standalone_c9c_v4_rtc_audit):
                 # The C5L-specific selector is intentionally NOT reused here:
                 # any unrelated C5L match must never override a C9C selection.
                 target, selection = select_tuya_standalone_target(
@@ -381,7 +391,11 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 return {**out,'etat':'limite_rtc_cinq_minutes'}
             if not interactive_live:
                 _LAST_RTC[client_key]=now+300
-            rtc,rtcsafe=read('thing.m.rtc.config.get',{'devId':target})
+            # C9C diagnostic only: try the IPC-specific RTC API used by
+            # independent native IPC clients. Existing video paths unchanged.
+            rtc_method=('m.ipc.v4.rtc.config.get' if standalone_c9c_v4_rtc_audit
+                        else 'thing.m.rtc.config.get')
+            rtc,rtcsafe=read(rtc_method,{'devId':target})
             out['configuration_rtc_acceptee']=rtcsafe['serveur_accepte']
             if not rtcsafe['serveur_accepte'] or rtcsafe['rejet_explicite']:
                 return {**out,'etat':'configuration_rtc_refusee',
@@ -389,8 +403,12 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
             out['rtc']=_rtc_presence(rtc)
             if standalone_c9c_rtc_audit:
                 out['rtc_c9c_schema']=summarize_c9c_rtc_schema(rtc, all_devices[target])
+            if standalone_c9c_v4_rtc_audit:
+                out['rtc_v4_schema']=summarize_c9c_rtc_schema(rtc, all_devices[target])
             media,private=inspect_rtc_media(rtc,target,all_devices[target].get('localKey',''),session.uid)
             out['media_bootstrap']=media
+            if standalone_c9c_v4_rtc_audit:
+                out['media_v4_pret']=private is not None
             if standalone_c9c_video_test:
                 # Only this manual video mode may consume the resolved RTC
                 # moto_id. The C5L / H1L paths stay bit-for-bit unchanged.
@@ -434,7 +452,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     'appel_http_supplementaire':0,'commande_camera':0,
                     'session_video_creee':False,'secrets_retournes':False}
             out['etat']='configuration_rtc_obtenue'
-            if standalone_c9c_rtc_audit or standalone_c9c_mqtt_watch:
+            if (standalone_c9c_rtc_audit or standalone_c9c_mqtt_watch
+                    or standalone_c9c_v4_rtc_audit):
                 # These are observations only; never retain provisional media
                 # keys from an audit that cannot produce an offer.
                 client._tuya_oem_media_bootstrap=None

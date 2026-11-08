@@ -506,6 +506,58 @@ async def async_setup(hass,config):
             'identifiants_retournes':False,'secrets_retournes':False,
         }
 
+    async def comparer_rtc_ipc_v4_c9c_autonome(call):
+        """Inspect IPC-v4 RTC API; no offer, signaling or camera command."""
+        if call.data.get('confirmation_lecture_rtc_v4') is not True:
+            raise ServiceValidationError('Confirmer la lecture RTC IPC-v4')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active est requise')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une seule C9C autonome sans station est requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct HA avant ce diagnostic')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,tester_rtc=True,
+            standalone_c9c_v4_rtc_audit=True,tester_mqtt=False,
+            tester_offre_mqtt=False,tester_relais_tcp=False,
+            tester_kcp=False,tester_media=False))
+        schema=report.get('rtc_v4_schema')
+        safe_schema={}
+        allowed_schema_keys=(
+            'p2p_config_presente','session_presente','moto_id_present',
+            'serveurs_ice_presents','serveur_turn_dans_ices',
+            'relais_tcp_declare','relais_udp_declare','cle_locale_presente',
+            'session_id_present')
+        if isinstance(schema,dict):
+            safe_schema={k:schema.get(k) is True for k in allowed_schema_keys}
+            pv=schema.get('version_mqtt_pv_connue')
+            safe_schema['version_mqtt_pv_connue']=pv if pv in ('2.2','2.3') else 'non_identifiee'
+        allowed_status=(
+            'configuration_rtc_obtenue','configuration_rtc_refusee',
+            'rtc_non_lance_c9c_non_identifiee','limite_inventaire_30_minutes',
+            'limite_login_une_heure','limite_rtc_cinq_minutes',
+            'login_UID_non_reussi','test_deja_en_cours',
+            'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+            'lecture_maisons_refusee','groupes_non_identifies',
+            'erreur_api_tuya','erreur_execution_sans_details',
+            'audit_rtc_v4_c9c_lecture_seule_uniquement')
+        state=report.get('etat')
+        return {
+            'diagnostic':'aosu_c9c_rtc_v4_passif_b13',
+            'etat':state if state in allowed_status else 'autre',
+            'rtc_ipc_v4_accepte':report.get('configuration_rtc_acceptee') is True,
+            'configuration_media_complete':report.get('media_v4_pret') is True,
+            'schema':safe_schema,
+            'offres_envoyees':0,'commandes_camera':0,'commandes_ptz':0,
+            'video_lancee':False,'secrets_retournes':False,
+            'identifiants_retournes':False,
+            'selection_non_confirmee':True,
+        }
+
     async def observer_mqtt_c9c_autonome(call):
         """Watch known MQTT topics while the owner opens the official app live."""
         if call.data.get('confirmation_ecoute_mqtt') is not True:
@@ -1917,6 +1969,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_rtc_c9c_autonome',
                                  diagnostiquer_rtc_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'comparer_rtc_ipc_v4_c9c_autonome',
+                                 comparer_rtc_ipc_v4_c9c_autonome,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'observer_mqtt_c9c_autonome',
                                  observer_mqtt_c9c_autonome,

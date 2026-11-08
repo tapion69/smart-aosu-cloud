@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta12 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta13 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -80,3 +80,9 @@ La C9C demeure une cible expérimentale non confirmée. Aucun changement aux con
 Une observation sur la C9C autonome a montré 18/18 publications chiffrées au format 2.2 déchiffrables, dont cinq du protocole 302 (une `answer`, quatre `candidate`), toutes cinq émises par l'appareil Tuya sélectionné. Ces observations ne prouvent toutefois pas que l'offre Home Assistant est acceptée : elles sont issues d'une session lancée par l'application officielle.
 
 Le bouton manuel **Observer MQTT** conserve le fonctionnement passif de la bêta11, et ajoute des compteurs anonymes sur les champs `from`/`to`, `path`, présence de `sessionid` et `moto_id`, SDP et codec AES/KCP dans les réponses, candidats ICE. Aucun contenu, identifiant, SDP, clé ni adresse n'est enregistré, retourné ou publié. Le test s'effectue en ouvrant le direct officiel sur le téléphone pendant l'écoute. Les moteurs vidéo/PTZ C5L/H1L et l'offre C9C restent strictement inchangés.
+
+## 0.8.13-beta13 — test RTC IPC-v4 en lecture seule pour C9C autonome
+
+Le direct officiel a produit 18 trames MQTT déchiffrables, dont un `answer` SDP AES/KCP et des `candidate` (protocole 302), émises par la cible Tuya et dirigées vers l'utilisateur. Le moteur de direct expérimental n'obtient toujours aucune réponse SDP. Il utilise actuellement la méthode RTC `thing.m.rtc.config.get`, alors que des clients IPC indépendants utilisent `m.ipc.v4.rtc.config.get`.
+
+Ajout d'un bouton **Comparer RTC IPC** : une lecture expresse de `m.ipc.v4.rtc.config.get` sur la C9C autonome **sans MQTT, sans offre, sans vidéo ni PTZ**. La réponse n'est pas conservée : seuls les drapeaux de validité/présence ICE, TURN, relais TCP/UDP, clé locale, session et `moto_id` sont retournés. Les limitations d'inventaire/login/RTC restent actives. Aucun changement de méthode RTC dans le direct, ni dans la C5L ou le H1L. L'identité AOSU/Tuya reste non définitivement confirmée, malgré la signalisation officielle observée.
