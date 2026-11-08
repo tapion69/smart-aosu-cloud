@@ -3084,3 +3084,19 @@ comparer_rtc_ipc_v4_c9c_autonome:
       required: true
       selector:
         boolean: {}
+
+tester_reveil_c9c_autonome:
+  name: C9C autonome — tester le réveil expérimental
+  description: >-
+    ATTENTION : cette action ENVOIE une commande MQTT réelle de réveil
+    vers l'unique candidat C9C autonome. Une seule commande, aucune
+    vidéo ni PTZ, et dix minutes au minimum entre essais. Elle utilise
+    un paquet CRC32 de la clé locale en mémoire, sans afficher cette clé.
+    Le résultat MQTT PUBACK seul ne prouve pas le réveil physique.
+    Ne pas utiliser en même temps que l'application AOSU ou un direct HA.
+  fields:
+    confirmation_reveil_experimental:
+      name: J'autorise l'envoi de la commande expérimentale de réveil
+      required: true
+      selector:
+        boolean: {}

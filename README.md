@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta18 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta19 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -128,3 +128,15 @@ Le direct de la C9C solaire autonome demeure bloqué avant réponse SDP, même v
 Le bouton existant **Observer MQTT** classe maintenant, en plus de la vidéo, les éventuelles déclarations DP 149 dans l'inventaire Tuya chargé pour l'unique C9C autonome, et les rapports DP 149 déchiffrés dans le canal MQTT de l'appareil pendant les 20 secondes d'observation. L'écran n'affiche que présence, indices basse consommation explicitement typés booléens, et nombres de messages `true`, `false` ou non booléens. Aucune valeur privée ni message brut. Un résultat absent est **inconnu**, et la convention exacte `true`/veille n'est pas présumée ; elle doit être vérifiée sur ce modèle et son firmware.
 
 Pour tester : mettre à jour, redémarrer HA, cliquer **Observer MQTT**, puis ouvrir le direct dans AOSU officiel durant l'observation. Envoyer uniquement le texte du diagnostic. **Aucun changement des offres MQTT, ICE/KCP, PTZ ou caméras C5L/H1L.** Les fréquences d'authentification et d'observation existantes sont maintenues.
+
+## 0.8.13-beta19 — réveil expérimental manuel de C9C autonome
+
+L'observation de la bêta18 a trouvé un rapport MQTT `DP149 wireless_awake=true` pendant un direct AOSU, compatible avec un réveil selon la [documentation Tuya des caméras basse consommation](https://developer.tuya.com/en/docs/iot-device-dev/tuyaos-package-ipc-device?id=Kcuwpao8ihq38). Le SDK officiel expose `wirelessWake(devId)`, mais ne documente pas publiquement son équivalent sous forme d'appel OEM Python. Une [intégration Home Assistant indépendante](https://github.com/JustDauren/tuya-peephole-integration) sous licence MIT emploie le topic `m/w/<deviceId>` et un CRC32 big-endian de la clé locale pour solliciter un réveil ; cette méthode n'est **pas confirmée pour les caméras AOSU C9C**.
+
+Un nouveau bouton **Tester le réveil** est proposé uniquement sur la carte expérimentale C9C autonome. Clic volontaire = **une commande MQTT réelle** sur la session TLS déjà gérée par notre intégration, suivie de 25 s d'écoute des rapports DP149, sans démarrage de vidéo ni PTZ. QoS1 PUBACK confirme seulement la réception du broker, **pas celle de la caméra**. Si un DP149 `true` apparaît, il signale une activité compatible avec un réveil, mais un autre client peut l'avoir provoquée. Ne pas ouvrir AOSU pendant le test pour éviter toute interférence.
+
+Le mode exige la cible C9C unique, une session utilisateur et une configuration RTC IPC-v4 valides, sans direct HA déjà lancé. Il ne réessaie pas automatiquement et applique un cooldown de 10 minutes par client. Les champs privés, CRC32, identité et paquets ne sont ni affichés ni enregistrés. **Les contrôleurs vidéo/PTZ C5L et H1L restent inchangés**, de même que la négociation vidéo expérimentale C9C.
+
+### Test
+
+Mettre à jour, redémarrer HA, ne pas ouvrir la vidéo AOSU et cliquer **Tester le réveil** une fois. Envoyer uniquement le statut expurgé. N'effectuer aucun test vidéo en parallèle.

@@ -582,6 +582,65 @@ async def async_setup(hass,config):
             'selection_non_confirmee':True,
         }
 
+    async def tester_reveil_c9c_autonome(call):
+        """Explicit experimental wake packet; does not start preview or PTZ."""
+        if call.data.get('confirmation_reveil_experimental') is not True:
+            raise ServiceValidationError('Autoriser explicitement le test de reveil')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active est requise')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une seule C9C autonome sans station est requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct HA avant le reveil')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,
+            tester_rtc=True,tester_mqtt=True,
+            standalone_c9c_wake_only=True,
+            tester_offre_mqtt=False,tester_relais_tcp=False,
+            tester_kcp=False,tester_media=False))
+        wake=report.get('reveil_c9c')
+        wake=wake if isinstance(wake,dict) else {}
+        allowed={
+            'observation_terminee','mqtt_connexion_refusee',
+            'mqtt_abonnement_refuse','identite_reveil_invalide',
+            'certificat_tls_invalide','delai_mqtt_depasse',
+            'reseau_mqtt_indisponible','trame_mqtt_invalide',
+            'test_reveil_deja_en_cours','limite_reveil_dix_minutes',
+            'configuration_rtc_expiree','session_tuya_incoherente',
+            'preparation_reveil_invalide'}
+        prep=report.get('etat')
+        prep_allowed={
+            'configuration_rtc_obtenue','limite_rtc_cinq_minutes',
+            'limite_login_une_heure','limite_inventaire_30_minutes',
+            'login_UID_non_reussi','test_deja_en_cours',
+            'rtc_non_lance_c9c_non_identifiee','configuration_rtc_refusee',
+            'erreur_api_tuya','test_reveil_c9c_manuel_uniquement'}
+        def count(name):
+            n=wake.get(name)
+            return min(100,max(0,n)) if type(n) is int else 0
+        return {
+            'diagnostic':'aosu_c9c_reveil_manuel_b19',
+            'etat':wake.get('etat') if wake.get('etat') in allowed else 'non_lance',
+            'preparation':prep if prep in prep_allowed else 'autre',
+            'wake_envoye':wake.get('wake_envoye') is True,
+            'puback_wake':wake.get('puback_wake') is True,
+            'dp149_vrai':count('dp149_vrai'),
+            'dp149_faux':count('dp149_faux'),
+            'messages_appareil':count('messages_appareil'),
+            'messages_dechiffres':count('messages_dechiffres'),
+            'requetes_reveil':count('requetes_reveil'),
+            'confirmation_reveil':(
+                'dp149_true_observe' if wake.get('confirmation_reveil')=='dp149_true_observe'
+                else 'non_confirmee'),
+            'video_lancee':False,'commandes_ptz':0,
+            'identifiants_retournes':False,
+            'secrets_retournes':False,'payloads_conserves':False,
+        }
+
     async def observer_mqtt_c9c_autonome(call):
         """Watch known MQTT topics while the owner opens the official app live."""
         if call.data.get('confirmation_ecoute_mqtt') is not True:
@@ -2031,6 +2090,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'comparer_rtc_ipc_v4_c9c_autonome',
                                  comparer_rtc_ipc_v4_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'tester_reveil_c9c_autonome',
+                                 tester_reveil_c9c_autonome,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'observer_mqtt_c9c_autonome',
                                  observer_mqtt_c9c_autonome,

@@ -38,7 +38,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="observe">Observer MQTT</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play());
@@ -49,6 +49,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('rtc').addEventListener('click',()=>void this._rtc());
     this.shadowRoot.getElementById('v4rtc').addEventListener('click',()=>void this._v4rtc());
     this.shadowRoot.getElementById('observe').addEventListener('click',()=>void this._observe());
+    this.shadowRoot.getElementById('wake').addEventListener('click',()=>void this._wake());
     this.shadowRoot.getElementById('screen').addEventListener('click',()=>{
       const element=this.shadowRoot.getElementById('view');
       if(element?.requestFullscreen) void element.requestFullscreen().catch(()=>{});
@@ -230,6 +231,30 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; moto_id : '+yn(x.moto_id_present)+
         ' ; pv : '+String(x.version_mqtt_pv_connue||'non_identifiee')+
         '. Aucun direct ni PTZ envoyé. Identité AOSU/Tuya non définitivement prouvée.');
+    } finally {
+      this._busy=false;
+      if(btn)btn.disabled=false;
+    }
+  }
+  async _wake() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('wake');
+    if(btn)btn.disabled=true;
+    this._message('Test de réveil réel : une seule commande MQTT expérimentale, sans vidéo ni PTZ…');
+    try {
+      const res=await this._service('tester_reveil_c9c_autonome',{
+        confirmation_reveil_experimental:true
+      });
+      const d=res?.response||res;
+      if(!d||typeof d.etat!=='string')return;
+      this._message('Réveil C9C : '+d.etat+
+        ' ; préparation : '+String(d.preparation||'?')+
+        ' ; envoyé : '+(d.wake_envoye===true?'oui':'non')+
+        ' ; acquitté MQTT : '+(d.puback_wake===true?'oui':'non')+
+        ' ; DP149 true/false : '+String(d.dp149_vrai??0)+'/'+String(d.dp149_faux??0)+
+        ' ; messages déchiffrés : '+String(d.messages_dechiffres??0)+
+        '. Aucun direct ni PTZ lancé. DP149 true est un indice de réveil, pas une preuve de causalité.');
     } finally {
       this._busy=false;
       if(btn)btn.disabled=false;
