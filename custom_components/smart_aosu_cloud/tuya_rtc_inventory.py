@@ -17,6 +17,7 @@ from .tuya_mqtt_offer import run_tuya_mqtt_offer
 from .camera_topology import select_tuya_standalone_target
 from .c9c_rtc_schema import summarize_c9c_rtc_schema
 from .c9c_moto_signal import resolve_rtc_moto_id
+from .c9c_mqtt_passive import observe_mqtt_for_c9c
 
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
@@ -183,7 +184,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                            confirmation_capture_locale:bool=False,
                            repertoire_capture_locale:str|None=None,live_preview=None, interactive_live:bool=False,
                            standalone_c9c_video_test:bool=False,
-                           standalone_c9c_rtc_audit:bool=False):
+                           standalone_c9c_rtc_audit:bool=False,
+                           standalone_c9c_mqtt_watch:bool=False):
     """Explicitly consented camera stream, or conservative manual one-shot diagnostic.
 
     interactive_live is an internal flag: it is accepted only with the real
@@ -206,6 +208,14 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
         return {'etat': 'audit_rtc_c9c_lecture_seule_uniquement',
                 'appel_reseau': 0, 'commande_camera': 0,
                 'secrets_retournes': False}
+    if standalone_c9c_mqtt_watch and (
+        standalone_c9c_video_test or standalone_c9c_rtc_audit
+        or interactive_live or tester_rtc is not True
+        or tester_mqtt is not True or confirmation_envoi_mot_de_passe is not True
+        or tester_offre_mqtt or tester_relais_tcp or tester_kcp or tester_media
+        or capturer_media_localement):
+        return {'etat':'observer_mqtt_c9c_lecture_seule_uniquement',
+                'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
     out={'diagnostic':'aosu_tuya_oem_inventory_b27','session_tuya_authentifiee':False,
          'appel_reseau':0,'mot_de_passe_envoye':False,
          'commande_camera':0,'session_video_creee':False,'secrets_retournes':False,
@@ -341,7 +351,7 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 and isinstance(getattr(client,'_c5l_name',None),str)
                 and getattr(client,'_c5l_name').strip()
                 and item['name'].strip().casefold()==getattr(client,'_c5l_name').strip().casefold()]
-            if standalone_c9c_video_test or standalone_c9c_rtc_audit:
+            if standalone_c9c_video_test or standalone_c9c_rtc_audit or standalone_c9c_mqtt_watch:
                 # The C5L-specific selector is intentionally NOT reused here:
                 # any unrelated C5L match must never override a C9C selection.
                 target, selection = select_tuya_standalone_target(
@@ -413,15 +423,19 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 except (TypeError,AttributeError):
                     pass
             elif tester_mqtt is True and private is not None:
-                out['signalisation_mqtt']=run_tuya_mqtt_signalisation(
-                    client,identity,signer,session,install_id,private)
+                if standalone_c9c_mqtt_watch:
+                    out['signalisation_mqtt']=observe_mqtt_for_c9c(
+                        client,identity,signer,session,install_id,private)
+                else:
+                    out['signalisation_mqtt']=run_tuya_mqtt_signalisation(
+                        client,identity,signer,session,install_id,private)
             elif tester_mqtt is True:
                 out['signalisation_mqtt']={'etat':'mqtt_non_lance_rtc_non_valide',
                     'appel_http_supplementaire':0,'commande_camera':0,
                     'session_video_creee':False,'secrets_retournes':False}
             out['etat']='configuration_rtc_obtenue'
-            if standalone_c9c_rtc_audit:
-                # This is an observation only; never retain provisional media
+            if standalone_c9c_rtc_audit or standalone_c9c_mqtt_watch:
+                # These are observations only; never retain provisional media
                 # keys from an audit that cannot produce an offer.
                 client._tuya_oem_media_bootstrap=None
             return out

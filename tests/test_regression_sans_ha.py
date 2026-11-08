@@ -14,7 +14,7 @@ COMP=ROOT/'custom_components/smart_aosu_cloud'
 class TestsConfigurationSansReseau(unittest.TestCase):
     def test_manifest(self):
         d=json.loads((COMP/'manifest.json').read_text(encoding='utf-8'))
-        self.assertEqual(d['version'],'0.8.13-beta9')
+        self.assertEqual(d['version'],'0.8.13-beta10')
         self.assertEqual(d['domain'],'smart_aosu_cloud')
 
     def test_python_syntax(self):

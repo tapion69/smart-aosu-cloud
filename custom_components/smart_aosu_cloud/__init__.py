@@ -506,6 +506,64 @@ async def async_setup(hass,config):
             'identifiants_retournes':False,'secrets_retournes':False,
         }
 
+    async def observer_mqtt_c9c_autonome(call):
+        """Watch known MQTT topics while the owner opens the official app live."""
+        if call.data.get('confirmation_ecoute_mqtt') is not True:
+            raise ServiceValidationError('Confirmer l ecoute MQTT passive')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active est requise')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une seule C9C autonome sans station est requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct Home Assistant avant cet essai')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory, runtime.client,
+            confirmation_envoi_mot_de_passe=True,
+            tester_rtc=True, tester_mqtt=True,
+            standalone_c9c_mqtt_watch=True,
+            tester_offre_mqtt=False, tester_relais_tcp=False,
+            tester_kcp=False, tester_media=False))
+        watch=report.get('signalisation_mqtt')
+        watch=watch if isinstance(watch,dict) else {}
+        selection=report.get('methode_selection_rtc')
+        permitted={'identite_exacte','camera_tuya_unique_non_confirmee',
+                   'appareil_tuya_unique_sans_categorie_video',
+                   'aucune_camera_tuya_identifiable'}
+        safe_status={'ecoute_terminee','uid_indisponible','connexion_mqtt_refusee',
+                     'abonnement_inattendu','aucun_abonnement_accepte',
+                     'certificat_tls_non_valide','mqtt_timeout',
+                     'trame_mqtt_inattendue','erreur_reseau_mqtt',
+                     'ecoute_deja_en_cours','limite_ecoute_dix_minutes',
+                     'rtc_expire','session_incoherente',
+                     'identite_mqtt_indisponible'}
+        state=watch.get('etat')
+        def count(field):
+            x=watch.get(field)
+            return min(100,max(0,x)) if type(x) is int else 0
+        return {
+            'diagnostic':'aosu_c9c_mqtt_passif_b10',
+            'etat':state if state in safe_status else 'non_lance',
+            'preparation':report.get('etat') if report.get('etat') in
+                ('configuration_rtc_obtenue','limite_rtc_cinq_minutes',
+                 'limite_login_une_heure','limite_inventaire_30_minutes',
+                 'login_UID_non_reussi','test_deja_en_cours',
+                 'rtc_non_lance_c9c_non_identifiee')
+                else 'autre',
+            'selection':selection if selection in permitted else 'non_confirmee',
+            'abonnement_appareil':watch.get('abonnement_appareil') is True,
+            'abonnement_moto':watch.get('abonnement_moto') is True,
+            'messages_appareil':count('messages_appareil'),
+            'messages_moto':count('messages_moto'),
+            'messages_autres':count('messages_autres'),
+            'offres_envoyees':0, 'video_lancee':False,'commandes_ptz':0,
+            'identifiants_retournes':False,'secrets_retournes':False,
+            'payloads_conserves':False,
+            'note':'Un compteur nul ne prouve pas que la camera est absente.',
+        }
+
     async def demarrer_video_c9c_autonome_beta(call):
         """Explicit video-only C5L P2P experiment on one standalone C9C.
 
@@ -1835,6 +1893,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_rtc_c9c_autonome',
                                  diagnostiquer_rtc_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'observer_mqtt_c9c_autonome',
+                                 observer_mqtt_c9c_autonome,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'demarrer_video_c9c_autonome_beta',
                                  demarrer_video_c9c_autonome_beta,

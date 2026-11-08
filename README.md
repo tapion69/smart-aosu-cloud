@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta9 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta10 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -60,3 +60,9 @@ D'après la documentation officielle Tuya WebRTC, `moto_id` est un champ faculta
 En bêta9, **uniquement après un clic sur « Essayer la vidéo » pour une unique C9C autonome**, l'intégration recherche `moto_id` dans des champs prédéfinis de la *même* réponse RTC fraîche ; s'il existe une valeur unique et valide, elle est mise dans l'offre MQTT et les messages de session associés (candidate/disconnect). Si la valeur est absente ou ambiguë, elle reste vide. Le rapport affiche seulement la source anonymisée et un booléen, jamais le `moto_id` lui-même. Les contrôleurs vidéo/PTZ des C5L et H1L restent inchangés.
 
 **Important :** la correspondance AOSU/Tuya de la C9C autonome reste non prouvée ; l'acceptation de la configuration RTC et une PUBACK MQTT ne prouvent pas la réception de l'offre par la caméra. L'essai doit être manuel, une seule tentative, sans PTZ.
+
+## 0.8.13-beta10 — écoute MQTT passive pendant le direct officiel
+
+La C9C autonome n'a toujours répondu à aucune offre SDP depuis HA, même avec le moto_id fourni par RTC. Un bouton **Observer MQTT** teste uniquement les abonnements aux canaux existants `smart/mb/in` et `/av/u`, pendant 20 secondes **sans aucune publication**, vidéo ou PTZ. Ouvrir le direct officiel dans AOSU sur le téléphone pendant l'observation. Seuls les statuts d'abonnement et les nombres de messages sont affichés. Aucun contenu chiffré, identifiant, jeton ou métadonnée privée ne quitte la mémoire. Cette observation ne prouve pas une correspondance de caméra et zéro message n'exclut pas d'autres chemins de signalisation. Cible : un seul modèle C9C autonome sans station. Pour éviter une interruption du direct HA, l'écoute refuse de démarrer si un direct HA est déjà actif.
+
+Le compte Tuya peut être authentifié et l'inventaire/RTC lu, mais aucune commande n'est envoyée aux caméras. Garder en tête les limitations d'inventaire (30 min), d'RTC (5 min) et d'écoute (10 min). La vidéo/PTZ des caméras déjà validées n'est pas modifiée.

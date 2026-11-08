@@ -3053,3 +3053,19 @@ diagnostiquer_rtc_c9c_autonome:
       required: true
       selector:
         boolean: {}
+
+observer_mqtt_c9c_autonome:
+  name: C9C autonome — observer MQTT sans envoyer d'offre
+  description: >-
+    Après authentification et lecture RTC de l'unique candidat Tuya, ouvre
+    une observation volontaire des deux canaux de signalisation pendant 20 s.
+    Ouvrir le direct dans l'application AOSU officielle pendant cette fenêtre.
+    Aucun message MQTT n'est publié ; aucun contenu de paquet, nom, IP ou jeton
+    n'est conservé ou renvoyé. Une seule observation toutes les 10 minutes.
+    Peut nécessiter une authentification Tuya sur le compte AOSU configuré.
+  fields:
+    confirmation_ecoute_mqtt:
+      name: Autoriser une connexion et une écoute MQTT passive
+      required: true
+      selector:
+        boolean: {}

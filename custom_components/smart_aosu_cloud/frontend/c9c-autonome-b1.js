@@ -38,7 +38,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="observe">Observer MQTT</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play());
@@ -47,6 +47,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
     this.shadowRoot.getElementById('detail').addEventListener('click',()=>void this._detail());
     this.shadowRoot.getElementById('rtc').addEventListener('click',()=>void this._rtc());
+    this.shadowRoot.getElementById('observe').addEventListener('click',()=>void this._observe());
     this.shadowRoot.getElementById('screen').addEventListener('click',()=>{
       const element=this.shadowRoot.getElementById('view');
       if(element?.requestFullscreen) void element.requestFullscreen().catch(()=>{});
@@ -195,6 +196,29 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; clé locale : '+yn(x.cle_locale_presente)+
         '. Identité non prouvée. Aucun direct ni PTZ lancé.');
     } finally {
+      this._busy=false;
+      if(btn)btn.disabled=false;
+    }
+  }
+  async _observe() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('observe');
+    if(btn)btn.disabled=true;
+    this._message('Ouvre maintenant le direct dans AOSU sur le téléphone. Écoute passive ~20 s après la préparation RTC…');
+    try{
+      const r=await this._service('observer_mqtt_c9c_autonome',{
+        confirmation_ecoute_mqtt:true
+      });
+      const d=r?.response||r;
+      if(!d||typeof d.etat!=='string')return;
+      this._message('MQTT : '+d.etat+' ; appareil abonné : '+(d.abonnement_appareil===true?'oui':'non')+
+        ' ; moto abonné : '+(d.abonnement_moto===true?'oui':'non')+
+        ' ; messages appareil : '+String(d.messages_appareil??'?')+
+        ' ; messages moto : '+String(d.messages_moto??'?')+
+        ' ; préparation : '+String(d.preparation||'?')+
+        '. Zéro offre/commande vidéo envoyée ; résultat indicatif uniquement.');
+    }finally{
       this._busy=false;
       if(btn)btn.disabled=false;
     }
