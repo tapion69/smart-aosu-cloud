@@ -18,7 +18,7 @@ class TestSharedMQTTBeta21(unittest.TestCase):
         self.assertIn("if not awake:",block)
         self.assertIn("'reveil_non_confirme_offre_non_envoyee'",block)
         self.assertLess(block.index("try_wake_c9c_on_open_socket("),
-                        block.index("_send_once(sock,key,pubtopic,source,2,11,302,offer)"))
+                        block.index("_send_once(sock,key,pubtopic,source,sequence_start+1,11,302,offer)"))
         self.assertNotIn("socket.create_connection",block)
         self.assertIn("sock.sendall(_mqtt_publish(topic, payload, 2))",WAKE)
         self.assertIn("_COOLDOWN_S = 600",WAKE)

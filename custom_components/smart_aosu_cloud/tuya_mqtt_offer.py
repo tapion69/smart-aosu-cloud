@@ -64,6 +64,17 @@ def _signal_frame(key:bytes,sequence:int,source:bytes,protocol:int,data:dict)->b
     return b'2.2'+struct.pack('!I',zlib.crc32(tail))+tail
 
 
+def _c9c_sdk_counters_b26() -> tuple[int, bytes]:
+    """Return first S and 4-byte O for ONE experimental standalone C9C session.
+
+    AOSU 5.10.12 SDK: SandO initializes S=2, publish() calls SAdd(),
+    O=floor(Math.random()*1_000_000)+1_000. Secure randbelow preserves
+    the observed value range without copying Java's PRNG.
+    No account/device value and no packet are returned in diagnostics.
+    """
+    return 3, struct.pack('!I', 1000 + secrets.randbelow(1_000_000))
+
+
 def _decode_signal(key:bytes,blob:bytes)->tuple[int,dict]:
     if len(blob)<31 or len(blob)>_MAX_PACKET or blob[:3]!=b'2.2':
         raise ValueError('bad envelope')
@@ -252,7 +263,12 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
     ctx.verify_mode=ssl.CERT_REQUIRED;ctx.check_hostname=True
     pubtopic=f'smart/mb/out/{media.device_id}'
     # All topics are private; never return them in a response.
-    source=secrets.token_bytes(4)
+    # Only C9C standalone experimental manual video uses the SDK SandO
+    # counter values. Legacy C5L and C9/H1L retain their exact wire path.
+    if use_moto_id:
+        sequence_start,source=_c9c_sdk_counters_b26()
+    else:
+        sequence_start,source=1,secrets.token_bytes(4)
     sent_offer=False
     ice=None
     ice_candidate=None
@@ -287,6 +303,7 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         # C9C standalone manual video only: additional fixed counters;
         # no raw session/uid/device values ever appear in diagnostics.
         diag.update({
+            'sequencement_sdk_c9c_b26': True,
             'inattendus_plage_0_99': 0,
             'inattendus_plage_100_299': 0,
             'inattendus_plage_300_399': 0,
@@ -355,9 +372,9 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             result['etat'] = 'reveil_non_confirme_offre_non_envoyee'
                             return result
                         confirmed_at = time.monotonic()
-                    _send_once(sock,key,pubtopic,source,1,10,22,{'reqType':'sigQry'})
+                    _send_once(sock,key,pubtopic,source,sequence_start,10,22,{'reqType':'sigQry'})
                     result['mqtt_messages_publies']=1
-                    _send_once(sock,key,pubtopic,source,2,11,302,offer)
+                    _send_once(sock,key,pubtopic,source,sequence_start+1,11,302,offer)
                     if wake_before_offer:
                         result['reveil_et_video']['offre_effectuee'] = True
                         result['reveil_et_video']['delai_confirmation_offre_ms'] = (
@@ -383,7 +400,7 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                                     'path':'mqtt'},
                                 'msg':{'candidate':ice_candidate},
                             }
-                            _send_once(sock,key,pubtopic,source,3,12,302,candidate_msg)
+                            _send_once(sock,key,pubtopic,source,sequence_start+2,12,302,candidate_msg)
                             result['mqtt_messages_publies']+=1
                             result['candidat_ice_b85_publie']=True
                             diag['candidat_ice_publie']=True
@@ -546,7 +563,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                     if sent_offer:
                         try:
                             # Best-effort release: a published offer may reserve the camera.
-                            _send_once(sock,key,pubtopic,source,4 if ice_candidate else 3,
+                            _send_once(sock,key,pubtopic,source,
+                                       sequence_start+(3 if ice_candidate else 2),
                                        13 if ice_candidate else 12,302,_disconnect(
                                            uid,media,moto_id=offer['header']['moto_id']))
                             result['mqtt_messages_publies']+=1

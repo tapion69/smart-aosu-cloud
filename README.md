@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta25 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta26 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -223,3 +223,28 @@ MQTT ou msid est absente du SDK. Même sur l'original, la présence d'un
 nom d'API dans une table de chaînes ne prouve pas qu'il est appelé pour
 la C9C. Le mode beta25 ne tente ni ouverture de flux ni WebRTC. Les
 moteurs des trois caméras C5L/H1L sont inchangés.
+
+
+## 0.8.13-beta26 — compteurs MQTT SDK 2.2 (C9C autonome uniquement)
+
+L'analyse locale des 17 DEX de l'APK AOSU 5.10.12 a permis de
+reconstituer la chaîne d'encodage PV2.2 :
+PublishBean2_2 (champs data, protocol, t), chiffrement AES **brut**,
+CRC32 sur S+O+ciphertext, puis assemblage '2.2'+CRC32+S+O+ciphertext.
+**Aucun Base64 ni champ JSON s pour la version 2.2**. Le moteur Python
+reproduisait déjà cette structure.
+
+La différence vérifiée porte sur la séquence/identification :
+la classe Android SandO initialise S=2, SAdd est appelé juste avant
+chaque publication, et O est un entier compris entre 1000 et 1000999.
+Le parcours **manuel et expérimental de la C9C autonome seulement**
+emploie maintenant S=3 pour sigQry, S=4 pour l'offre, puis incrémente S
+pour le candidat éventuel et le disconnect. O est généré une fois
+par session dans la même plage SDK et encodé sur 4 octets big-endian.
+
+Le réveil, les MQTT PUBACK, l'AES/CRC, les délais, le PTZ et les
+parcours C5L/C9-H1L ne changent pas. La carte État indique
+'compteur SDK C9C beta26 : actif' quand ce mode a été utilisé.
+Il s'agit d'une hypothèse de compatibilité fondée sur une différence
+vérifiée, pas d'une garantie de SDP ni de vidéo. Tester sur la caméra
+autonome après mise à jour seulement, une tentative à la fois.

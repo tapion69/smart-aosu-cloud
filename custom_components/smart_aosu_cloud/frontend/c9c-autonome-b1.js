@@ -459,6 +459,9 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         count(sig.inattendus_plage_300_399)+'/'+count(sig.inattendus_plage_autre)+
         ' ; autres provenant appareil : '+count(sig.inattendus_emis_par_appareil)
       : '');
+    const sequenceInfo = sig.sequencement_sdk_c9c_b26===true
+      ? ' ; compteur SDK C9C beta26 : actif'
+      : '';
     const rtcPath=(last.rtc_api_source==='ipc_v4'?'IPC-v4':
       last.rtc_api_source==='thing_rtc'?'Thing RTC':'non_disponible');
     const motoInfo=' ; méthode RTC : '+rtcPath+
@@ -468,7 +471,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       (stage==='rtc_non_lance_c9c_non_identifiee'
         ? ' ; identification : '+selection+' ; caméras Tuya : '+cams+' / appareils Tuya : '+total+'. Ne pas relancer sans correction.'
         : ' ; sélection RTC : '+selection+' ; config RTC : '+String(last.configuration_rtc_acceptee===true?'acceptée':last.configuration_rtc_acceptee===false?'refusée':'inconnue')+
-          (noSdp ? ' ; MQTT : sigQry='+count(sig.reponses_sigqry)+', autres='+count(sig.reponses_protocole_inattendu)+', 302 inconnu='+count(sig.messages_302_autres_types)+', 302 invalide='+count(sig.messages_302_format_invalide)+' ; SDP absente.'+extra+motoInfo+wakeStatus : '.'+motoInfo+wakeStatus)));
+          (noSdp ? ' ; MQTT : sigQry='+count(sig.reponses_sigqry)+', autres='+count(sig.reponses_protocole_inattendu)+', 302 inconnu='+count(sig.messages_302_autres_types)+', 302 invalide='+count(sig.messages_302_format_invalide)+' ; SDP absente.'+extra+motoInfo+wakeStatus+sequenceInfo : '.'+motoInfo+wakeStatus+sequenceInfo)));
   }
 }
 if(!customElements.get('smart-aosu-c9c-autonome-b1'))
