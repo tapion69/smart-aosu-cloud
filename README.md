@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta24 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta25 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -203,3 +203,23 @@ que des booléens anonymes sur WebRTC, moto_id, auth, msid et ICE.
 Il n'envoie aucun réveil, MQTT, SDP, vidéo ou PTZ. La prise en charge
 WebRTC ne peut pas être affirmée sur les seuls indicateurs reçus.
 Les moteurs C5L et H1L restent inchangés.
+
+
+## 0.8.13-beta25 — inspection du SDK MQTT de l'APK AOSU
+
+Le nouveau bouton Analyser SDK APK réalise une analyse purement locale des
+tables de chaînes DEX de l'APK AOSU 5.10.12 configuré. Il ne publie aucune
+chaîne extraite, clé, identifiant ou URL privée, et ne réalise aucun
+appel réseau ni commande caméra. Une protection de 15 minutes limite les
+analyses manuelles. Les sources vérifiées sont l'APK original de 200 Mo
+et la version allégée de 1,69 Mo ; toutes deux sont contrôlées par SHA256
+avant toute lecture. L'APK original exact, si présent dans le même
+répertoire que l'APK configuré sous le nom Aosu_5.10.12_21839.apks.apk,
+est préféré. Le script n'écrit jamais ce fichier ni aucune extraction.
+
+L'APK léger ne comporte qu'une fraction des DEX originaux : un résultat
+négatif sur la version allégée ne permet pas de conclure que la méthode
+MQTT ou msid est absente du SDK. Même sur l'original, la présence d'un
+nom d'API dans une table de chaînes ne prouve pas qu'il est appelé pour
+la C9C. Le mode beta25 ne tente ni ouverture de flux ni WebRTC. Les
+moteurs des trois caméras C5L/H1L sont inchangés.

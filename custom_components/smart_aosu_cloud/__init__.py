@@ -582,6 +582,43 @@ async def async_setup(hass,config):
             'selection_non_confirmee':True,
         }
 
+    async def analyser_sdk_mqtt_c9c_b25(call):
+        """No network, no Tuya login, no camera commands: local APK inspection."""
+        if call.data.get('confirmation_analyse_apk_locale') is not True:
+            raise ServiceValidationError('Confirmer l analyse locale de l APK')
+        entries=[e for e in hass.config_entries.async_entries(DOMAIN)
+                 if getattr(e,'runtime_data',None)]
+        if len(entries)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active requise')
+        runtime=entries[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une C9C autonome unique requise')
+        from .c9c_sdk_mqtt_b25 import audit_apk_sdk_c9c, _INDICATORS
+        raw=await hass.async_add_executor_job(audit_apk_sdk_c9c,runtime.client)
+        status=('analyse_originale_terminee','analyse_lite_partielle',
+                'non_lance','analyse_deja_en_cours','limite_quart_heure',
+                'apk_non_configure','apk_introuvable','apk_illisible',
+                'apk_non_reconnu','archive_invalide_ou_memoire_insuffisante')
+        source=('aucune','original_verifie','lite_verifie')
+        value=raw.get('indicateurs')
+        value=value if isinstance(value,dict) else {}
+        count=raw.get('dex_scannes')
+        return {
+            'diagnostic':'aosu_c9c_sdk_mqtt_b25',
+            'etat':raw.get('etat') if raw.get('etat') in status else 'autre',
+            'source':raw.get('source') if raw.get('source') in source else 'aucune',
+            'dex_scannes':min(32,max(0,count)) if type(count) is int else 0,
+            'analyse_partielle':raw.get('analyse_partielle') is True,
+            'apk_complet_valide':raw.get('apk_complet_valide') is True,
+            'methode_mqtt_identifiee':False,
+            'indicateurs':{k:value.get(k) is True for k in _INDICATORS},
+            'appels_reseau':0,'publications_mqtt':0,'offres_envoyees':0,
+            'commandes_camera':0,'commandes_ptz':0,
+            'video_lancee':False,'identifiants_retournes':False,
+            'secrets_retournes':False,'chaines_brutes_retournees':False,
+            'fichiers_crees':0,
+        }
+
     async def comparer_ipc_v2_c9c_autonome_b24(call):
         """Read a second OEM IPC config method for ONE standalone C9C."""
         if call.data.get('confirmation_lecture_ipc_v2') is not True:
@@ -2196,6 +2233,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'comparer_rtc_ipc_v4_c9c_autonome',
                                  comparer_rtc_ipc_v4_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'analyser_sdk_mqtt_c9c_b25',
+                                 analyser_sdk_mqtt_c9c_b25,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'comparer_ipc_v2_c9c_autonome_b24',
                                  comparer_ipc_v2_c9c_autonome_b24,

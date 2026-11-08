@@ -3085,6 +3085,23 @@ comparer_rtc_ipc_v4_c9c_autonome:
       selector:
         boolean: {}
 
+analyser_sdk_mqtt_c9c_b25:
+  name: C9C autonome — analyser SDK MQTT dans APK local (sans réseau)
+  description: >-
+    Inspecte uniquement la table de chaînes des DEX de la version AOSU
+    5.10.12 dont l'empreinte SHA256 est connue. Aucun accès réseau, login,
+    requête RTC/MQTT, réveil, offre vidéo ou PTZ. Résultat booléen sans
+    chaînes brutes, identifiants ou secrets. La version allégée ne contient
+    qu'une partie du SDK. Si l'APK original exact est présent dans le
+    même dossier que l'APK configuré, il est préféré pour cette inspection.
+    Quinze minutes entre deux analyses manuelles.
+  fields:
+    confirmation_analyse_apk_locale:
+      name: Autoriser la lecture locale de l'APK AOSU
+      required: true
+      selector:
+        boolean: {}
+
 comparer_ipc_v2_c9c_autonome_b24:
   name: C9C autonome — lire IPC v2 (sans vidéo)
   description: >-

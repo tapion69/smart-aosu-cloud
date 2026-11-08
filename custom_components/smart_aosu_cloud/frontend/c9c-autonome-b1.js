@@ -38,7 +38,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="sdkb25">Analyser SDK APK</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play(false));
@@ -51,6 +51,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('v4rtc').addEventListener('click',()=>void this._v4rtc());
     this.shadowRoot.getElementById('webrtcaudit').addEventListener('click',()=>void this._webrtc(false));
     this.shadowRoot.getElementById('ipcv2b24').addEventListener('click',()=>void this._ipcV2B24());
+    this.shadowRoot.getElementById('sdkb25').addEventListener('click',()=>void this._sdkB25());
     this.shadowRoot.getElementById('webrtcchannel').addEventListener('click',()=>void this._webrtc(true));
     this.shadowRoot.getElementById('observe').addEventListener('click',()=>void this._observe());
     this.shadowRoot.getElementById('wake').addEventListener('click',()=>void this._wake());
@@ -240,6 +241,44 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; pv : '+String(x.version_mqtt_pv_connue||'non_identifiee')+
         '. Aucun direct ni PTZ envoyé. Identité AOSU/Tuya non définitivement prouvée.');
     } finally {
+      this._busy=false;
+      if(btn)btn.disabled=false;
+    }
+  }
+  async _sdkB25() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('sdkb25');
+    if(btn)btn.disabled=true;
+    this._message('Analyse locale de l APK AOSU, sans communication caméra…');
+    try {
+      const response=await this._service('analyser_sdk_mqtt_c9c_b25',{
+        confirmation_analyse_apk_locale:true
+      });
+      const d=response?.response||response;
+      if(!d||typeof d.etat!=='string')return;
+      if(!['analyse_lite_partielle','analyse_originale_terminee'].includes(d.etat)){
+        this._message('Analyse SDK : '+d.etat+
+          '. Aucune commande caméra ni communication réseau envoyée.');
+        return;
+      }
+      const v=d.indicateurs||{},yn=x=>x===true?'oui':'non';
+      this._message('SDK APK : '+(d.source==='original_verifie'?'original complet':'version allégée')+
+        ' ; DEX : '+String(d.dex_scannes??0)+
+        ' ; examen partiel : '+yn(d.analyse_partielle)+
+        ' ; jarvis MQTT : '+yn(v.jarvis_mqtt)+
+        ' ; jarvis config : '+yn(v.jarvis_config)+
+        ' ; chaîne msid : '+yn(v.mqtt_session_msid)+
+        ' ; canal /av/u : '+yn(v.route_webrtc_in)+
+        ' ; canal /av/moto : '+yn(v.route_webrtc_out)+
+        ' ; domaine MQTT mobile : '+yn(v.mqtt_mobile_domain)+
+        ' ; MQTT SDK : '+yn(v.sdk_mqtt_client)+
+        ' ; SDK caméra Tuya : '+yn(v.sdk_camera_tuya)+
+        '. Chaînes statiques uniquement : cela ne prouve aucun appel exécuté.'+
+        (d.analyse_partielle===true?
+         ' APK allégé : absence de chaîne non concluante.':'')+
+        ' Aucune vidéo, réseau ou commande caméra.');
+    }finally{
       this._busy=false;
       if(btn)btn.disabled=false;
     }
