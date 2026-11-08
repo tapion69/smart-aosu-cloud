@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta21 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta22 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -166,3 +166,12 @@ Le diagnostic distingue réveil, PUBACK du réveil, envoi et PUBACK de l'offre
 vidéo, ainsi que les délais de réveil et de publication après confirmation.
 Un PUBACK ne prouve jamais que la caméra a accepté l'offre SDP.
 Cette bêta nécessite encore un essai réel sur la caméra externe.
+
+
+## 0.8.13-beta22 — correction de la bêta21
+
+La bêta21 accédait au résultat reveil_et_video avant sa création :
+une exception KeyError arrêtait le parcours avant toute commande MQTT.
+Ce résultat est désormais lu seulement après l'appel run_tuya_mqtt_offer.
+Un test hors réseau exécute la branche RTC/MQTT avec une réponse simulée.
+La connexion partagée et les chemins C5L/H1L restent inchangés.

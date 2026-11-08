@@ -462,8 +462,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 out['etat']='reveil_video_rtc_incompatible'
                 return out
             if tester_offre_mqtt is True and private is not None:
-                if standalone_c9c_wake_then_video:
-                    out['reveil_et_video']['offre_effectuee']=True
+                # Shared MQTT session creates its own wake report first.
+                # Read it only after run_tuya_mqtt_offer completes.
                 out['signalisation_mqtt']=run_tuya_mqtt_offer(
                     client,identity,signer,session,install_id,private,
                     tester_relais_tcp=tester_relais_tcp,tester_kcp=tester_kcp, tester_media=tester_media,
