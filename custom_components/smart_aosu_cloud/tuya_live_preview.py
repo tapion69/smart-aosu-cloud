@@ -677,6 +677,8 @@ class LiveController:
                 'deconnexion_distante':disconnect_info,
                 'etat_negociation':report.get('etat','non_disponible'),
                 'methode_selection_rtc':report.get('methode_selection_rtc','non_disponible'),
+                'rtc_api_source':report.get('rtc_api_source','non_disponible')
+                    if self._standalone_video_test_mode else 'non_disponible',
                 'nombre_appareils_tuya':report.get('nombre_appareils_tuya'),
                 'cameras_tuya_categorie_video':report.get('cameras_tuya_categorie_video'),
                 'inventaire_cache_utilise':report.get('inventaire_cache_utilise'),

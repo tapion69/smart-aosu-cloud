@@ -391,10 +391,14 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 return {**out,'etat':'limite_rtc_cinq_minutes'}
             if not interactive_live:
                 _LAST_RTC[client_key]=now+300
-            # C9C diagnostic only: try the IPC-specific RTC API used by
-            # independent native IPC clients. Existing video paths unchanged.
-            rtc_method=('m.ipc.v4.rtc.config.get' if standalone_c9c_v4_rtc_audit
+            # The IPC-v4 call is used ONLY for the explicitly confirmed manual
+            # standalone-C9C live test or its read-only v4 diagnostic.
+            # Generic C5L video and all H1L logic keep the previous API.
+            rtc_ipc_v4 = (standalone_c9c_video_test is True or
+                          standalone_c9c_v4_rtc_audit is True)
+            rtc_method=('m.ipc.v4.rtc.config.get' if rtc_ipc_v4
                         else 'thing.m.rtc.config.get')
+            out['rtc_api_source']='ipc_v4' if rtc_ipc_v4 else 'thing_rtc'
             rtc,rtcsafe=read(rtc_method,{'devId':target})
             out['configuration_rtc_acceptee']=rtcsafe['serveur_accepte']
             if not rtcsafe['serveur_accepte'] or rtcsafe['rejet_explicite']:

@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta14 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta15 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -94,3 +94,13 @@ Le bouton **Comparer RTC IPC** de la beta13 renvoyait `erreur_api_tuya`, non pas
 Cette correction ajoute exclusivement cette lecture (`v=1.0`, `{"devId":"..."}`) à la liste autorisée ; seuls les diagnostics manuels C9C l'appellent, jamais le direct C5L/H1L, ni le PTZ. L'éventuel nouveau refus affiche uniquement une origine déterminée parmi `validation_locale`, `reponse_http_invalide`, `reseau_ou_dechiffrement`, `refus_du_serveur` ou `erreur_inconnue`. Aucun texte brut de réponse, code inconnu ou identifiant privé n'est retourné.
 
 **Test** : mettre à jour, redémarrer et cliquer **Comparer RTC IPC**, après expiration de la protection de 5 minutes. Ne pas lancer le direct depuis Home Assistant pendant ce test.
+
+## 0.8.13-beta15 — essai vidéo manuel RTC IPC-v4 pour la C9C autonome
+
+Sur une installation externe, `m.ipc.v4.rtc.config.get` a répondu positivement : configuration média complète, session, ICE/TURN et relais TCP. Les observations MQTT officielles montraient une réponse SDP AES/KCP, mais notre direct Home Assistant n'en recevait pas via l'ancienne méthode `thing.m.rtc.config.get`.
+
+**Uniquement** lorsque l'utilisateur appuie sur **Essayer la vidéo** pour une unique C9C autonome sans station, le moteur demande désormais sa configuration RTC avec `m.ipc.v4.rtc.config.get` (API v1.0 déjà autorisée en bêta14). La suite MQTT/SDP/ICE/KCP et le `moto_id` sont inchangés, afin d'isoler cette modification. Les chemins C5L et H1L conservent leur RTC antérieur.
+
+Le diagnostic `statut_direct_c5l` contient un nouveau champ **`dernier_resultat.rtc_api_source`** (`ipc_v4` ou `thing_rtc`) sans identité privée. La carte affiche également cette méthode après la fin de l'essai. Le PTZ C9C reste désactivé.
+
+**Attention :** obtenir la configuration RTC ne garantit pas l'arrivée d'une SDP ni d'une vidéo ; le relais TURN/UDP/KCP reste un chantier distinct. Une seule tentative manuelle, puis inspection du diagnostic, sans répétition automatique. Aucun compte, token, PCAP, APK ou configuration d'installation n'est distribué.

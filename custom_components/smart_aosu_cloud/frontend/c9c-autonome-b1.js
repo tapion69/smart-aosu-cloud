@@ -287,7 +287,10 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     const sig=last.signalisation_b89||{};
     const count=(v)=>Number.isInteger(v)?v:'?';
     const noSdp=last.etat_mqtt==='offre_envoyee_sans_reponse_sdp';
-    const motoInfo=' ; moto_id RTC : '+String(last.moto_id_source_rtc||'non_disponible')+
+    const rtcPath=(last.rtc_api_source==='ipc_v4'?'IPC-v4':
+      last.rtc_api_source==='thing_rtc'?'Thing RTC':'non_disponible');
+    const motoInfo=' ; méthode RTC : '+rtcPath+
+      ' ; moto_id RTC : '+String(last.moto_id_source_rtc||'non_disponible')+
       ' ; moto_id dans offre : '+(last.moto_id_applique===true?'oui':'non');
     this._message(brief+(stage ? ' ; phase : '+stage : '')+
       (stage==='rtc_non_lance_c9c_non_identifiee'
