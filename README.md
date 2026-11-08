@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta17 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta18 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -120,3 +120,11 @@ Après ouverture puis fermeture du direct AOSU, l'essai C9C dans Home Assistant 
 La bêta17 ne modifie aucune requête RTC, offre MQTT, ICE, décodage ou PTZ. Elle classe **uniquement pour l'essai manuel C9C autonome** les six protocoles non reconnus par plages numériques et les messages 302 de session différente par types `answer`, `candidate`, `disconnect` et présence d'un SDP. Des correspondances exactes avec les identifiants de l'appareil et du compte sont comptées en RAM sans jamais retourner les identifiants. Cela permettra de savoir si la SDP reçue après le réveil appartenait à l'ancienne session AOSU.
 
 Aucune nouvelle tentative automatique ni nouvelle commande. Un seul essai manuel après mise à jour, sans simultanéité avec le direct officiel, suffit au diagnostic. **Les contrôleurs C5L/H1L restent inchangés.**
+
+## 0.8.13-beta18 — vérifier passivement le DP 149 de la C9C autonome
+
+Le direct de la C9C solaire autonome demeure bloqué avant réponse SDP, même via RTC IPC-v4. La documentation Tuya décrit un mécanisme de réveil `wirelessWake(devId)` pour les caméras basse consommation, et un état de veille `DP 149 / wireless_awake`. **Cette fonction SDK n'est pas une action OEM Python confirmée : aucun réveil n'est envoyé.**
+
+Le bouton existant **Observer MQTT** classe maintenant, en plus de la vidéo, les éventuelles déclarations DP 149 dans l'inventaire Tuya chargé pour l'unique C9C autonome, et les rapports DP 149 déchiffrés dans le canal MQTT de l'appareil pendant les 20 secondes d'observation. L'écran n'affiche que présence, indices basse consommation explicitement typés booléens, et nombres de messages `true`, `false` ou non booléens. Aucune valeur privée ni message brut. Un résultat absent est **inconnu**, et la convention exacte `true`/veille n'est pas présumée ; elle doit être vérifiée sur ce modèle et son firmware.
+
+Pour tester : mettre à jour, redémarrer HA, cliquer **Observer MQTT**, puis ouvrir le direct dans AOSU officiel durant l'observation. Envoyer uniquement le texte du diagnostic. **Aucun changement des offres MQTT, ICE/KCP, PTZ ou caméras C5L/H1L.** Les fréquences d'authentification et d'observation existantes sont maintenues.

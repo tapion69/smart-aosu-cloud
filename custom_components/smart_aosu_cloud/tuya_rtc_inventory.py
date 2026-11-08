@@ -17,6 +17,7 @@ from .tuya_mqtt_offer import run_tuya_mqtt_offer
 from .camera_topology import select_tuya_standalone_target
 from .c9c_rtc_schema import summarize_c9c_rtc_schema
 from .c9c_moto_signal import resolve_rtc_moto_id
+from .c9c_mqtt_classify import inspect_sleep_dp149
 from .c9c_mqtt_passive import observe_mqtt_for_c9c
 
 _LOCK = threading.Lock()
@@ -372,6 +373,11 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     return {**out, 'etat': 'rtc_non_lance_c9c_non_identifiee',
                             'methode_selection_rtc': selection}
                 out['methode_selection_rtc'] = selection
+                if standalone_c9c_mqtt_watch:
+                    # Only cached/loaded Tuya metadata, no extra network call.
+                    # This never establishes the state of a sleeping camera.
+                    out['veille_inventaire_c9c'] = inspect_sleep_dp149(
+                        all_devices.get(target), inventory=True)
             elif len(confirmed)==1:
                 target=confirmed[0]
                 out['methode_selection_rtc']='correspondance_exacte'

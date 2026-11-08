@@ -616,11 +616,15 @@ async def async_setup(hass,config):
                      'rtc_expire','session_incoherente',
                      'identite_mqtt_indisponible','device_id_indisponible'}
         state=watch.get('etat')
+        cache_sleep = report.get('veille_inventaire_c9c')
+        cache_sleep = cache_sleep if isinstance(cache_sleep,dict) else {}
+        low_power = cache_sleep.get('low_power_hint')
+        low_power = low_power if low_power in ('oui','non','inconnu') else 'inconnu'
         def count(field):
             x=watch.get(field)
             return min(100,max(0,x)) if type(x) is int else 0
         return {
-            'diagnostic':'aosu_c9c_mqtt_passif_b16',
+            'diagnostic':'aosu_c9c_mqtt_passif_b18',
             'etat':state if state in safe_status else 'non_lance',
             'preparation':report.get('etat') if report.get('etat') in
                 ('configuration_rtc_obtenue','limite_rtc_cinq_minutes',
@@ -635,6 +639,14 @@ async def async_setup(hass,config):
             'messages_appareil':count('messages_appareil'),
             'messages_moto':count('messages_moto'),
             'messages_autres':count('messages_autres'),
+            'dp149_inventaire_present':cache_sleep.get('dp149_present') is True,
+            'dp149_inventaire_vrai':cache_sleep.get('dp149_true') is True,
+            'dp149_inventaire_faux':cache_sleep.get('dp149_false') is True,
+            'dp149_indice_basse_consommation':low_power,
+            'dp149_messages':count('dp149_messages'),
+            'dp149_vrai':count('dp149_vrai'),
+            'dp149_faux':count('dp149_faux'),
+            'dp149_non_booleen':count('dp149_non_booleen'),
             'messages_sortants':count('messages_sortants'),
             'sortants_pv22':count('sortants_pv22'),
             'sortants_dechiffres':count('sortants_dechiffres'),

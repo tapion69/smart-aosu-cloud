@@ -66,6 +66,8 @@ def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
         "sessionid_present":0,"moto_id_present":0,
         "answers_avec_sdp":0,"answers_aes_kcp":0,
         "candidates_avec_ice":0,"answers_vers_utilisateur":0,
+        "dp149_messages":0,"dp149_vrai":0,
+        "dp149_faux":0,"dp149_non_booleen":0,
     }
     local=local_key.encode("utf-8") if isinstance(local_key,str) and len(local_key)<=64 else b""
     local=local if len(local) in (16,24,32) else None
@@ -115,6 +117,12 @@ def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
                         result=classify_observed_signal(
                             raw,key=local,device_id=device_id,uid=uid,
                             decoder=_decode_signal)
+                        if result["decoded"] and not (t & 0x01):
+                            if result["dp149_present"]:
+                                base["dp149_messages"]+=1
+                                base["dp149_vrai"]+=int(result["dp149_true"])
+                                base["dp149_faux"]+=int(result["dp149_false"])
+                                base["dp149_non_booleen"]+=int(result["dp149_non_bool"])
                         if result["pv22"]:
                             base["trames_pv22"]+=1
                             if result["decoded"]:
@@ -204,7 +212,7 @@ def observe_mqtt_for_c9c(client:Any, identity:Any, signer:Any,
                          session:Any, install_id:str,
                          media:PrivateMediaBootstrap)->dict:
     """One manual observation per ten minutes, no P2P or camera commands."""
-    base={"diagnostic":"aosu_c9c_mqtt_passif_b16",
+    base={"diagnostic":"aosu_c9c_mqtt_passif_b18",
           "etat":"non_lance","commandes_camera":0,"commandes_ptz":0,
           "offres_envoyees":0,"video_lancee":False,
           "identifiants_retournes":False,"secrets_retournes":False,

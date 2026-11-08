@@ -274,8 +274,13 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; sessionid / moto_id : '+String(d.sortants_offre_sessionid??'?')+'/'+String(d.sortants_offre_moto_id??'?')+
         ' ; trace / skill / sécurité : '+String(d.sortants_offre_trace??'?')+'/'+String(d.sortants_offre_p2p_skill??'?')+'/'+String(d.sortants_offre_security_3??'?')+
         ' ; préconnexion / token / tcp_token : '+String(d.sortants_offre_preconnect??'?')+'/'+String(d.sortants_offre_token??'?')+'/'+String(d.sortants_offre_tcp_token??'?')+
+        ' ; DP149 déclaré inventaire : '+(d.dp149_inventaire_present===true?'oui':'non observé')+
+        ' ; basse conso déclarée : '+String(d.dp149_indice_basse_consommation||'inconnu')+
+        ' ; DP149 MQTT messages : '+String(d.dp149_messages??'?')+
+        ' ; DP149 true/false/non booléen : '+String(d.dp149_vrai??'?')+'/'+
+             String(d.dp149_faux??'?')+'/'+String(d.dp149_non_booleen??'?')+
         ' ; préparation : '+String(d.preparation||'?')+
-        '. Observation seule : aucune offre vidéo ni PTZ envoyé depuis HA.');
+        '. Pas de réveil envoyé. Absence de DP149 = état inconnu.');
     }finally{
       this._busy=false;
       if(btn)btn.disabled=false;

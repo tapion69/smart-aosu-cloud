@@ -6,6 +6,75 @@ identity, SDP or unknown protocol strings are ever returned.
 from __future__ import annotations
 from typing import Any, Callable
 
+# These exact Tuya DP indicators are inspected only in pre-existing in-memory
+# cloud inventory or decrypted MQTT payloads. No DP write or wake call.
+_SLEEP_CONTAINERS = (
+    "dps", "dp", "dpCodes", "status", "schema", "functions",
+    "data", "result", "values", "dpMap", "dpList"
+)
+_SLEEP_KEYS = (149, "149", "wireless_awake")
+
+
+def inspect_sleep_dp149(blob: Any, *, inventory: bool = False) -> dict:
+    """Return only fixed booleans and a whitelisted low-power hint.
+
+    A missing DP is *unknown*, not an assertion that low-power mode is absent.
+    A true/false observation is not assumed to be the current device state.
+    """
+    report = {
+        "dp149_present": False,
+        "dp149_true": False,
+        "dp149_false": False,
+        "dp149_non_bool": False,
+        "low_power_hint": "inconnu",
+    }
+    if not isinstance(blob, (dict, list)):
+        return report
+    if inventory and isinstance(blob, dict):
+        for name in ("isLowPowerDevice", "isLowPower", "lowPower", "low_power"):
+            value = blob.get(name)
+            if type(value) is bool:
+                report["low_power_hint"] = "oui" if value else "non"
+                break
+
+    # Only known metadata / DP envelopes; prevent arbitrary deep traversal.
+    todo = [(blob, 0)]
+    inspected = 0
+    while todo and inspected < 160:
+        node, depth = todo.pop()
+        inspected += 1
+        if isinstance(node, dict):
+            # DP 149 in the normal Tuya dps mapping, or by its code.
+            for name in _SLEEP_KEYS:
+                if name in node:
+                    report["dp149_present"] = True
+                    value = node[name]
+                    if type(value) is bool:
+                        report["dp149_true" if value else "dp149_false"] = True
+                    elif not isinstance(value, (dict, list)):
+                        report["dp149_non_bool"] = True
+            dp_id = node.get("dpId", node.get("id", node.get("abilityId")))
+            code = node.get("code")
+            if dp_id in (149, "149") or code == "wireless_awake":
+                report["dp149_present"] = True
+                for name in ("value", "val", "dpValue"):
+                    if name in node:
+                        value = node[name]
+                        if type(value) is bool:
+                            report["dp149_true" if value else "dp149_false"] = True
+                        else:
+                            report["dp149_non_bool"] = True
+                        break
+            if depth < 6:
+                for name in _SLEEP_CONTAINERS:
+                    child = node.get(name)
+                    if isinstance(child, (dict, list)):
+                        todo.append((child, depth + 1))
+        elif isinstance(node, list) and depth < 6:
+            todo.extend((item, depth + 1) for item in node[:80]
+                        if isinstance(item, (dict, list)))
+    return report
+
 
 def classify_observed_signal(raw: bytes, *, key: bytes | None,
                              device_id: str, uid: str,
@@ -24,6 +93,8 @@ def classify_observed_signal(raw: bytes, *, key: bytes | None,
         "offer_p2p_skill_1635": False, "offer_security_level_3": False,
         "offer_preconnect_true": False, "offer_token_present": False,
         "offer_tcp_token_present": False, "offer_log_present": False,
+        "dp149_present": False, "dp149_true": False,
+        "dp149_false": False, "dp149_non_bool": False,
     }
     if not isinstance(raw, bytes) or len(raw) < 3 or len(raw) > 32768:
         return result
@@ -40,6 +111,9 @@ def classify_observed_signal(raw: bytes, *, key: bytes | None,
     if not isinstance(payload, dict):
         return result
     result["decoded"] = True
+    sleep = inspect_sleep_dp149(payload)
+    for name in ("dp149_present", "dp149_true", "dp149_false", "dp149_non_bool"):
+        result[name] = sleep[name]
     if type(protocol) is int and protocol in (22, 302):
         result["protocol"] = str(protocol)
     header = payload.get("header")
