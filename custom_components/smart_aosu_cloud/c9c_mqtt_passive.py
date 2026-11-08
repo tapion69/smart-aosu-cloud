@@ -50,6 +50,10 @@ def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
         "types_candidate":0,"types_disconnect":0,"types_autres":0,
         "origine_appareil_confirmee":0,"destinataire_appareil_confirme":0,
         "origine_utilisateur_confirmee":0,"destinataire_utilisateur_confirme":0,
+        "path_mqtt":0,"path_autre":0,
+        "sessionid_present":0,"moto_id_present":0,
+        "answers_avec_sdp":0,"answers_aes_kcp":0,
+        "candidates_avec_ice":0,"answers_vers_utilisateur":0,
     }
     local=local_key.encode("utf-8") if isinstance(local_key,str) and len(local_key)<=64 else b""
     local=local if len(local) in (16,24,32) else None
@@ -107,7 +111,15 @@ def _observe(auth:Any, uid:str, *, device_id:str, local_key:str)->dict:
                                     ("origine_appareil_confirmee","from_device"),
                                     ("destinataire_appareil_confirme","to_device"),
                                     ("origine_utilisateur_confirmee","from_user"),
-                                    ("destinataire_utilisateur_confirme","to_user")):
+                                    ("destinataire_utilisateur_confirme","to_user"),
+                                    ("path_mqtt","path_mqtt"),
+                                    ("path_autre","path_other"),
+                                    ("sessionid_present","sessionid_present"),
+                                    ("moto_id_present","moto_id_present"),
+                                    ("answers_avec_sdp","answer_sdp_present"),
+                                    ("answers_aes_kcp","answer_aes_kcp"),
+                                    ("candidates_avec_ice","candidate_ice_present"),
+                                    ("answers_vers_utilisateur","answer_to_user")):
                                     base[field]+=int(result[flag] is True)
                             else:
                                 base["decodages_echec"]+=1
@@ -139,7 +151,7 @@ def observe_mqtt_for_c9c(client:Any, identity:Any, signer:Any,
                          session:Any, install_id:str,
                          media:PrivateMediaBootstrap)->dict:
     """One manual observation per ten minutes, no P2P or camera commands."""
-    base={"diagnostic":"aosu_c9c_mqtt_passif_b11",
+    base={"diagnostic":"aosu_c9c_mqtt_passif_b12",
           "etat":"non_lance","commandes_camera":0,"commandes_ptz":0,
           "offres_envoyees":0,"video_lancee":False,
           "identifiants_retournes":False,"secrets_retournes":False,

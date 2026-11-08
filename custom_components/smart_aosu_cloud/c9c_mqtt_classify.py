@@ -15,6 +15,10 @@ def classify_observed_signal(raw: bytes, *, key: bytes | None,
         "protocol": "other", "type": "other",
         "from_device": False, "to_device": False,
         "from_user": False, "to_user": False,
+        "path_mqtt": False, "path_other": False,
+        "sessionid_present": False, "moto_id_present": False,
+        "answer_sdp_present": False, "answer_aes_kcp": False,
+        "candidate_ice_present": False, "answer_to_user": False,
     }
     if not isinstance(raw, bytes) or len(raw) < 3 or len(raw) > 32768:
         return result
@@ -47,4 +51,23 @@ def classify_observed_signal(raw: bytes, *, key: bytes | None,
             isinstance(sender, str) and bool(uid) and sender == uid)
         result["to_user"] = (
             isinstance(recipient, str) and bool(uid) and recipient == uid)
+        path = header.get("path")
+        result["path_mqtt"] = path == "mqtt"
+        result["path_other"] = isinstance(path,str) and bool(path) and path != "mqtt"
+        sessionid = header.get("sessionid")
+        moto = header.get("moto_id")
+        result["sessionid_present"] = isinstance(sessionid,str) and bool(sessionid)
+        result["moto_id_present"] = isinstance(moto,str) and bool(moto)
+    msg = payload.get("msg")
+    if isinstance(msg,dict) and result["protocol"]=="302":
+        if result["type"]=="answer":
+            sdp = msg.get("sdp")
+            result["answer_sdp_present"] = isinstance(sdp,str) and bool(sdp)
+            result["answer_aes_kcp"] = (
+                isinstance(sdp,str) and "AES/KCP" in sdp)
+            result["answer_to_user"] = result["to_user"] is True
+        elif result["type"]=="candidate":
+            candidate = msg.get("candidate")
+            result["candidate_ice_present"] = (
+                isinstance(candidate,str) and bool(candidate))
     return result

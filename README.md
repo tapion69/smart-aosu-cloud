@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta11 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta12 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -74,3 +74,9 @@ Le test externe a obtenu 19 messages sur le sujet `smart/mb/in/<appareil>`, aucu
 Cette version conserve le bouton **Observer MQTT**, la fenêtre de 20 secondes et les sujets existants. Elle vérifie **uniquement en mémoire** le format chiffré `2.2`, la possibilité de déchiffrer avec la clé locale déjà disponible, les protocoles `22`/`302`, et les types `offer`/`answer`/`candidate`/`disconnect` ainsi que les correspondances d'identifiants exacts. Les sorties ne contiennent **que des compteurs** : aucun identifiant, clé, nom, IP, sujet réel, trame, SDP ou contenu de message n'est enregistré ou retourné. Le déchiffrement est une observation ; il ne modifie aucun paquet.
 
 La C9C demeure une cible expérimentale non confirmée. Aucun changement aux contrôleurs vidéo C5L, C9/H1L, ni aux commandes PTZ. Une trame non déchiffrable n'établit ni l'absence de vidéo ni une mauvaise identité : le format ou la clé peuvent être différents.
+
+## 0.8.13-beta12 — comparer la session MQTT officielle à l'offre Home Assistant
+
+Une observation sur la C9C autonome a montré 18/18 publications chiffrées au format 2.2 déchiffrables, dont cinq du protocole 302 (une `answer`, quatre `candidate`), toutes cinq émises par l'appareil Tuya sélectionné. Ces observations ne prouvent toutefois pas que l'offre Home Assistant est acceptée : elles sont issues d'une session lancée par l'application officielle.
+
+Le bouton manuel **Observer MQTT** conserve le fonctionnement passif de la bêta11, et ajoute des compteurs anonymes sur les champs `from`/`to`, `path`, présence de `sessionid` et `moto_id`, SDP et codec AES/KCP dans les réponses, candidats ICE. Aucun contenu, identifiant, SDP, clé ni adresse n'est enregistré, retourné ou publié. Le test s'effectue en ouvrant le direct officiel sur le téléphone pendant l'écoute. Les moteurs vidéo/PTZ C5L/H1L et l'offre C9C restent strictement inchangés.

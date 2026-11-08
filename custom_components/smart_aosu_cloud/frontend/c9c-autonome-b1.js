@@ -224,6 +224,13 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; types offre/réponse/candidat : '+String(d.types_offer??'?')+'/'+
               String(d.types_answer??'?')+'/'+String(d.types_candidate??'?')+
         ' ; source appareil confirmée : '+String(d.origine_appareil_confirmee??'?')+
+        ' ; destinataire utilisateur confirmé : '+String(d.destinataire_utilisateur_confirme??'?')+
+        ' ; SDP dans answer : '+String(d.answers_avec_sdp??'?')+
+        ' ; AES/KCP : '+String(d.answers_aes_kcp??'?')+
+        ' ; ICE candidats : '+String(d.candidates_avec_ice??'?')+
+        ' ; path mqtt/autres : '+String(d.path_mqtt??'?')+'/'+String(d.path_autre??'?')+
+        ' ; sessionid présent : '+String(d.sessionid_present??'?')+
+        ' ; moto_id présent : '+String(d.moto_id_present??'?')+
         ' ; préparation : '+String(d.preparation||'?')+
         '. Aucune offre vidéo ou commande PTZ envoyée.');
     }finally{

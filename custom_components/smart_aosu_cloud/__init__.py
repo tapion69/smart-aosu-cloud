@@ -544,7 +544,7 @@ async def async_setup(hass,config):
             x=watch.get(field)
             return min(100,max(0,x)) if type(x) is int else 0
         return {
-            'diagnostic':'aosu_c9c_mqtt_passif_b11',
+            'diagnostic':'aosu_c9c_mqtt_passif_b12',
             'etat':state if state in safe_status else 'non_lance',
             'preparation':report.get('etat') if report.get('etat') in
                 ('configuration_rtc_obtenue','limite_rtc_cinq_minutes',
@@ -574,6 +574,14 @@ async def async_setup(hass,config):
             'destinataire_appareil_confirme':count('destinataire_appareil_confirme'),
             'origine_utilisateur_confirmee':count('origine_utilisateur_confirmee'),
             'destinataire_utilisateur_confirme':count('destinataire_utilisateur_confirme'),
+            'path_mqtt':count('path_mqtt'),
+            'path_autre':count('path_autre'),
+            'sessionid_present':count('sessionid_present'),
+            'moto_id_present':count('moto_id_present'),
+            'answers_avec_sdp':count('answers_avec_sdp'),
+            'answers_aes_kcp':count('answers_aes_kcp'),
+            'candidates_avec_ice':count('candidates_avec_ice'),
+            'answers_vers_utilisateur':count('answers_vers_utilisateur'),
             'offres_envoyees':0, 'video_lancee':False,'commandes_ptz':0,
             'identifiants_retournes':False,'secrets_retournes':False,
             'payloads_conserves':False,

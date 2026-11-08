@@ -24,6 +24,8 @@ class ClassifyC9CSignals(unittest.TestCase):
         self.assertTrue(out["decoded"])
         self.assertTrue(out["from_device"])
         self.assertTrue(out["to_user"])
+        self.assertTrue(out["answer_to_user"])
+        self.assertTrue(out["answer_sdp_present"])
         for secret in (private_device,private_uid,"PRIVATE_SDP"):
             self.assertNotIn(secret,str(out))
 
