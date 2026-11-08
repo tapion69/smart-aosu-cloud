@@ -23,6 +23,7 @@ from typing import Any
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from .tuya_media_bootstrap import PrivateMediaBootstrap
+from .c9c_session_classify import classify_unmatched_c9c_message
 from .tuya_ice_b85 import ControlledIceB85
 from .tuya_relay_handshake import probe_relay_handshake
 from .tuya_mqtt_signaling import (
@@ -281,6 +282,26 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         'messages_disconnect': 0,
         'fin_attente': 'non_lancee',
     }
+    if use_moto_id:
+        # C9C standalone manual video only: additional fixed counters;
+        # no raw session/uid/device values ever appear in diagnostics.
+        diag.update({
+            'inattendus_plage_0_99': 0,
+            'inattendus_plage_100_299': 0,
+            'inattendus_plage_300_399': 0,
+            'inattendus_plage_autre': 0,
+            'inattendus_emis_par_appareil': 0,
+            'inattendus_vers_utilisateur': 0,
+            'inattendus_types_video': 0,
+            'reponses_302_hors_session_answer': 0,
+            'reponses_302_hors_session_candidate': 0,
+            'reponses_302_hors_session_disconnect': 0,
+            'reponses_302_hors_session_autres': 0,
+            'reponses_302_hors_session_sdp': 0,
+            'reponses_302_hors_session_emis_par_appareil': 0,
+            'reponses_302_hors_session_vers_utilisateur': 0,
+            'reponses_302_session_absente': 0,
+        })
     result['signalisation_b89'] = diag
     try:
         with socket.create_connection((_BROKER,_PORT),timeout=8) as tcp:
@@ -374,6 +395,18 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                                 continue
                             if protocol_class != 'offer_answer':
                                 diag['reponses_protocole_inattendu']+=1
+                                if use_moto_id:
+                                    unmatched=classify_unmatched_c9c_message(
+                                        protocol,data,expected_session=media.session_id,
+                                        expected_device=media.device_id,expected_uid=uid)
+                                    bucket=unmatched['protocol_bucket']
+                                    diag['inattendus_plage_'+bucket]+=1
+                                    diag['inattendus_emis_par_appareil']+=int(
+                                        unmatched['from_device'])
+                                    diag['inattendus_vers_utilisateur']+=int(
+                                        unmatched['to_user'])
+                                    diag['inattendus_types_video']+=int(
+                                        unmatched['kind'] in ('offer','answer','candidate'))
                                 continue
                             header=data.get('header');msg=data.get('msg')
                             if not isinstance(header,dict) or not isinstance(msg,dict):
@@ -381,6 +414,23 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                                 continue
                             if header.get('sessionid')!=media.session_id:
                                 diag['reponses_session_incorrecte']+=1
+                                if use_moto_id:
+                                    unmatched=classify_unmatched_c9c_message(
+                                        protocol,data,expected_session=media.session_id,
+                                        expected_device=media.device_id,expected_uid=uid)
+                                    kind=unmatched['kind']
+                                    key=('reponses_302_hors_session_'+kind
+                                         if kind in ('answer','candidate','disconnect')
+                                         else 'reponses_302_hors_session_autres')
+                                    diag[key]+=1
+                                    diag['reponses_302_hors_session_sdp']+=int(
+                                        unmatched['answer_sdp_present'])
+                                    diag['reponses_302_hors_session_emis_par_appareil']+=int(
+                                        unmatched['from_device'])
+                                    diag['reponses_302_hors_session_vers_utilisateur']+=int(
+                                        unmatched['to_user'])
+                                    diag['reponses_302_session_absente']+=int(
+                                        unmatched['session_state']=='absente')
                                 continue
                             typ=header.get('type')
                             if typ=='answer' and isinstance(msg.get('sdp'),str):

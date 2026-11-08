@@ -295,6 +295,15 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     const sig=last.signalisation_b89||{};
     const count=(v)=>Number.isInteger(v)?v:'?';
     const noSdp=last.etat_mqtt==='offre_envoyee_sans_reponse_sdp';
+    const extra=(sig.reponses_302_hors_session_answer!==undefined
+      ? ' ; hors session 302 réponse/candidat : '+
+        count(sig.reponses_302_hors_session_answer)+'/'+count(sig.reponses_302_hors_session_candidate)+
+        ' ; SDP hors session : '+count(sig.reponses_302_hors_session_sdp)+
+        ' ; autres protocoles 0-99/100-299/300-399/autres : '+
+        count(sig.inattendus_plage_0_99)+'/'+count(sig.inattendus_plage_100_299)+'/'+
+        count(sig.inattendus_plage_300_399)+'/'+count(sig.inattendus_plage_autre)+
+        ' ; autres provenant appareil : '+count(sig.inattendus_emis_par_appareil)
+      : '');
     const rtcPath=(last.rtc_api_source==='ipc_v4'?'IPC-v4':
       last.rtc_api_source==='thing_rtc'?'Thing RTC':'non_disponible');
     const motoInfo=' ; méthode RTC : '+rtcPath+
@@ -304,7 +313,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       (stage==='rtc_non_lance_c9c_non_identifiee'
         ? ' ; identification : '+selection+' ; caméras Tuya : '+cams+' / appareils Tuya : '+total+'. Ne pas relancer sans correction.'
         : ' ; sélection RTC : '+selection+' ; config RTC : '+String(last.configuration_rtc_acceptee===true?'acceptée':last.configuration_rtc_acceptee===false?'refusée':'inconnue')+
-          (noSdp ? ' ; MQTT : sigQry='+count(sig.reponses_sigqry)+', autres='+count(sig.reponses_protocole_inattendu)+', 302 inconnu='+count(sig.messages_302_autres_types)+', 302 invalide='+count(sig.messages_302_format_invalide)+' ; SDP absente.'+motoInfo : '.'+motoInfo)));
+          (noSdp ? ' ; MQTT : sigQry='+count(sig.reponses_sigqry)+', autres='+count(sig.reponses_protocole_inattendu)+', 302 inconnu='+count(sig.messages_302_autres_types)+', 302 invalide='+count(sig.messages_302_format_invalide)+' ; SDP absente.'+extra+motoInfo : '.'+motoInfo)));
   }
 }
 if(!customElements.get('smart-aosu-c9c-autonome-b1'))

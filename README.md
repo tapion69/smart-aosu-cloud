@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta16 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta17 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -112,3 +112,11 @@ Le direct C9C autonome ne reçoit toujours pas de SDP, même avec RTC IPC-v4 et 
 Le bouton existant **Observer MQTT** tente maintenant de s'abonner, en plus des deux canaux précédents, à `smart/mb/out/<appareil>` (canal sortant). Cet abonnement peut être interdit par le broker : le résultat le précise et **les deux abonnements précédents continuent normalement**. Pendant le direct officiel, la sonde classe les seules offres `302` dans la mémoire volatile (SDP AES/KCP, `path`, `sessionid`, `moto_id`, `trace_id`, `p2p_skill`, `security_level`, tokens, préconnexion), sans exposer aucune valeur. Les offres retained MQTT sont ignorées.
 
 La sonde ne publie aucun MQTT PUBLISH, n'envoie aucune offre, ne démarre ni session vidéo ni PTZ et ne conserve ni trame, ni clé, ni adresse, ni identifiant. Zéro offre observée ne prouve pas l'absence d'offre : le serveur peut refuser ou ne pas retransmettre le canal sortant. Aucun changement à la vidéo C5L/H1L ni au moteur C9C ; seule la sonde passive est étendue.
+
+## 0.8.13-beta17 — expliquer les messages reçus après le réveil officiel
+
+Après ouverture puis fermeture du direct AOSU, l'essai C9C dans Home Assistant a reçu **7** publications MQTT et **4** requêtes STUN, mais **0 réponse SDP à la session HA**. Une publication était au protocole 302 avec un identifiant de session différent ; six avaient un protocole autre que 22/302. Les requêtes STUN ne prouvent pas une acceptation de l'offre HA : elles peuvent venir de la session officielle précédente.
+
+La bêta17 ne modifie aucune requête RTC, offre MQTT, ICE, décodage ou PTZ. Elle classe **uniquement pour l'essai manuel C9C autonome** les six protocoles non reconnus par plages numériques et les messages 302 de session différente par types `answer`, `candidate`, `disconnect` et présence d'un SDP. Des correspondances exactes avec les identifiants de l'appareil et du compte sont comptées en RAM sans jamais retourner les identifiants. Cela permettra de savoir si la SDP reçue après le réveil appartenait à l'ancienne session AOSU.
+
+Aucune nouvelle tentative automatique ni nouvelle commande. Un seul essai manuel après mise à jour, sans simultanéité avec le direct officiel, suffit au diagnostic. **Les contrôleurs C5L/H1L restent inchangés.**
