@@ -508,7 +508,7 @@ async def async_setup(hass,config):
         allowed_category=('camera_reconnue','non_video_reconnue',
                           'autre_non_identifiee','absente')
         return {
-            'diagnostic':'aosu_fiche_tuya_c9c_b29',
+            'diagnostic':'aosu_fiche_tuya_c9c_b27',
             'etat':report.get('etat') if report.get('etat') in states else 'autre',
             'fiche_tuya_acceptee':report.get('fiche_tuya_api_acceptee') is True,
             'selection':methods_value if methods_value in methods else 'autre',

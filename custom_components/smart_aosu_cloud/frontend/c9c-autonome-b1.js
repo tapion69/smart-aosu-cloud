@@ -176,9 +176,29 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const model=allowed(v.modele,['c9c_exact','present_autre_ou_inconnu','absent']);
       const category=allowed(v.categorie,['camera_reconnue','non_video_reconnue',
         'autre_non_identifiee','absente']);
-      this._message('Fiche Tuya beta29 : obtenue ; SN : '+sn+
-        ' ; référence : '+ref+' ; modèle : '+model+
-        ' ; catégorie : '+category+
+      const snLabels={
+        aosu_sn_indisponible:'SN AOSU indisponible',
+        egal:'identique',
+        present_sans_egalite:'SN présent, non concordant',
+        absent_dans_tuya:'SN absent de la fiche Tuya'};
+      const refLabels={
+        aosu_reference_indisponible:'référence AOSU indisponible',
+        egale:'identique',
+        presente_sans_egalite:'présente, non concordante',
+        absente_dans_tuya:'absente de la fiche Tuya'};
+      const modelLabels={
+        c9c_exact:'C9C déclaré',
+        present_autre_ou_inconnu:'modèle présent, non C9C',
+        absent:'modèle absent'};
+      const categoryLabels={
+        camera_reconnue:'caméra reconnue',
+        non_video_reconnue:'catégorie non vidéo',
+        autre_non_identifiee:'catégorie inconnue',
+        absente:'catégorie absente'};
+      this._message('Fiche Tuya beta29 : obtenue ; SN : '+(snLabels[sn]||'inconnu')+
+        ' ; référence : '+(refLabels[ref]||'inconnu')+
+        ' ; modèle : '+(modelLabels[model]||'inconnu')+
+        ' ; catégorie : '+(categoryLabels[category]||'inconnue')+
         ' ; productId présent : '+yes(x.product_id_present)+
         ' ; bloc productBean : '+yes(x.product_bean_present)+
         ' ; productId dans productBean : '+yes(x.product_id_dans_product_bean)+

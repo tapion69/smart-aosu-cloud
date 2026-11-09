@@ -78,6 +78,8 @@ class TestC9CTuyaIdentityB29(unittest.TestCase):
         self.assertIn("if data.get('etat_reference_b29') in allowed_ref",INIT)
         self.assertIn("this._tuyaDetail27()",UI)
         self.assertIn("Fiche Tuya beta29",UI)
+        self.assertIn("SN présent, non concordant",UI)
+        self.assertIn("référence AOSU indisponible",UI)
         self.assertNotIn("ptz_maintien",UI)
 
 if __name__=="__main__":
