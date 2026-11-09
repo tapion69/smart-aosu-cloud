@@ -1,0 +1,27 @@
+name: C9C standalone beta31 offline checks
+
+on:
+  push:
+    paths:
+      - 'custom_components/smart_aosu_cloud/**'
+      - 'tests/test_c9c_*b31.py'
+      - '.github/workflows/c9c-beta31-offline.yml'
+  workflow_dispatch:
+
+jobs:
+  c9c-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python syntax
+        run: python -m compileall -q custom_components/smart_aosu_cloud
+      - name: JavaScript syntax
+        run: node --check custom_components/smart_aosu_cloud/frontend/c9c-autonome-b1.js
+      - name: Offline C9C beta31 tests
+        run: python -m unittest discover -s tests -p 'test_c9c_*b31.py' -v

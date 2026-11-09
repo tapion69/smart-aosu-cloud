@@ -34,17 +34,19 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         button{min-height:42px;padding:4px 12px;background:var(--secondary-background-color);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:8px;cursor:pointer}
         button:disabled{opacity:.5}
         p{font-size:12px;line-height:1.4;margin:8px 0;color:var(--secondary-text-color)}
+        #notice{white-space:pre-wrap}
       </style>
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="tuyadetail27">Fiche Tuya</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="sdkb25">Analyser SDK APK</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="fullb31">Diagnostic complet</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="tuyadetail27">Fiche Tuya</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="sdkb25">Analyser SDK APK</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play(false));
     this.shadowRoot.getElementById('wakeplay').addEventListener('click',()=>void this._play(true));
     this.shadowRoot.getElementById('stop').addEventListener('click',()=>void this._stop());
     this.shadowRoot.getElementById('state').addEventListener('click',()=>void this._state());
+    this.shadowRoot.getElementById('fullb31').addEventListener('click',()=>void this._fullB31());
     this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
     this.shadowRoot.getElementById('detail').addEventListener('click',()=>void this._detail());
     this.shadowRoot.getElementById('tuyadetail27').addEventListener('click',()=>void this._tuyaDetail27());
@@ -149,6 +151,65 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     } finally {
       this._busy=false;
       if(button)button.disabled=false;
+    }
+  }
+  async _fullB31() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('fullb31');
+    if(btn)btn.disabled=true;
+    this._message('Diagnostic complet C9C : lectures Tuya, produit, IPC et RTC…');
+    try {
+      const response=await this._service('diagnostiquer_c9c_complet_b31',{
+        confirmation_diagnostic_complet:true
+      });
+      const d=response?.response||response;
+      if(!d||typeof d.etat!=='string')return;
+      if(d.etat!=='diagnostic_complet_termine'&&d.etat!=='diagnostic_complet_partiel'){
+        this._message('Diagnostic complet beta31 : '+d.etat+
+          '. Aucune offre, réveil, vidéo ou PTZ envoyés.');
+        return;
+      }
+      const steps=d.etapes||{},id=d.identite||{},p=d.produit||{},
+            pid=d.reference_produit||{},rtc=d.rtc||{};
+      const yn=x=>x===true?'oui':'non';
+      const st=k=>String(steps[k]||'non_tentee');
+      const rtcLine=k=>{
+        const r=rtc[k]||{};
+        return k+': '+st(k)+' ; WebRTC '+yn(r.webrtc_declare)+
+          ' ; auth '+yn(r.auth_webrtc)+' ; moto_id '+yn(r.moto_id)+
+          ' ; MSID '+yn(r.msid)+' ; MSID ambigu '+yn(r.msid_ambigu)+
+          ' ; ICE '+yn(r.ice)+' ; session '+yn(r.session)+
+          ' ; AES/KCP '+yn(r.aes_kcp)+' ; TURN '+yn(r.turn);
+      };
+      const lines=[
+        'DIAGNOSTIC COMPLET BETA31 : '+d.etat,
+        'Sélection : '+String(d.selection||'inconnue')+
+          ' ; appels Tuya : '+String(d.appels_api??0)+'/6',
+        'Identité : SN '+String(id.sn||'inconnu')+
+          ' ; référence '+String(id.reference||'inconnu')+
+          ' ; type P2P '+String(id.p2p||'inconnu')+
+          ' ; liaison exacte '+yn(id.exacte),
+        'Fiche Tuya : '+st('fiche_tuya')+
+          ' ; productId '+(pid.id_ambigu?'ambigu':pid.id_present?'présent':'absent')+
+          ' ; source '+String(pid.source||'absent')+
+          ' ; version disponible '+yn(pid.version_presente),
+        'Produit : '+st('produit')+
+          ' ; catégorie '+String(p.categorie||'absente')+
+          ' ; modèle '+String(p.modele||'absent')+
+          ' ; indice vidéo '+yn(p.indice_video)+
+          ' ; capacités '+yn(p.capacites)+
+          ' ; P2P '+yn(p.p2p)+' ; WebRTC '+yn(p.webrtc),
+        'Modèle produit : '+st('modele_produit'),
+        rtcLine('ipc_v2'),rtcLine('rtc_v4'),rtcLine('rtc_classique'),
+        id.exacte===true?'Correspondance d’identité exacte ; vidéo non confirmée.':
+          'Identité AOSU/Tuya non confirmée. Les métadonnées produit ne prouvent pas le lien.',
+        'Aucun réveil, offre, vidéo ou PTZ. Aucun identifiant ou secret dans le rapport.'
+      ];
+      this._message(lines.join('\n'));
+    }finally{
+      this._busy=false;
+      if(btn)btn.disabled=false;
     }
   }
   async _tuyaDetail27() {

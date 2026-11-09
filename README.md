@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta30 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta31 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -280,3 +280,16 @@ Aucun identifiant ni secret n'est affiché. Le code n'ajoute aucun
 appel API, publication MQTT, réveil, SDP, vidéo ni PTZ. Les moteurs
 des trois caméras C5L/H1L restent inchangés. Le code P2P annoncé
 n'établit pas l'identité AOSU/Tuya ni le transport vidéo réel.
+
+
+## 0.8.13-beta31 - Diagnostic complet en une action
+
+Le nouveau bouton Diagnostic complet regroupe jusqu'a six lectures
+dans la meme session UID pour une seule C9C autonome :
+fiche appareil, produit, modele produit si version connue, IPC v2,
+RTC IPC-v4 et RTC classique. Le resultat distingue les appels
+acceptes, refuses, sans parametre ou impossibles. Il classe les
+indices d'identite, produit, P2P et WebRTC sans jamais exporter
+de nom, SN, productId, jeton, cle ou adresse. Aucune offre MQTT,
+aucun reveil, SDP, video, PTZ, capture ni nouvelle authentification
+par etape. Les moteurs C5L/H1L restent inchanges.

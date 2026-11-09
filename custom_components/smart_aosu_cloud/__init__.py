@@ -447,6 +447,108 @@ async def async_setup(hass,config):
         result['appels_reseau']=network_calls
         return result
 
+    async def diagnostiquer_c9c_complet_b31(call):
+        """One user action, up to six read-only APIs, no media traffic."""
+        if call.data.get('confirmation_diagnostic_complet') is not True:
+            raise ServiceValidationError('Confirmer le diagnostic complet')
+        entries=[e for e in hass.config_entries.async_entries(DOMAIN)
+                 if getattr(e,'runtime_data',None)]
+        if len(entries)!=1:
+            raise ServiceValidationError('Une seule configuration Smart AOSU active requise')
+        runtime=entries[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une C9C autonome unique sans H1L requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct avant le diagnostic')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,tester_rtc=True,
+            standalone_c9c_full_audit_b31=True,
+            tester_mqtt=False,tester_offre_mqtt=False,
+            tester_relais_tcp=False,tester_kcp=False,tester_media=False))
+        raw=report.get('audit_complet_b31')
+        raw=raw if isinstance(raw,dict) else {}
+        rawsteps=raw.get('etapes')
+        rawsteps=rawsteps if isinstance(rawsteps,dict) else {}
+        stages=('fiche_tuya','produit','modele_produit','ipc_v2','rtc_v4','rtc_classique')
+        stepvalues=('acceptee','refusee','erreur','non_tentee',
+                    'non_tentee_product_id_absent','non_tentee_produit_ambigu',
+                    'non_tentee_version_absente','limite_six_appels','analyse_indisponible')
+        steps={k:rawsteps.get(k) if rawsteps.get(k) in stepvalues else 'non_tentee'
+               for k in stages}
+        ri=raw.get('identite')
+        ri=ri if isinstance(ri,dict) else {}
+        sn=('aosu_sn_indisponible','egal','present_sans_egalite','absent_dans_tuya')
+        refs=('aosu_reference_indisponible','egale','presente_sans_egalite','absente_dans_tuya')
+        types=('ppcs_2','thing_4','autre_numerique','non_numerique',
+               'valeurs_multiples','hors_skills','absent')
+        identity={
+            'sn':ri.get('sn') if ri.get('sn') in sn else 'inconnu',
+            'reference':ri.get('reference') if ri.get('reference') in refs else 'inconnu',
+            'p2p':ri.get('p2p_sdk') if ri.get('p2p_sdk') in types else 'inconnu',
+            'exacte':ri.get('identite_exacte') is True,
+            'aosu_sn_present':ri.get('aosu_sn_present') is True,
+            'aosu_reference_presente':ri.get('aosu_reference_presente') is True,
+        }
+        rp=raw.get('reference_produit')
+        rp=rp if isinstance(rp,dict) else {}
+        sources=('absent','ambigu','inventaire_tuya','fiche_tuya','concordant')
+        src=rp.get('source_product_id')
+        product_ref={
+            'source':src if src in sources else 'absent',
+            'id_present':rp.get('product_id_explicite') is True,
+            'id_ambigu':rp.get('product_id_ambigu') is True,
+            'version_presente':rp.get('version_produit_presente') is True,
+            'version_ambigue':rp.get('version_produit_ambigue') is True}
+        p=raw.get('produit')
+        p=p if isinstance(p,dict) else {}
+        categories=('camera','non_camera','autre','absente','ambigue')
+        models=('c9c','autre','absent')
+        product={
+            'categorie':p.get('categorie') if p.get('categorie') in categories else 'absente',
+            'modele':p.get('modele') if p.get('modele') in models else 'absent',
+            'capacites':p.get('capacites_bloc_present') is True,
+            'p2p':p.get('p2p_bloc_present') is True,
+            'webrtc':p.get('webrtc_bloc_present') is True,
+            'indice_video':p.get('video_indice_present') is True,
+        }
+        rtcflags=('moto_id','auth_webrtc','msid','msid_ambigu','webrtc_declare',
+                  'aes_kcp','p2p_config','session','ice','turn','relais_tcp')
+        rawrtc=raw.get('rtc')
+        rawrtc=rawrtc if isinstance(rawrtc,dict) else {}
+        rtcs={}
+        for name in ('ipc_v2','rtc_v4','rtc_classique'):
+            value=rawrtc.get(name)
+            value=value if isinstance(value,dict) else {}
+            rtcs[name]={k:value.get(k) is True for k in rtcflags}
+        methods=('identite_exacte','camera_tuya_unique_non_confirmee',
+                 'appareil_tuya_unique_sans_categorie_video',
+                 'appareil_tuya_unique_categorie_non_video',
+                 'aucune_camera_tuya_identifiable')
+        etats=('diagnostic_complet_termine','diagnostic_complet_partiel',
+               'limite_diagnostic_complet_cinq_minutes',
+               'limite_reconnexion_fiche_tuya_20_minutes',
+               'limite_inventaire_30_minutes','limite_login_une_heure',
+               'login_UID_non_reussi','test_deja_en_cours',
+               'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+               'lecture_maisons_refusee','groupes_non_identifies',
+               'erreur_api_tuya','erreur_execution_sans_details',
+               'rtc_non_lance_c9c_non_identifiee',
+               'diagnostic_complet_lecture_seule_uniquement')
+        count=raw.get('appels_api')
+        count=min(6,max(0,count)) if type(count) is int else 0
+        method=report.get('methode_selection_rtc')
+        return {
+            'diagnostic':'aosu_c9c_complet_b31',
+            'etat':report.get('etat') if report.get('etat') in etats else 'autre',
+            'selection':method if method in methods else 'inconnue',
+            'etapes':steps,'identite':identity,'reference_produit':product_ref,
+            'produit':product,'rtc':rtcs,'appels_api':count,
+            'publications_mqtt':0,'commandes_ptz':0,'video_lancee':False,
+            'identifiants_retournes':False,'secrets_retournes':False,
+            'donnees_brutes_retournees':False,
+        }
+
     async def diagnostiquer_fiche_tuya_c9c_b27(call):
         """Read one Tuya device detail for the selected standalone C9C candidate."""
         if call.data.get('confirmation_lecture_fiche_tuya') is not True:
@@ -2312,6 +2414,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_identite_c9c_autonome',
                                  diagnostiquer_identite_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'diagnostiquer_c9c_complet_b31',
+                                 diagnostiquer_c9c_complet_b31,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_fiche_tuya_c9c_b27',
                                  diagnostiquer_fiche_tuya_c9c_b27,

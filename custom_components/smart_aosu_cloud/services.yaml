@@ -3025,6 +3025,21 @@ diagnostiquer_identite_c9c_autonome:
       selector:
         boolean: {}
 
+diagnostiquer_c9c_complet_b31:
+  name: C9C autonome — diagnostic complet en une seule action
+  description: >-
+    Une session UID, six lectures Tuya au maximum : appareil,
+    produit, modèle si version disponible, IPC v2, RTC IPC-v4 et
+    RTC classique. Aucune publication MQTT, réveil, offre, vidéo
+    ou PTZ. Les identifiants, clés et réponses brutes restent en RAM.
+    Les temporisations beta28 restent appliquées.
+  fields:
+    confirmation_diagnostic_complet:
+      name: Autoriser les lectures de diagnostic en une seule opération
+      required: true
+      selector:
+        boolean: {}
+
 diagnostiquer_fiche_tuya_c9c_b27:
   name: C9C autonome — comparer la fiche Tuya sans vidéo
   description: >-
