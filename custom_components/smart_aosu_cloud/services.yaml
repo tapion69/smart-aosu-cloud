@@ -3029,9 +3029,11 @@ diagnostiquer_fiche_tuya_c9c_b27:
   name: C9C autonome — comparer la fiche Tuya sans vidéo
   description: >-
     Une requête HTTPS déjà autorisée thing.m.device.get v4.1 pour
-    le seul candidat Tuya de la caméra C9C autonome. Compare en mémoire
-    des champs SN ou coopUUID connus, ne renvoie que des booleens
-    expurgés. Un modèle C9C identique ne prouve pas l'identité.
+    le seul candidat Tuya de la caméra C9C autonome. Distingue SN absent,
+    SN présent sans égalité, correspondance exacte et référence AOSU
+    indisponible. Expose uniquement la présence de blocs productBean,
+    productId, skills, capacités et P2P. Aucun ID, SN ou productId brut.
+    Un modèle C9C identique ne prouve pas l'identité.
     Aucun réveil, MQTT, SDP, direct, PTZ ou enregistrement.
     Respecte le cooldown de cinq minutes des lectures de configuration.
     Peut réutiliser l'inventaire Tuya récent et, si la session a expiré,

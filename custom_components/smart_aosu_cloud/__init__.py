@@ -470,6 +470,11 @@ async def async_setup(hass,config):
         data=data if isinstance(data,dict) else {}
         names=('fiche_structure_presente','numero_serie_present',
                'numero_serie_exact','references_presentes',
+               'product_id_racine_present','product_bean_present',
+               'product_id_dans_product_bean',
+               'skills_bloc_present','capacites_bloc_present',
+               'p2p_type_champ_present','p2p_config_bloc_present',
+               'p2p_support_bool_present',
                'reference_coop_exacte','modele_present','modele_c9c_exact',
                'categorie_video_reconnue','categorie_non_video_reconnue',
                'categorie_absente','id_tuya_de_la_reponse_correspond_a_la_requete',
@@ -493,14 +498,33 @@ async def async_setup(hass,config):
                       'modele_c9c_seulement_non_confirmant',
                       'champs_presents_sans_correspondance',
                       'aucun_identifiant_concluant')
+        # Whitelist only literal server-independent states. Never export
+        # raw serials, coop IDs, product IDs, payloads or untrusted labels.
+        allowed_sn=('aosu_sn_indisponible','egal',
+                    'present_sans_egalite','absent_dans_tuya')
+        allowed_ref=('aosu_reference_indisponible','egale',
+                     'presente_sans_egalite','absente_dans_tuya')
+        allowed_model=('c9c_exact','present_autre_ou_inconnu','absent')
+        allowed_category=('camera_reconnue','non_video_reconnue',
+                          'autre_non_identifiee','absente')
         return {
-            'diagnostic':'aosu_fiche_tuya_c9c_b27',
+            'diagnostic':'aosu_fiche_tuya_c9c_b29',
             'etat':report.get('etat') if report.get('etat') in states else 'autre',
             'fiche_tuya_acceptee':report.get('fiche_tuya_api_acceptee') is True,
             'selection':methods_value if methods_value in methods else 'autre',
             'correspondance':data.get('etat_correspondance')
                 if data.get('etat_correspondance') in allowed_link else 'non_disponible',
             'schema':{name:data.get(name) is True for name in names},
+            'comparaison_b29':{
+                'sn':data.get('etat_sn_b29')
+                    if data.get('etat_sn_b29') in allowed_sn else 'inconnu',
+                'reference':data.get('etat_reference_b29')
+                    if data.get('etat_reference_b29') in allowed_ref else 'inconnu',
+                'modele':data.get('etat_modele_b29')
+                    if data.get('etat_modele_b29') in allowed_model else 'inconnu',
+                'categorie':data.get('etat_categorie_b29')
+                    if data.get('etat_categorie_b29') in allowed_category else 'inconnu',
+            },
             'offres_envoyees':0,'publications_mqtt':0,'commandes_camera':0,
             'commandes_ptz':0,'video_lancee':False,
             'identifiants_retournes':False,'secrets_retournes':False,

@@ -167,17 +167,30 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         this._message('Fiche Tuya : '+d.etat+'. Aucune offre ou commande caméra.');
         return;
       }
-      const x=d.schema||{},yes=v=>v===true?'oui':'non';
-      this._message('Fiche Tuya : obtenue ; liaison : '+String(d.correspondance||'inconnue')+
-        ' ; SN exact : '+yes(x.numero_serie_exact)+
-        ' ; référence coop exacte : '+yes(x.reference_coop_exacte)+
-        ' ; modèle C9C : '+yes(x.modele_c9c_exact)+
-        ' ; catégorie caméra : '+yes(x.categorie_video_reconnue)+
-        ' ; catégorie absente : '+yes(x.categorie_absente)+
+      const x=d.schema||{},v=d.comparaison_b29||{},yes=q=>q===true?'oui':'non';
+      const allowed=(value,choices)=>choices.includes(value)?value:'inconnu';
+      const sn=allowed(v.sn,['aosu_sn_indisponible','egal',
+        'present_sans_egalite','absent_dans_tuya']);
+      const ref=allowed(v.reference,['aosu_reference_indisponible','egale',
+        'presente_sans_egalite','absente_dans_tuya']);
+      const model=allowed(v.modele,['c9c_exact','present_autre_ou_inconnu','absent']);
+      const category=allowed(v.categorie,['camera_reconnue','non_video_reconnue',
+        'autre_non_identifiee','absente']);
+      this._message('Fiche Tuya beta29 : obtenue ; SN : '+sn+
+        ' ; référence : '+ref+' ; modèle : '+model+
+        ' ; catégorie : '+category+
         ' ; productId présent : '+yes(x.product_id_present)+
-        ' ; ID Tuya de réponse concordant : '+yes(x.id_tuya_de_la_reponse_correspond_a_la_requete)+
-        ' ; identité AOSU/Tuya confirmée : '+yes(x.identite_aosu_tuya_etablie)+
-        '. Sans offre, réveil, vidéo ni PTZ.');
+        ' ; bloc productBean : '+yes(x.product_bean_present)+
+        ' ; productId dans productBean : '+yes(x.product_id_dans_product_bean)+
+        ' ; skills : '+yes(x.skills_bloc_present)+
+        ' ; capacités : '+yes(x.capacites_bloc_present)+
+        ' ; champ type P2P : '+yes(x.p2p_type_champ_present)+
+        ' ; configuration P2P : '+yes(x.p2p_config_bloc_present)+
+        ' ; indicateur booléen P2P : '+yes(x.p2p_support_bool_present)+
+        ' ; ID Tuya retourné correspondant à la requête : '+
+          yes(x.id_tuya_de_la_reponse_correspond_a_la_requete)+
+        ' ; identité AOSU/Tuya prouvée : '+yes(x.identite_aosu_tuya_etablie)+
+        '. Un productId ou un modèle ne prouve pas la liaison. Aucune offre, réveil, vidéo ni PTZ.');
     }finally{
       this._busy=false;
       if(btn)btn.disabled=false;
