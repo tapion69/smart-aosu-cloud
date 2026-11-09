@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta27 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta28 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >

@@ -27,9 +27,21 @@ from .c9c_tuya_device_b27 import summarize_tuya_device_b27
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
 _LAST_LOGIN: dict[int, float] = {}
+_LAST_C9C_DETAIL_LOGIN: dict[int, float] = {}
 _LAST_RTC: dict[int, float] = {}
 _COOLDOWN = 1800  # prevent manual repetitive discovery while developing
 _ENDPOINT = 'https://a1.tuyaeu.com/api.json'
+
+
+def _c9c_detail_login_allowed(now: float, global_expiry: float,
+                              detail_expiry: float) -> bool:
+    """Manual read-only C9C detail: at least 20 min between UID login attempts.
+
+    Regular inventory/video still obeys the 60 min login limit. This safe
+    exception only applies after the 20 min in-RAM session lifetime has
+    elapsed and the user explicitly clicks Fiche Tuya. No retries.
+    """
+    return (now >= detail_expiry and now >= global_expiry - 2400)
 
 
 def _walk(root: Any, *, depth: int = 0):
@@ -305,6 +317,14 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
         client_key=id(client)
         cache=getattr(client,'_tuya_oem_inventory_cache',None)
         cache_fresh=isinstance(cache,dict) and now-cache.get('created',0)<600
+        if standalone_c9c_tuya_detail_audit and isinstance(cache,dict):
+            # Read-only detail only: keep a verified same-account inventory
+            # for at most 30 min, avoiding duplicate Tuya inventory calls.
+            created=cache.get('created')
+            cache_fresh=(type(created) in (int,float)
+                         and 0 <= now-created < 1800
+                         and isinstance(cache.get('devices'),dict)
+                         and isinstance(cache.get('summary'),dict))
         if not interactive_live and now < _LAST_RUN.get(client_key,0) and not (tester_rtc and cache_fresh):
             return {**out,'etat':'limite_inventaire_30_minutes'}
         if capturer_media_localement and (not tester_media or confirmation_media is not True
@@ -332,12 +352,20 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
         if session is None:
             if confirmation_envoi_mot_de_passe is not True:
                 return {**out,'etat':'session_perdue_ou_expiree_confirmation_login_requise'}
-            if not interactive_live and now < _LAST_LOGIN.get(client_key,0):
-                return {**out,'etat':'limite_login_une_heure'}
+            if not interactive_live:
+                if standalone_c9c_tuya_detail_audit:
+                    if not _c9c_detail_login_allowed(
+                            now, _LAST_LOGIN.get(client_key,0),
+                            _LAST_C9C_DETAIL_LOGIN.get(client_key,0)):
+                        return {**out,'etat':'limite_reconnexion_fiche_tuya_20_minutes'}
+                elif now < _LAST_LOGIN.get(client_key,0):
+                    return {**out,'etat':'limite_login_une_heure'}
             if not isinstance(client.password,str) or not client.password:
                 return {**out,'etat':'mot_de_passe_AOSU_absent'}
             if not interactive_live:
                 _LAST_LOGIN[client_key]=now+3600
+                if standalone_c9c_tuya_detail_audit:
+                    _LAST_C9C_DETAIL_LOGIN[client_key]=now+1200
             login,session=do_uid_login_request(identity,signer,'sha256_material',
                 uid=hints.tuya_username,country_code=hints.country_code,
                 password=client.password,ttid=f'sdk_international@{identity.app_id}',

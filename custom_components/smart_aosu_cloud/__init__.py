@@ -477,6 +477,7 @@ async def async_setup(hass,config):
         states=('fiche_tuya_obtenue','fiche_tuya_refusee',
                 'limite_fiche_tuya_cinq_minutes',
                 'rtc_non_lance_c9c_non_identifiee','limite_login_une_heure',
+                'limite_reconnexion_fiche_tuya_20_minutes',
                 'limite_inventaire_30_minutes','test_deja_en_cours',
                 'login_UID_non_reussi','session_AOSU_ou_profil_absent',
                 'preflight_OEM_invalide','lecture_maisons_refusee',

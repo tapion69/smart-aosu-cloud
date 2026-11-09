@@ -3034,6 +3034,9 @@ diagnostiquer_fiche_tuya_c9c_b27:
     expurgés. Un modèle C9C identique ne prouve pas l'identité.
     Aucun réveil, MQTT, SDP, direct, PTZ ou enregistrement.
     Respecte le cooldown de cinq minutes des lectures de configuration.
+    Peut réutiliser l'inventaire Tuya récent et, si la session a expiré,
+    autorise une seule reconnexion manuelle toutes les vingt minutes.
+    Les autres diagnostics gardent la limite de login d'une heure.
   fields:
     confirmation_lecture_fiche_tuya:
       name: Autoriser la lecture de la fiche Tuya du candidat
