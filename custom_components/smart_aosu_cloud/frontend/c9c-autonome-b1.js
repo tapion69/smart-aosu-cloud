@@ -188,6 +188,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
           ' ; appels Tuya : '+String(d.appels_api??0)+'/6',
         'Identité : SN '+String(id.sn||'inconnu')+
           ' ; référence '+String(id.reference||'inconnu')+
+          ' ; Origine référence AOSU '+String(id.origine_aosu_cp||'inconnue')+
           ' ; type P2P '+String(id.p2p||'inconnu')+
           ' ; liaison exacte '+yn(id.exacte),
         'Fiche Tuya : '+st('fiche_tuya')+

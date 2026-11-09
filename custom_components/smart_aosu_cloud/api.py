@@ -19,6 +19,7 @@ from .semantics import parse_cover_event_time
 from .oem_identity import extract_login_hints, inspect_login_hints, public_report
 from .event_feed import get_recent_event_feed
 from .provider_audit import summarize_getlist_provider
+from .c9c_cp_reference_b32 import extract_c9c_cp_reference
 
 class AosuCloudError(Exception):
     """Protocol/network failure without potentially sensitive server contents."""
@@ -136,6 +137,7 @@ class AosuCloudClient:
         self._camera_sn_index=[]  # 3 cameras, excluding the H1L base
         self._standalone_c9c_sn=None  # RAM only; candidate for explicit VIDEO test
         self._standalone_c9c_coop_id=None  # RAM only, never published
+        self._standalone_c9c_cp_source='absente'  # safe enum, not an ID
         self._c5l_sn=None  # private RAM-only target for manual discovery
         self._c5l_coop_present=False
         self._c5l_coop_id=None  # private RAM-only, never exposed in diagnostics
@@ -258,12 +260,15 @@ class AosuCloudClient:
                     isinstance(r,dict) and str(r.get('model') or '').strip().upper()=='H1L'
                     for r in records):
                 self._standalone_c9c_sn=standalone[0]['sn']
-                coop=standalone[0].get('coopUUID')
-                self._standalone_c9c_coop_id=(coop if isinstance(coop,str)
-                    and coop.strip() else None)
+                # The Android SDK maps coopUUID to GzDeviceInfo.cpDeviceId.
+                # Use only this SN-matched AOSU record, never guessed IDs.
+                private_cp,cp_source=extract_c9c_cp_reference(standalone[0])
+                self._standalone_c9c_coop_id=private_cp
+                self._standalone_c9c_cp_source=cp_source
             else:
                 self._standalone_c9c_sn=None
                 self._standalone_c9c_coop_id=None
+                self._standalone_c9c_cp_source='absente'
             # One private target for the opt-in read-only identity audit.
             # APK conversion path: UUIDInfoWebDataItem.coopUUID -> GzDeviceInfo.cpDeviceId.
             c5l = [r for r in records if isinstance(r,dict) and r.get('model')=='C5L'
@@ -349,6 +354,7 @@ class AosuCloudClient:
         self._camera_sn_index.clear()
         self._standalone_c9c_sn=None
         self._standalone_c9c_coop_id=None
+        self._standalone_c9c_cp_source='absente'
         self._c5l_sn=None
         self._c5l_coop_present=False
         self._c5l_coop_id=None  # private RAM-only, never exposed in diagnostics

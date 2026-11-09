@@ -482,6 +482,11 @@ async def async_setup(hass,config):
         refs=('aosu_reference_indisponible','egale','presente_sans_egalite','absente_dans_tuya')
         types=('ppcs_2','thing_4','autre_numerique','non_numerique',
                'valeurs_multiples','hors_skills','absent')
+        allowed_aosu_sources=('coop_uuid_racine','cp_device_id_racine',
+                              'cp_device_info','champs_concordants',
+                              'references_contradictoires','format_invalide',
+                              'fiche_absente','absente')
+        aosu_source=getattr(runtime.client,'_standalone_c9c_cp_source','absente')
         identity={
             'sn':ri.get('sn') if ri.get('sn') in sn else 'inconnu',
             'reference':ri.get('reference') if ri.get('reference') in refs else 'inconnu',
@@ -489,6 +494,8 @@ async def async_setup(hass,config):
             'exacte':ri.get('identite_exacte') is True,
             'aosu_sn_present':ri.get('aosu_sn_present') is True,
             'aosu_reference_presente':ri.get('aosu_reference_presente') is True,
+            'origine_aosu_cp':aosu_source if aosu_source in allowed_aosu_sources
+                                  else 'inconnue',
         }
         rp=raw.get('reference_produit')
         rp=rp if isinstance(rp,dict) else {}

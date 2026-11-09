@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta31 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta32 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -293,3 +293,22 @@ indices d'identite, produit, P2P et WebRTC sans jamais exporter
 de nom, SN, productId, jeton, cle ou adresse. Aucune offre MQTT,
 aucun reveil, SDP, video, PTZ, capture ni nouvelle authentification
 par etape. Les moteurs C5L/H1L restent inchanges.
+
+
+## 0.8.13-beta32 — extraction sécurisée de cpDeviceId pour C9C autonome
+
+Le SDK Android AOSU copie UUIDInfoWebDataItem.coopUUID vers
+GzDeviceInfo.cpDeviceId. Le client ignorait les éventuelles références
+à la racine cpDeviceId et dans cpDeviceInfo.cpDeviceId.
+
+La beta32 compare, uniquement sur le dossier AOSU du SN C9C autonome,
+coopUUID, cpDeviceId et cpDeviceInfo.cpDeviceId. En présence
+de valeurs différentes, aucun de ces champs n'est exploité. Aucun
+nom, modèle, productId ou position dans une liste ne remplace une
+identité exacte. Le CP ID reste en RAM et ne sort pas dans les
+entités ni dans les diagnostics.
+
+Le bouton Diagnostic complet existant ajoute l'origine du champ AOSU
+et conserve l'état identité non prouvée si aucune concordance Tuya
+unique n'existe. Aucun appel supplémentaire, réveil, MQTT, SDP,
+vidéo, PTZ, changement de caméra C5L ou C9C/H1L.
