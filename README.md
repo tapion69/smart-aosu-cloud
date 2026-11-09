@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta29 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta30 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -265,3 +265,18 @@ ID, clé, numéro de série, mot de passe, réponse brute ni URL.
 Aucun réveil, publication MQTT, SDP, session vidéo, capture ou PTZ.
 La temporisation des lectures de cinq minutes reste en place.
 Les chemins C5L et H1L ne sont pas modifiés.
+
+
+## 0.8.13-beta30 — détection prudente du type P2P
+
+L'analyse locale des 17 DEX de l'APK AOSU 5.10.12 confirme deux
+codes explicites : PPCS = 2 et THING = 4 (enum P2PType).
+Le bouton Fiche Tuya existant affiche une classification du champ
+numérique skills.p2pType : PPCS, Thing, autre, non numérique, ambigu,
+hors skills ou absent. p2pSpecifiedType est signalé par sa seule
+présence. Une valeur inconnue n'est pas assimilée au repli Thing.
+
+Aucun identifiant ni secret n'est affiché. Le code n'ajoute aucun
+appel API, publication MQTT, réveil, SDP, vidéo ni PTZ. Les moteurs
+des trois caméras C5L/H1L restent inchangés. Le code P2P annoncé
+n'établit pas l'identité AOSU/Tuya ni le transport vidéo réel.

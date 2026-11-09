@@ -3034,6 +3034,8 @@ diagnostiquer_fiche_tuya_c9c_b27:
     indisponible. Expose uniquement la présence de blocs productBean,
     productId, skills, capacités et P2P. Aucun ID, SN ou productId brut.
     Un modèle C9C identique ne prouve pas l'identité.
+    Classifie uniquement le champ numérique skills.p2pType selon l'enum
+    du SDK AOSU (2 PPCS, 4 Thing, sinon inconnu), sans valeur privée.
     Aucun réveil, MQTT, SDP, direct, PTZ ou enregistrement.
     Respecte le cooldown de cinq minutes des lectures de configuration.
     Peut réutiliser l'inventaire Tuya récent et, si la session a expiré,

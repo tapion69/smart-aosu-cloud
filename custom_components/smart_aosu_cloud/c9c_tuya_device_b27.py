@@ -82,6 +82,21 @@ def summarize_tuya_device_b27(payload:Any, *, expected_device_id:str,
                              for obj in nodes)
     p2p_type_present=any(obj.get("p2pType") is not None
                          for obj in nodes)
+    # Only explicit numeric skills.p2pType is mapped. AOSU 5.10.12
+    # P2PType enum: PPCS=2, THING=4. Unknown types remain unknown.
+    values=set()
+    for obj in nodes:
+        skills=obj.get("skills")
+        if isinstance(skills,dict) and "p2pType" in skills:
+            v=skills["p2pType"]
+            values.add(("ppcs_2" if v==2 else "thing_4" if v==4
+                        else "autre_numerique")
+                       if type(v) in (int,float) else "non_numerique")
+    p2p_sdk_type=("valeurs_multiples" if len(values)>1
+                  else next(iter(values)) if values
+                  else "hors_skills" if p2p_type_present else "absent")
+    p2p_specified_present=any(
+        obj.get("p2pSpecifiedType") is not None for obj in nodes)
     p2p_config_present=any(isinstance(obj.get("p2pConfig"),dict) for obj in nodes)
     p2p_flag_present=any(type(obj.get(key)) is bool
         for obj in nodes for key in ("supportP2p","supportsP2P","isP2pEnabled"))
@@ -117,6 +132,8 @@ def summarize_tuya_device_b27(payload:Any, *, expected_device_id:str,
         "skills_bloc_present":skills_present,
         "capacites_bloc_present":capabilities_present,
         "p2p_type_champ_present":p2p_type_present,
+        "p2p_sdk_type_b30":p2p_sdk_type,
+        "p2p_specified_type_present":p2p_specified_present,
         "p2p_config_bloc_present":p2p_config_present,
         "p2p_support_bool_present":p2p_flag_present,
         "uuid_present":uuid_present,

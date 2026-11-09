@@ -474,7 +474,7 @@ async def async_setup(hass,config):
                'product_id_dans_product_bean',
                'skills_bloc_present','capacites_bloc_present',
                'p2p_type_champ_present','p2p_config_bloc_present',
-               'p2p_support_bool_present',
+               'p2p_specified_type_present','p2p_support_bool_present',
                'reference_coop_exacte','modele_present','modele_c9c_exact',
                'categorie_video_reconnue','categorie_non_video_reconnue',
                'categorie_absente','id_tuya_de_la_reponse_correspond_a_la_requete',
@@ -507,6 +507,9 @@ async def async_setup(hass,config):
         allowed_model=('c9c_exact','present_autre_ou_inconnu','absent')
         allowed_category=('camera_reconnue','non_video_reconnue',
                           'autre_non_identifiee','absente')
+        allowed_p2p=('ppcs_2','thing_4','autre_numerique',
+                     'non_numerique','valeurs_multiples',
+                     'hors_skills','absent')
         return {
             'diagnostic':'aosu_fiche_tuya_c9c_b27',
             'etat':report.get('etat') if report.get('etat') in states else 'autre',
@@ -515,6 +518,8 @@ async def async_setup(hass,config):
             'correspondance':data.get('etat_correspondance')
                 if data.get('etat_correspondance') in allowed_link else 'non_disponible',
             'schema':{name:data.get(name) is True for name in names},
+            'p2p_sdk_b30':data.get('p2p_sdk_type_b30')
+                if data.get('p2p_sdk_type_b30') in allowed_p2p else 'inconnu',
             'comparaison_b29':{
                 'sn':data.get('etat_sn_b29')
                     if data.get('etat_sn_b29') in allowed_sn else 'inconnu',

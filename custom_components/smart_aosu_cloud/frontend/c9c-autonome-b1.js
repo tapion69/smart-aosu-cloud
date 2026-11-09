@@ -195,7 +195,17 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         non_video_reconnue:'catégorie non vidéo',
         autre_non_identifiee:'catégorie inconnue',
         absente:'catégorie absente'};
-      this._message('Fiche Tuya beta29 : obtenue ; SN : '+(snLabels[sn]||'inconnu')+
+      const p2p=allowed(d.p2p_sdk_b30,['ppcs_2','thing_4',
+        'autre_numerique','non_numerique','valeurs_multiples',
+        'hors_skills','absent']);
+      const p2pLabels={
+        ppcs_2:'PPCS (code SDK 2)',thing_4:'Thing (code SDK 4)',
+        autre_numerique:'autre code numérique, type inconnu',
+        non_numerique:'valeur non numérique, type inconnu',
+        valeurs_multiples:'plusieurs valeurs incompatibles',
+        hors_skills:'champ hors skills, type inconnu',
+        absent:'type absent'};
+      this._message('Fiche Tuya beta30 : obtenue ; SN : '+(snLabels[sn]||'inconnu')+
         ' ; référence : '+(refLabels[ref]||'inconnu')+
         ' ; modèle : '+(modelLabels[model]||'inconnu')+
         ' ; catégorie : '+(categoryLabels[category]||'inconnue')+
@@ -205,12 +215,14 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; skills : '+yes(x.skills_bloc_present)+
         ' ; capacités : '+yes(x.capacites_bloc_present)+
         ' ; champ type P2P : '+yes(x.p2p_type_champ_present)+
+        ' ; type P2P SDK : '+(p2pLabels[p2p]||'inconnu')+
+        ' ; p2pSpecifiedType présent : '+yes(x.p2p_specified_type_present)+
         ' ; configuration P2P : '+yes(x.p2p_config_bloc_present)+
         ' ; indicateur booléen P2P : '+yes(x.p2p_support_bool_present)+
         ' ; ID Tuya retourné correspondant à la requête : '+
           yes(x.id_tuya_de_la_reponse_correspond_a_la_requete)+
         ' ; identité AOSU/Tuya prouvée : '+yes(x.identite_aosu_tuya_etablie)+
-        '. Un productId ou un modèle ne prouve pas la liaison. Aucune offre, réveil, vidéo ni PTZ.');
+        '. Le type P2P SDK ne prouve ni la liaison AOSU/Tuya ni la vidéo. Aucune offre, réveil, vidéo ni PTZ.');
     }finally{
       this._busy=false;
       if(btn)btn.disabled=false;
