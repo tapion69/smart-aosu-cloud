@@ -447,6 +447,64 @@ async def async_setup(hass,config):
         result['appels_reseau']=network_calls
         return result
 
+    async def diagnostiquer_fiche_tuya_c9c_b27(call):
+        """Read one Tuya device detail for the selected standalone C9C candidate."""
+        if call.data.get('confirmation_lecture_fiche_tuya') is not True:
+            raise ServiceValidationError('Confirmer la lecture de la fiche Tuya')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration Smart AOSU active requise')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('C9C autonome unique sans station requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct avant la lecture Tuya')
+        report=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,tester_rtc=True,
+            standalone_c9c_tuya_detail_audit=True,
+            tester_mqtt=False,tester_offre_mqtt=False,
+            tester_relais_tcp=False,tester_kcp=False,tester_media=False))
+        data=report.get('fiche_tuya_b27')
+        data=data if isinstance(data,dict) else {}
+        names=('fiche_structure_presente','numero_serie_present',
+               'numero_serie_exact','references_presentes',
+               'reference_coop_exacte','modele_present','modele_c9c_exact',
+               'categorie_video_reconnue','categorie_non_video_reconnue',
+               'categorie_absente','id_tuya_de_la_reponse_correspond_a_la_requete',
+               'product_id_present','uuid_present','identite_aosu_tuya_etablie')
+        states=('fiche_tuya_obtenue','fiche_tuya_refusee',
+                'limite_fiche_tuya_cinq_minutes',
+                'rtc_non_lance_c9c_non_identifiee','limite_login_une_heure',
+                'limite_inventaire_30_minutes','test_deja_en_cours',
+                'login_UID_non_reussi','session_AOSU_ou_profil_absent',
+                'preflight_OEM_invalide','lecture_maisons_refusee',
+                'groupes_non_identifies','erreur_api_tuya',
+                'erreur_execution_sans_details',
+                'fiche_tuya_c9c_lecture_seule_uniquement')
+        methods=('identite_exacte','camera_tuya_unique_non_confirmee',
+                 'appareil_tuya_unique_sans_categorie_video',
+                 'appareil_tuya_unique_categorie_non_video',
+                 'aucune_camera_tuya_identifiable')
+        methods_value=report.get('methode_selection_rtc')
+        allowed_link=('identite_exacte_dans_fiche_tuya',
+                      'modele_c9c_seulement_non_confirmant',
+                      'champs_presents_sans_correspondance',
+                      'aucun_identifiant_concluant')
+        return {
+            'diagnostic':'aosu_fiche_tuya_c9c_b27',
+            'etat':report.get('etat') if report.get('etat') in states else 'autre',
+            'fiche_tuya_acceptee':report.get('fiche_tuya_api_acceptee') is True,
+            'selection':methods_value if methods_value in methods else 'autre',
+            'correspondance':data.get('etat_correspondance')
+                if data.get('etat_correspondance') in allowed_link else 'non_disponible',
+            'schema':{name:data.get(name) is True for name in names},
+            'offres_envoyees':0,'publications_mqtt':0,'commandes_camera':0,
+            'commandes_ptz':0,'video_lancee':False,
+            'identifiants_retournes':False,'secrets_retournes':False,
+        }
+
     async def diagnostiquer_fiche_c9c_autonome(call):
         """Manual read-only AOSU detailed device lookup for one standalone C9C."""
         if call.data.get('confirmation_lecture_fiche') is not True:
@@ -2224,6 +2282,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_identite_c9c_autonome',
                                  diagnostiquer_identite_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'diagnostiquer_fiche_tuya_c9c_b27',
+                                 diagnostiquer_fiche_tuya_c9c_b27,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_fiche_c9c_autonome',
                                  diagnostiquer_fiche_c9c_autonome,

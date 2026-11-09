@@ -3025,6 +3025,22 @@ diagnostiquer_identite_c9c_autonome:
       selector:
         boolean: {}
 
+diagnostiquer_fiche_tuya_c9c_b27:
+  name: C9C autonome — comparer la fiche Tuya sans vidéo
+  description: >-
+    Une requête HTTPS déjà autorisée thing.m.device.get v4.1 pour
+    le seul candidat Tuya de la caméra C9C autonome. Compare en mémoire
+    des champs SN ou coopUUID connus, ne renvoie que des booleens
+    expurgés. Un modèle C9C identique ne prouve pas l'identité.
+    Aucun réveil, MQTT, SDP, direct, PTZ ou enregistrement.
+    Respecte le cooldown de cinq minutes des lectures de configuration.
+  fields:
+    confirmation_lecture_fiche_tuya:
+      name: Autoriser la lecture de la fiche Tuya du candidat
+      required: true
+      selector:
+        boolean: {}
+
 diagnostiquer_fiche_c9c_autonome:
   name: C9C autonome — consulter la fiche AOSU (lecture seule)
   description: >-

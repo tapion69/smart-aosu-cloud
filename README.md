@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta26 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta27 (essai C9C autonome, correction identification)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -248,3 +248,20 @@ parcours C5L/C9-H1L ne changent pas. La carte État indique
 Il s'agit d'une hypothèse de compatibilité fondée sur une différence
 vérifiée, pas d'une garantie de SDP ni de vidéo. Tester sur la caméra
 autonome après mise à jour seulement, une tentative à la fois.
+
+
+## 0.8.13-beta27 — identité Tuya C9C autonome, lecture seule
+
+Après les tests beta26, la fiche AOSU confirme le numéro de série,
+mais ne fournit aucun identifiant Tuya correspondant. Le bouton
+**Fiche Tuya** lit donc une fois l'API Tuya déjà autorisée
+\`thing.m.device.get\` v4.1 pour l'unique candidat Tuya sélectionné.
+Il compare en mémoire les champs d'identité connus (SN, coopUUID,
+modèle C9C, catégorie) à la caméra AOSU. Le modèle seul ou l'unicité
+du candidat **ne sont pas une preuve d'identité**.
+
+La réponse est expurgée : booléens et statuts fixes seulement, sans
+ID, clé, numéro de série, mot de passe, réponse brute ni URL.
+Aucun réveil, publication MQTT, SDP, session vidéo, capture ou PTZ.
+La temporisation des lectures de cinq minutes reste en place.
+Les chemins C5L et H1L ne sont pas modifiés.

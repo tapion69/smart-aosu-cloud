@@ -38,7 +38,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="sdkb25">Analyser SDK APK</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="tuyadetail27">Fiche Tuya</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="sdkb25">Analyser SDK APK</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play(false));
@@ -47,6 +47,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('state').addEventListener('click',()=>void this._state());
     this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
     this.shadowRoot.getElementById('detail').addEventListener('click',()=>void this._detail());
+    this.shadowRoot.getElementById('tuyadetail27').addEventListener('click',()=>void this._tuyaDetail27());
     this.shadowRoot.getElementById('rtc').addEventListener('click',()=>void this._rtc());
     this.shadowRoot.getElementById('v4rtc').addEventListener('click',()=>void this._v4rtc());
     this.shadowRoot.getElementById('webrtcaudit').addEventListener('click',()=>void this._webrtc(false));
@@ -148,6 +149,38 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     } finally {
       this._busy=false;
       if(button)button.disabled=false;
+    }
+  }
+  async _tuyaDetail27() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('tuyadetail27');
+    if(btn)btn.disabled=true;
+    this._message('Lecture de la fiche Tuya du candidat C9C (aucune vidéo ni PTZ)…');
+    try {
+      const res=await this._service('diagnostiquer_fiche_tuya_c9c_b27',{
+        confirmation_lecture_fiche_tuya:true
+      });
+      const d=res?.response||res;
+      if(!d||typeof d.etat!=='string')return;
+      if(d.etat!=='fiche_tuya_obtenue'){
+        this._message('Fiche Tuya : '+d.etat+'. Aucune offre ou commande caméra.');
+        return;
+      }
+      const x=d.schema||{},yes=v=>v===true?'oui':'non';
+      this._message('Fiche Tuya : obtenue ; liaison : '+String(d.correspondance||'inconnue')+
+        ' ; SN exact : '+yes(x.numero_serie_exact)+
+        ' ; référence coop exacte : '+yes(x.reference_coop_exacte)+
+        ' ; modèle C9C : '+yes(x.modele_c9c_exact)+
+        ' ; catégorie caméra : '+yes(x.categorie_video_reconnue)+
+        ' ; catégorie absente : '+yes(x.categorie_absente)+
+        ' ; productId présent : '+yes(x.product_id_present)+
+        ' ; ID Tuya de réponse concordant : '+yes(x.id_tuya_de_la_reponse_correspond_a_la_requete)+
+        ' ; identité AOSU/Tuya confirmée : '+yes(x.identite_aosu_tuya_etablie)+
+        '. Sans offre, réveil, vidéo ni PTZ.');
+    }finally{
+      this._busy=false;
+      if(btn)btn.disabled=false;
     }
   }
   async _detail() {
