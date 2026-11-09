@@ -1,0 +1,26 @@
+name: Smart AOSU SDK identity route offline regression
+
+on:
+  push:
+    paths:
+      - 'tools/aosu_sdk_route_offline.py'
+      - 'tests/test_aosu_sdk_route_offline.py'
+      - 'custom_components/smart_aosu_cloud/camera_topology.py'
+      - '.github/workflows/aosu-route-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  sdk-route-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify script syntax
+        run: python -m py_compile tools/aosu_sdk_route_offline.py tests/test_aosu_sdk_route_offline.py
+      - name: Run synthetic identity and camera topology tests
+        run: python -m unittest discover -s tests -p 'test_aosu_sdk_route_offline.py' -v
