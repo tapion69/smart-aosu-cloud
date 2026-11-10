@@ -1,0 +1,28 @@
+# Diagnostic ADB AOSU officiel sans root — Windows
+
+Un seul essai, sans nouveau firmware ni modification de Home Assistant.
+
+1. Télécharger AOSU_CP_SANS_ROOT.ps1 et LANCER_AOSU_CP.cmd dans un même dossier.
+2. Connecter un seul téléphone Android par USB avec débogage autorisé.
+3. Ouvrir l'application AOSU officielle.
+4. Double-cliquer LANCER_AOSU_CP.cmd.
+5. Sur le téléphone, ouvrir une seule fois la vidéo de la C9C dans AOSU officiel.
+6. Revenir au PC, appuyer sur Entrée et copier uniquement le rapport anonymisé.
+
+ADB est recherché dans PATH et les chemins habituels Android Studio/SDK.
+Si absent, installer Android SDK Platform-Tools.
+
+Seules les commandes adb devices, shell pidof et logcat -d sont utilisées.
+Le script ne vide pas les journaux, n'installe pas de paquet, ne lit aucun
+fichier privé Android, n'envoie aucune commande caméra et ne sauvegarde
+aucun journal brut. Les traces ne sont traitées qu'en RAM et la sortie
+ne contient que des booléens, jamais les cpDeviceId, secrets ou SN.
+
+Limite importante : une version de production peut ne pas émettre ces logs,
+et un marqueur présent peut provenir d'un autre appareil. La lecture ne
+prouve ni identité de la C9C ni réussite du flux vidéo.
+
+Le script inclut -SelfTest pour prouver sur des données synthétiques que
+les valeurs privées ne sont pas retournées. La CI exécute ce mode sur Windows.
+
+La version HA reste 0.8.13-beta32. Ne pas transmettre de logcat brut.

@@ -1,0 +1,28 @@
+name: AOSU no-root Windows CP probe
+
+on:
+  push:
+    paths:
+      - 'tools/windows/AOSU_CP_SANS_ROOT.ps1'
+      - 'tools/windows/LANCER_AOSU_CP.cmd'
+      - '.github/workflows/aosu-adb-cp-windows.yml'
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check native PowerShell and privacy
+        shell: pwsh
+        run: |
+          & ./tools/windows/AOSU_CP_SANS_ROOT.ps1 -SelfTest
+      - name: Verify no ADB modification actions
+        shell: pwsh
+        run: |
+          $src = Get-Content tools/windows/AOSU_CP_SANS_ROOT.ps1 -Raw
+          if ($src -match '(?m)^\s*&\s*\$adb\s+(?:push|install|root|remount|reboot|shell\s+su)\b') { throw 'forbidden ADB action' }
+          if ($src -match '(?m)^\s*&\s*\$adb\s+logcat\s+-c\b') { throw 'forbidden log erasure' }
