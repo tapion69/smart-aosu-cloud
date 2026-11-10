@@ -180,3 +180,55 @@ fonctionnelles. La prochaine action technique utile est de confirmer
 une source réelle et autorisée de la liaison CP dans les données
 d'appairage AOSU ; ne pas relancer les mêmes diagnostics ni inventer
 un identifiant de caméra.
+
+## Callback PlatformDeviceInfo du 10 novembre — enquête v3 (12 constats)
+
+Les essais beta32 ont déjà prouvé : `Origine référence AOSU = absente`,
+`SN Tuya absent`, sélection Tuya heuristique et absence de SDP.
+Le bytecode Android 5.10.12 a maintenant été examiné jusqu'au
+callback `TyDeviceInfoSource$init$1.OooO00o(PlatformDeviceInfo)`.
+
+Trois faits supplémentaires ont été vérifiés hors ligne :
+
+1. Le callback lit `PlatformDeviceInfo.cpDeviceId` ;
+2. il appelle `DeviceBusiness.getDeviceInfo` ;
+3. il appelle `GzDeviceInfo.setCpDataInfo` pour enrichir l'objet AOSU.
+
+La méthode `DeviceWebService.OooOOOO()` utilisée pour la liste
+AOSU n'accepte aucun argument métier supplémentaire au niveau de
+sa signature Android. Cela ne prouve pas que les couches HTTP n'ajoutent
+aucun en-tête ou paramètre de session ; en revanche, il n'existe
+pas à cette interface un argument CP que notre appel aurait omis.
+
+**Interprétation** : l'application peut obtenir la référence CP
+par l'événement de sa couche Tuya Android, distinct des réponses
+AOSU/ Tuya de Home Assistant. Cette conclusion demeure *statique* ;
+la référence réelle de la C9C externe n'a pas été retrouvée.
+
+Mises à jour GitHub :
+- outil `tools/aosu_cp_cache_route_offline.py`, désormais 12 constats ;
+- tests de confidentialité et absence de fausse identité ;
+- rapport `docs/AOSU_CP_CACHE_ROUTE_STATIC_2026-11-10.md` enrichi.
+- Commit : `2e442153a5a36de47ef7f37652b7aa7421959594`.
+- Tests GitHub réussis : https://github.com/tapion69/smart-aosu-cloud/actions/runs/42864909848
+
+### Condition concrète avant une beta33
+
+Trouver une source autorisée **qui fournit réellement le cpDeviceId
+de cette caméra précise** (par exemple des métadonnées d'appairage
+disponibles sur le téléphone avec accord du propriétaire, ou une
+API AOSU read-only vérifiée), avec provenance et concordance exacte
+vers un seul appareil Tuya. Sans cette preuve, ni le champ Thing(4),
+ni le productId, ni les trois réponses RTC ne doivent servir à
+rediriger automatiquement l'offre vidéo.
+
+Ne pas répéter `getList`, `getInfoBySn`, ou les cinq lectures
+Tuya beta31 pour les mêmes champs. Ne pas inventer de
+`coopUUID` pour appeler `getListByCoopUUIDList`.
+Un téléphone Android non rooté n'autorise pas Home Assistant
+à lire directement le cache privé de l'application AOSU.
+
+**Aucune beta33 publiée** : l'intégration demeure
+`0.8.13-beta32`. Aucun test utilisateur supplémentaire pour
+cette analyse ; trois caméras existantes, vidéo, PTZ et entités
+inchangés.
