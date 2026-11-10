@@ -97,11 +97,15 @@ jobs:
           '@
           $fake = Join-Path $env:RUNNER_TEMP 'fake_adb_unauthorized.exe'
           Add-Type -TypeDefinition $code -OutputAssembly $fake -OutputType ConsoleApplication
-          $stdout=@(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\windows\AOSU_CP_SANS_ROOT.ps1 -AutoRead -AdbPath $fake)
-          $status=$LASTEXITCODE
-          $text=$stdout -join [Environment]::NewLine
-          if($status -ne 3 -or -not $text.Contains('TELEPHONE_ABSENT_NON_AUTORISE_OU_MULTIPLE')) {
-              throw 'Unauthorized fake USB device was not classified correctly'
+          # The expected exit code is 3. Use Start-Process to inspect
+          # it without GitHub's PowerShell shell treating it as a test failure.
+          $reportPath = Join-Path $env:RUNNER_TEMP 'mock_usb_unauthorized.txt'
+          $argsList = '-NoProfile -ExecutionPolicy Bypass -File .\tools\windows\AOSU_CP_SANS_ROOT.ps1 -AutoRead -AdbPath ' + $fake
+          $proc = Start-Process -FilePath powershell.exe -ArgumentList $argsList -Wait -PassThru -RedirectStandardOutput $reportPath
+          $text = [System.IO.File]::ReadAllText($reportPath)
+          Remove-Item -LiteralPath $reportPath -ErrorAction SilentlyContinue
+          if($proc.ExitCode -ne 3 -or -not $text.Contains('TELEPHONE_ABSENT_NON_AUTORISE_OU_MULTIPLE')) {
+              throw ('Unauthorized mock ADB was misclassified, status=' + $proc.ExitCode)
           }
       - name: Verify no ADB modification actions
         shell: pwsh
