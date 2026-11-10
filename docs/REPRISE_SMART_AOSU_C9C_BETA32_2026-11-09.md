@@ -149,3 +149,34 @@ sans inventer de valeur ni réinitialiser les trois caméras validées.
 
 Aucun secret de connexion, SN, clé média ou productId n'est conservé
 dans ce fichier.
+
+## 10 novembre 2026 — enquête hors réseau sur le rapprochement Android
+
+Après le diagnostic utilisateur beta32 :
+- origine référence AOSU = absente ;
+- SN Tuya absent, aucun cpDeviceId AOSU confirmé ;
+- candidat Tuya Thing (code 4), sélection heuristique ;
+- paramètres RTC présents mais aucune réponse SDP prouvée.
+
+L'APK AOSU 5.10.12 d'origine (17 DEX) a été réanalysé
+sans réseau ni compte. Les 9 constats du chemin de rapprochement
+AOSU → TyDeviceInfoSource → cache indexé par cpDeviceId sont positifs.
+Cela démontre un mécanisme SDK de cache local, **pas** l'existence du
+cpDeviceId de cette C9C dans les données cloud déjà disponibles.
+
+Nouveaux fichiers GitHub :
+- tools/aosu_cp_cache_route_offline.py (analyseur reproductible) ;
+- tests/test_aosu_cp_cache_route_offline.py (synthetic, sans APK) ;
+- docs/AOSU_CP_CACHE_ROUTE_STATIC_2026-11-10.md (analyse) ;
+- .github/workflows/aosu-cp-cache-audit.yml (CI).
+
+Commit : 04e376e3685cbfe98e8908a5c67997ca10695fd2.
+Tests GitHub réussis :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/42861879809
+
+**Version Home Assistant toujours 0.8.13-beta32** ; aucune nouvelle
+version, aucun appel caméra, aucune modification des trois caméras
+fonctionnelles. La prochaine action technique utile est de confirmer
+une source réelle et autorisée de la liaison CP dans les données
+d'appairage AOSU ; ne pas relancer les mêmes diagnostics ni inventer
+un identifiant de caméra.
