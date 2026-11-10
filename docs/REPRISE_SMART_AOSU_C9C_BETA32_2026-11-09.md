@@ -263,3 +263,26 @@ Un ZIP regroupant les trois fichiers Windows est également produit
 par GitHub Actions après ses tests. C'est **un seul essai nouveau**
 possible côté Android, sans répéter le diagnostic Tuya beta31/beta32.
 La version installable HA reste **0.8.13-beta32**.
+
+## 10 novembre 2026 — test réel ADB sans root Windows 1.2
+
+Le téléphone et l'application AOSU ont été correctement détectés.
+Le script a lu les journaux `logcat` du PID officiel mais n'a
+détecté aucun des marqueurs CP/cache que nous avions identifiés
+dans l'APK. `journal_aosu_lisible=true` ne certifie pas que les
+messages recherchés ont été émis : seulement qu'il y avait des
+lignes accessibles. **Le CP ID de la C9C reste inconnu.**
+
+Résultat complet et ses limites :
+`docs/C9C_ANDROID_ADB_1_2_RESULTAT_SANS_MARQUEURS_2026-11-10.md`.
+
+La prochaine voie autorisée n'est pas une nouvelle offre SDP ou
+un troisième essai du même logcat : demander au fournisseur, par
+le titulaire du compte, les données d'appairage de la caméra et
+la procédure d'accès aux données de diagnostic. AOSU décrit une
+procédure de demande sur son site officiel. Il n'est pas certain
+que le `cpDeviceId` puisse être communiqué.
+
+**Version Home Assistant inchangée : 0.8.13-beta32**.
+Les trois caméras fonctionnelles, leurs entités et leurs PTZ
+restent inchangés.
