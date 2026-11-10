@@ -232,3 +232,34 @@ Un téléphone Android non rooté n'autorise pas Home Assistant
 `0.8.13-beta32`. Aucun test utilisateur supplémentaire pour
 cette analyse ; trois caméras existantes, vidéo, PTZ et entités
 inchangés.
+
+## 10 novembre 2026 — nouvel outil ADB sans root pour examiner les traces CP
+
+L'APK officiel AOSU 5.10.12 emploie le package Android
+`com.glazero.android` et contient des messages de diagnostic
+concernant `cpDeviceId`, le chargement de la liste Tuya,
+`ensureDeviceListForTargetDevice` et le rapprochement du cache.
+
+Un outil **Windows facultatif** a été publié sous
+`tools/windows/AOSU_CP_SANS_ROOT.ps1` avec un lanceur CMD et
+une notice. Il utilise uniquement `adb devices`,
+`adb shell pidof` et `adb logcat -d` filtré sur le PID AOSU.
+Il ne lit pas les fichiers privés de l'application et ne
+déclenche ni flux, ni réveil, ni PTZ.
+
+Le propriétaire ouvre manuellement la C9C dans **AOSU officiel**,
+puis le script relève les marques disponibles dans les journaux
+du processus AOSU. Il ne renvoie que des indicateurs booléens,
+et ne conserve aucun log, numéro de série ni identifiant CP.
+Un marqueur présent ne prouve pas la correspondance avec la C9C.
+La version publiée peut ne pas journaliser ces informations ;
+leur absence dans logcat ne prouve pas qu'elles sont absentes
+du cache privé.
+
+**Vérification Windows sans téléphone réussie** :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/42868671339
+
+Un ZIP regroupant les trois fichiers Windows est également produit
+par GitHub Actions après ses tests. C'est **un seul essai nouveau**
+possible côté Android, sans répéter le diagnostic Tuya beta31/beta32.
+La version installable HA reste **0.8.13-beta32**.
