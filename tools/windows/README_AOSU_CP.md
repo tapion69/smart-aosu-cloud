@@ -26,3 +26,11 @@ Le script inclut -SelfTest pour prouver sur des données synthétiques que
 les valeurs privées ne sont pas retournées. La CI exécute ce mode sur Windows.
 
 La version HA reste 0.8.13-beta32. Ne pas transmettre de logcat brut.
+
+## Correctif Windows 1.1 — erreur variable HOME
+
+Le script n'utilise plus la variable de boucle \$home, interdite en ecriture
+car PowerShell la confond avec \$HOME (variable systeme protegee).
+Le test sans telephone execute desormais Find-Adb et verifie que
+\$HOME demeure inchange. Tests sur Windows PowerShell 5.1 ET PowerShell 7.
+La version Home Assistant 0.8.13-beta32 reste inchangee.

@@ -12,13 +12,14 @@ function Find-Adb {
     $paths=New-Object 'System.Collections.Generic.List[string]'
     $cmd=Get-Command adb.exe -CommandType Application -ErrorAction SilentlyContinue
     if($null -ne $cmd -and $cmd.Source){[void]$paths.Add($cmd.Source)}
-    foreach($home in @($env:LOCALAPPDATA,$env:ANDROID_HOME,$env:ANDROID_SDK_ROOT)){
-        if([string]::IsNullOrWhiteSpace($home)){continue}
-        if($home -eq $env:LOCALAPPDATA){
-            [void]$paths.Add((Join-Path $home 'Android\Sdk\platform-tools\adb.exe'))
-        }else{
-            [void]$paths.Add((Join-Path $home 'platform-tools\adb.exe'))
-        }
+    # Never use $home: PowerShell resolves it as read-only $HOME.
+    # Distinct roots also avoid misclassifying Android SDK paths.
+    if(-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)){
+        [void]$paths.Add((Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'))
+    }
+    foreach($sdkDirectory in @($env:ANDROID_HOME,$env:ANDROID_SDK_ROOT)){
+        if([string]::IsNullOrWhiteSpace($sdkDirectory)){continue}
+        [void]$paths.Add((Join-Path $sdkDirectory 'platform-tools\adb.exe'))
     }
     foreach($path in $paths){
         if(Test-Path -LiteralPath $path -PathType Leaf){return $path}
@@ -77,6 +78,13 @@ function New-AnonymousReport {
 }
 
 if($SelfTest){
+    # Regression: execute the real Windows ADB path discovery, even when
+    # adb.exe is not installed. Earlier tests never exercised Find-Adb.
+    $originalUserHome=[string]$HOME
+    [void](Find-Adb)
+    if([string]$HOME -cne $originalUserHome){
+        throw 'ECHEC_TEST_VARIABLE_HOME'
+    }
     $sample=@(
         'I/AOSU : loadDeviceInfoList load gz device success deviceList=PRIVATE_SN'
         'I/AOSU : loadDeviceInfoList load ty device success'
@@ -102,7 +110,7 @@ if($SelfTest){
     exit 0
 }
 
-Write-Host 'SMART AOSU - LECTURE ADB SANS ROOT - AUCUN LOG BRUT ENREGISTRE'
+Write-Host 'SMART AOSU - LECTURE ADB SANS ROOT - CORRECTIF 1.1 - AUCUN LOG BRUT ENREGISTRE'
 $adb=Find-Adb
 if([string]::IsNullOrWhiteSpace($adb)){
     Write-Host 'ETAT : ADB_INTROUVABLE - installer Android SDK Platform-Tools'
