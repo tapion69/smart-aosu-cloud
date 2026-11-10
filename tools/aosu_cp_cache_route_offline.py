@@ -22,6 +22,8 @@ def summarize(dex: dict[str,DexIndex], dex_count: int) -> dict:
     sdk_devices=d.method('/device/mid/TyDeviceInfoSource;','OooO0o')
     ty_set=d.method('/device/mid/TyDeviceInfoSource;','OooOOOO')
     ty_get=d.method('/device/mid/TyDeviceInfoSource;','OooO0oo')
+    # A Tuya platform event also enriches an AOSU device by its CP ID.
+    platform_event=d.method('/device/mid/TyDeviceInfoSource$init$1;','OooO00o')
     facts={
      'web_coop_uuid_to_cp_id':a.field_access(conversion,'/server/UUIDInfoWebDataItem;','coopUUID',(0x54,)) and a.field_access(conversion,'/model/GzDeviceInfo;','cpDeviceId',(0x5b,)),
      'business_looks_up_data_repository':d.calls(business,'/device/DeviceInfoDataRepo;','getDeviceInfo'),
@@ -32,8 +34,14 @@ def summarize(dex: dict[str,DexIndex], dex_count: int) -> dict:
      'tuya_source_uses_sdk_device_interface':d.calls(sdk_devices,'/spi/iot/IotDevice;','OoooO00'),
      'tuya_cache_is_indexed_by_cp_id':d.field_access(ty_set,'/model/GzDeviceInfo;','cpDeviceId',(0x54,)) and d.calls(ty_set,'/util/concurrent/ConcurrentHashMap;','putAll'),
      'tuya_cache_supports_id_lookup':d.calls(ty_get,'/util/concurrent/ConcurrentHashMap;','get'),
+     'platform_event_reads_cp_device_id':d.field_access(
+          platform_event,'/model/PlatformDeviceInfo;','cpDeviceId',(0x54,)),
+     'platform_event_looks_up_aosu_device':d.calls(
+          platform_event,'/device/DeviceBusiness;','getDeviceInfo'),
+     'platform_event_enriches_aosu_device':d.calls(
+          platform_event,'/model/GzDeviceInfo;','setCpDataInfo'),
     }
-    return {'diagnostic':'aosu_cp_cache_route_offline_v2','dex_count':dex_count,'static_only':True,'network_calls':0,'video_calls':0,'camera_commands':0,'secrets_exported':False,'runtime_device_identity_confirmed':False,'external_c9c_cp_id_recovered':False,'facts':{k:bool(v) for k,v in facts.items()}}
+    return {'diagnostic':'aosu_cp_cache_route_offline_v3','dex_count':dex_count,'static_only':True,'network_calls':0,'video_calls':0,'camera_commands':0,'secrets_exported':False,'runtime_device_identity_confirmed':False,'external_c9c_cp_id_recovered':False,'facts':{k:bool(v) for k,v in facts.items()}}
 
 def analyze(path:Path)->dict:
     if path.stat().st_size>350_000_000:raise ValueError('archive_too_large')
@@ -56,6 +64,6 @@ def main():
     args=cli.parse_args()
     try:print(json.dumps(analyze(args.apk),ensure_ascii=False,indent=2))
     except (OSError,ValueError,IndexError,struct.error,zipfile.BadZipFile):
-        print(json.dumps({'diagnostic':'aosu_cp_cache_route_offline_v2','etat':'archive_non_exploitable','secrets_exported':False}))
+        print(json.dumps({'diagnostic':'aosu_cp_cache_route_offline_v3','etat':'archive_non_exploitable','secrets_exported':False}))
         raise SystemExit(2)
 if __name__=='__main__':main()

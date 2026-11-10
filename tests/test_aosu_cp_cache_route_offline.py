@@ -19,8 +19,11 @@ class Stub:
 class TestOfflineCPCacheRouting(unittest.TestCase):
     def test_static_facts_never_claim_runtime_identity(self):
         r=TOOL['summarize']({'classes11.dex':Stub(),'classes15.dex':Stub()},17)
-        self.assertEqual(len(r['facts']),9)
+        self.assertEqual(len(r['facts']),12)
         self.assertTrue(all(r['facts'].values()))
+        self.assertTrue(r['facts']['platform_event_reads_cp_device_id'])
+        self.assertTrue(r['facts']['platform_event_looks_up_aosu_device'])
+        self.assertTrue(r['facts']['platform_event_enriches_aosu_device'])
         self.assertEqual(r['dex_count'],17)
         self.assertFalse(r['runtime_device_identity_confirmed'])
         self.assertFalse(r['external_c9c_cp_id_recovered'])

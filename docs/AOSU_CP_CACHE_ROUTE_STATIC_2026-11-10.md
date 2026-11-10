@@ -64,3 +64,38 @@ La prochaine enquête technique peut rechercher si des réponses
 d'appairage AOSU déjà autorisées exposent la liaison, mais les appels
 nécessitant un coopUUID inconnu ne doivent pas être lancés avec des
 identifiants inventés.
+
+## Analyse complémentaire : événement Tuya → enrichissement AOSU (v3)
+
+Le bytecode de classes15.dex, méthode
+`TyDeviceInfoSource$init$1.OooO00o(PlatformDeviceInfo)`,
+contient trois opérations vérifiées conjointement :
+
+1. Lecture de `PlatformDeviceInfo.cpDeviceId` ;
+2. Appel à `DeviceBusiness.getDeviceInfo` ;
+3. Appel à `GzDeviceInfo.setCpDataInfo`.
+
+Le SDK possède ainsi un **second sens de rapprochement** : un
+événement de la plateforme Tuya est utilisé pour retrouver et
+enrichir la fiche d'appareil AOSU. Cette preuve concerne le
+code de l'application, pas la valeur CP de la C9C externe.
+
+Autre vérification : la méthode `DeviceWebService.OooOOOO()`
+appelée par le chargeur de liste AOSU ne prend aucun argument
+métier dans sa signature DEX. Aucun paramètre CP manquant n'y a
+été identifié. Les en-têtes et paramètres d'authentification
+ajoutés par les couches réseau restent hors de cette conclusion.
+
+Le diagnostic beta32 a déjà montré que la référence CP est absente
+de l'inventaire AOSU pour cette C9C. Une copie exacte du mécanisme
+Android exigerait les données de l'événement Tuya effectivement
+reçu et son association à l'appareil, non disponibles dans les
+réponses API déjà vérifiées. Une intégration HA ne peut pas lire
+la mémoire privée de l'application sur un téléphone tiers.
+
+L'outil de vérification hors réseau inspecte maintenant douze
+indices, et conserve les indicateurs explicites
+`runtime_device_identity_confirmed=false` et
+`external_c9c_cp_id_recovered=false`.
+
+**Version installable inchangée : 0.8.13-beta32.**
