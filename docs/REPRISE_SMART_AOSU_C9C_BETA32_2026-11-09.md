@@ -286,3 +286,37 @@ que le `cpDeviceId` puisse être communiqué.
 **Version Home Assistant inchangée : 0.8.13-beta32**.
 Les trois caméras fonctionnelles, leurs entités et leurs PTZ
 restent inchangés.
+
+## 10 novembre 2026 — audit croisé des deux APK réexpédiés, plus SDK natif
+
+Audit complet : `docs/AUDIT_CROISE_APKS_COMPLET_LITE_C9C_2026-11-10.md`.
+Commit : `8498e31026005cee0ae5894588c76e45bccdd9ac`.
+
+L'original est bien l'APK 5.10.12 déjà analysé :
+SHA256 `ec176ce3bdd000cd514371137fff6d8b2141bbde061c3fb2ab3892d7a72b52d7`,
+17 DEX et 75 bibliothèques ARM64. Le Lite (SHA256
+`6a3692aa0dc2385f9d988ffbcf7a703249d426b022f78857d2b380748e790be1`)
+contient seulement `classes11.dex` et `libglazero-security.so`,
+tous deux identiques à l'original, mais sans manifeste Android ni SDK
+P2P natif. Les anciens résultats négatifs de Lite n'étaient
+pas représentatifs du moteur caméra.
+
+Différence concrète : le code Android
+`ThingSmartCameraP2PSync.innerConnect` traite `p2pPolicy`,
+`sessionTid`, `clientTid`, configuration IPC, capacités
+de l'appareil et mode local ; `TyCameraCenter` appelle
+`ThingIPCSdk.createCameraP2P`, appuyé par `libThingP2PSDK.so`.
+Le Python actuel construit au contraire un SDP AES/KCP et une offre
+MQTT sans parité démontrée avec ce chemin natif.
+
+La chaîne `sigQry` employée avant l'offre Python est visible dans
+le code d'un gestionnaire de signal Wi-Fi Tuya
+(`MQ_203_DataReceivedBean`, `WifiSignalListener.onSignalValueFind`),
+pas dans le parcours caméra identifié. Ne plus traiter `sigQry`
+comme protocole d'amorçage vidéo confirmé.
+
+Toujours **aucune correspondance d'identité C9C AOSU/Tuya prouvée**.
+La beta32 et les trois caméras C5L/H1L fonctionnelles restent intactes.
+Ne pas lancer un nouvel essai SDP avant vérification hors réseau
+de la parité SDK et preuve exacte d'identité. Le rapport complet
+propose deux voies techniques (pont SDK autorisé ou moteur indépendant).
