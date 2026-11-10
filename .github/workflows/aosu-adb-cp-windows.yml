@@ -25,6 +25,71 @@ jobs:
         run: |
           & .\tools\windows\AOSU_CP_SANS_ROOT.ps1 -SelfTest
           if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell 5.1 selftest failed' }
+      - name: Full fake ADB USB and logcat test on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $code = @'
+          using System;
+          public static class MockAdb {
+              public static int Main(string[] args) {
+                  if(args.Length > 0 && args[0] == "devices") {
+                      Console.Error.WriteLine("* daemon started successfully");
+                      Console.WriteLine("List of devices attached");
+                      Console.WriteLine("FAKEDEVICE123\tdevice");
+                      return 0;
+                  }
+                  if(args.Length >= 2 && args[0] == "shell" && args[1] == "pidof") {
+                      Console.WriteLine("4242");
+                      return 0;
+                  }
+                  if(args.Length > 0 && args[0] == "logcat") {
+                      Console.WriteLine("I/AOSU : loadDeviceInfoList load gz device success");
+                      Console.WriteLine("I/AOSU : loadDeviceInfoList load ty device success");
+                      Console.WriteLine("I/AOSU : cpData setMemoryCache deviceIdTy2GzMap size:1");
+                      Console.WriteLine("I/AOSU : targetCpDeviceId=SECRET_FAKE_CP");
+                      Console.WriteLine("I/AOSU : token=SECRET_FAKE_TOKEN");
+                      return 0;
+                  }
+                  return 11;
+              }
+          }
+          '@
+          $fake = Join-Path $env:RUNNER_TEMP 'fake_adb_ok.exe'
+          Add-Type -TypeDefinition $code -OutputAssembly $fake -OutputType ConsoleApplication
+          $stdout=@(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\windows\AOSU_CP_SANS_ROOT.ps1 -AutoRead -AdbPath $fake)
+          $status=$LASTEXITCODE
+          $text=$stdout -join [Environment]::NewLine
+          if($status -ne 0) { throw ('mock ADB process exit code: '+$status) }
+          if(-not $text.Contains('RAPPORT ANONYMISE') -or
+             -not $text.Contains('"valeur_cp_potentielle_dans_journal": true') -or
+             $text.Contains('SECRET_FAKE_CP') -or
+             $text.Contains('SECRET_FAKE_TOKEN')) {
+              throw 'Failed mock ADB processing or anonymity'
+          }
+      - name: Fake USB unauthorized device produces precise safe diagnostic
+        shell: powershell
+        run: |
+          $code = @'
+          using System;
+          public static class MockAdbUnauthorized {
+              public static int Main(string[] args) {
+                  if(args.Length > 0 && args[0] == "devices") {
+                      Console.WriteLine("List of devices attached");
+                      Console.WriteLine("FAKEDEVICE123\tunauthorized");
+                      return 0;
+                  }
+                  return 11;
+              }
+          }
+          '@
+          $fake = Join-Path $env:RUNNER_TEMP 'fake_adb_unauthorized.exe'
+          Add-Type -TypeDefinition $code -OutputAssembly $fake -OutputType ConsoleApplication
+          $stdout=@(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\windows\AOSU_CP_SANS_ROOT.ps1 -AutoRead -AdbPath $fake)
+          $status=$LASTEXITCODE
+          $text=$stdout -join [Environment]::NewLine
+          if($status -ne 3 -or -not $text.Contains('TELEPHONE_ABSENT_NON_AUTORISE_OU_MULTIPLE')) {
+              throw 'Unauthorized fake USB device was not classified correctly'
+          }
       - name: Verify no ADB modification actions
         shell: pwsh
         run: |

@@ -34,3 +34,18 @@ car PowerShell la confond avec \$HOME (variable systeme protegee).
 Le test sans telephone execute desormais Find-Adb et verifie que
 \$HOME demeure inchange. Tests sur Windows PowerShell 5.1 ET PowerShell 7.
 La version Home Assistant 0.8.13-beta32 reste inchangee.
+
+## Correctif Windows 1.2 — diagnostic par étape et parcours ADB simulé
+
+La version 1.1 masquait toutes les erreurs sous un seul texte,
+sans dire si la panne venait d'ADB, de l'USB, de l'application
+AOSU ou de logcat. La version 1.2 donne maintenant un état précis
+pour chaque étape, **sans afficher les erreurs natives** ni un
+numéro de série, une valeur cpDeviceId ou une trace brute.
+
+Les commandes ADB sont exécutées dans une fonction dédiée qui
+ignore les messages de démarrage du daemon sur stderr en
+Windows PowerShell 5.1. Le script reste en lecture seule et
+n'enregistre aucun journal. Le test GitHub simule le parcours
+complet avec un faux ADB et des identifiants synthétiques,
+et vérifie aussi le cas d'un appareil USB non autorisé.

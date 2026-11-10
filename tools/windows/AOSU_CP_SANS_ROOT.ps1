@@ -4,7 +4,8 @@ Lecture ADB sans root de traces cpDeviceId de l'application AOSU officielle.
 Aucune commande camera, aucun journal ni identifiant conserve sur disque.
 #>
 [CmdletBinding()]
-param([switch]$SelfTest,[ValidateRange(1000,50000)][int]$MaxLines=20000)
+param([switch]$SelfTest,[switch]$AutoRead,[string]$AdbPath,
+      [ValidateRange(1000,50000)][int]$MaxLines=20000)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 
@@ -25,6 +26,23 @@ function Find-Adb {
         if(Test-Path -LiteralPath $path -PathType Leaf){return $path}
     }
     return $null
+}
+
+
+function Invoke-AdbRead {
+    param([string]$Executable,[string[]]$Parameters)
+    # Powershell 5.1 treats some native stderr messages as errors when
+    # ErrorActionPreference='Stop' (ADB daemon startup is a known case).
+    # Suppress stderr; never expose raw ADB output or IDs.
+    $previous=$ErrorActionPreference
+    try {
+        $ErrorActionPreference='Continue'
+        $outputLines=@(& $Executable @Parameters 2>$null)
+        $status=[int]$LASTEXITCODE
+        return [pscustomobject]@{ Code=$status; Lines=@($outputLines) }
+    } finally {
+        $ErrorActionPreference=$previous
+    }
 }
 
 function New-AnonymousReport {
@@ -110,45 +128,72 @@ if($SelfTest){
     exit 0
 }
 
-Write-Host 'SMART AOSU - LECTURE ADB SANS ROOT - CORRECTIF 1.1 - AUCUN LOG BRUT ENREGISTRE'
-$adb=Find-Adb
-if([string]::IsNullOrWhiteSpace($adb)){
-    Write-Host 'ETAT : ADB_INTROUVABLE - installer Android SDK Platform-Tools'
-    exit 2
-}
+Write-Host 'SMART AOSU - LECTURE ADB SANS ROOT - CORRECTIF 1.2'
+Write-Host 'Aucun log brut ni identifiant affiche ou enregistre.'
+$step='recherche_adb'
 try{
-    $rows=@(& $adb devices 2>$null)
-    $devices=@($rows|Where-Object{$_ -match '^[^\s]+\s+device\s*$'})
-    if($LASTEXITCODE -ne 0 -or $devices.Count -ne 1){
-        Write-Host 'ETAT : TELEPHONE_ABSENT_OU_MULTIPLE - autoriser le debogage USB'
+    if(-not [string]::IsNullOrWhiteSpace($AdbPath)){
+        if(-not (Test-Path -LiteralPath $AdbPath -PathType Leaf)){
+            Write-Host 'ETAT : CHEMIN_ADB_INVALIDE'
+            exit 2
+        }
+        $adb=$AdbPath
+    }else{
+        $adb=Find-Adb
+    }
+    if([string]::IsNullOrWhiteSpace($adb)){
+        Write-Host 'ETAT : ADB_INTROUVABLE'
+        exit 2
+    }
+    $step='liste_telephones'
+    $response=Invoke-AdbRead -Executable $adb -Parameters @('devices')
+    if($response.Code -ne 0){
+        Write-Host 'ETAT : ADB_DEVICES_ECHEC'
         exit 3
     }
-    $pidText=[string]((& $adb shell pidof -s com.glazero.android 2>$null)-join ' ')
-    if($pidText -notmatch '^\s*\d+\s*$'){
-        Write-Host 'ETAT : APPLICATION_AOSU_NON_OUVERTE - ouvrir AOSU officiel'
+    $devices=@($response.Lines|Where-Object{$_ -match '^\S+\s+device\s*$'})
+    if($devices.Count -ne 1){
+        Write-Host 'ETAT : TELEPHONE_ABSENT_NON_AUTORISE_OU_MULTIPLE'
+        Write-Host 'Verifier USB, debogage et autorisation ADB.'
+        exit 3
+    }
+    $step='recherche_application'
+    $response=Invoke-AdbRead -Executable $adb -Parameters @('shell','pidof','-s','com.glazero.android')
+    $pidText=[string]($response.Lines -join ' ')
+    if($response.Code -ne 0 -or $pidText -notmatch '^\s*\d+\s*$'){
+        Write-Host 'ETAT : APPLICATION_AOSU_NON_TROUVEE'
         exit 4
     }
-    Write-Host 'Dans AOSU officiel, ouvrir une fois le direct de la C9C.'
-    [void](Read-Host 'Revenir sur le PC et appuyer sur Entree')
-    $pidText=[string]((& $adb shell pidof -s com.glazero.android 2>$null)-join ' ')
-    if($pidText -notmatch '^\s*\d+\s*$'){
-        Write-Host 'ETAT : PROCESSUS_AOSU_ARRETE'
+    Write-Host 'ETAT : ADB_ET_APPLICATION_RECONNUS'
+    if(-not $AutoRead){
+        Write-Host 'Ouvrir la C9C une fois dans AOSU officiel sur le telephone.'
+        [void](Read-Host 'Appuyer sur Entree sur le PC quand termine')
+    }
+    $step='verification_application'
+    $response=Invoke-AdbRead -Executable $adb -Parameters @('shell','pidof','-s','com.glazero.android')
+    $pidText=[string]($response.Lines -join ' ')
+    if($response.Code -ne 0 -or $pidText -notmatch '^\s*\d+\s*$'){
+        Write-Host 'ETAT : APPLICATION_AOSU_ARRETEE'
         exit 5
     }
-    # Lecture du seul PID AOSU, ni effacement de logcat ni ecriture sur disque.
-    $lines=@(& $adb logcat -d -t $MaxLines --pid=$($pidText.Trim()) -v brief 2>$null)
-    if($LASTEXITCODE -ne 0){
-        Write-Host 'ETAT : LOGCAT_NON_AUTORISE_OU_INCOMPATIBLE'
+    $step='lecture_logcat'
+    $pidArg='--pid='+$pidText.Trim()
+    $response=Invoke-AdbRead -Executable $adb -Parameters @('logcat','-d','-t',[string]$MaxLines,$pidArg,'-v','brief')
+    if($response.Code -ne 0){
+        Write-Host 'ETAT : LOGCAT_REFUSE_OU_OPTION_NON_SUPPORTEE'
         exit 6
     }
-    $result=New-AnonymousReport -Lines $lines
-    $lines=$null
+    $step='analyse_anonyme'
+    $report=New-AnonymousReport -Lines $response.Lines
+    $response=$null
     Write-Host '=== RAPPORT ANONYMISE ==='
-    $result | ConvertTo-Json -Depth 2
+    $report|ConvertTo-Json -Depth 3
     Write-Host '=== FIN DU RAPPORT ==='
-    Write-Host 'Un marqueur cpDeviceId ne prouve pas la liaison a la C9C.'
+    Write-Host 'Un marqueur ne prouve pas la liaison a la C9C.'
+    exit 0
 }catch{
-    # Ne jamais exposer une erreur externe pouvant contenir des donnees.
-    Write-Host 'ETAT : ERREUR_LECTURE_ADB_SANS_DETAILS'
+    # Only a predefined phase is exposed. Raw exception messages could
+    # include serials, tokens, paths or logcat lines; never display them.
+    Write-Host ('ETAT : ECHEC_INTERNE_ETAPE_'+$step.ToUpperInvariant())
     exit 7
 }
