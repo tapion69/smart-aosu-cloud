@@ -60,11 +60,24 @@ jobs:
           $status=$LASTEXITCODE
           $text=$stdout -join [Environment]::NewLine
           if($status -ne 0) { throw ('mock ADB process exit code: '+$status) }
-          if(-not $text.Contains('RAPPORT ANONYMISE') -or
-             -not $text.Contains('"valeur_cp_potentielle_dans_journal": true') -or
+          $begin=[Array]::IndexOf($stdout,'=== RAPPORT ANONYMISE ===')
+          $end=[Array]::IndexOf($stdout,'=== FIN DU RAPPORT ===')
+          if($begin -lt 0 -or $end -le ($begin+1)) {
+              throw ('Mock report boundaries missing, phase=' + ($stdout -join ' | '))
+          }
+          $json=@($stdout[($begin+1)..($end-1)]) -join [Environment]::NewLine
+          $parsed=ConvertFrom-Json -InputObject $json
+          if(-not $parsed.valeur_cp_potentielle_dans_journal -or
+             -not $parsed.rapprochement_cache -or
+             -not $parsed.chargement_liste_aosu -or
+             -not $parsed.chargement_liste_tuya -or
+             $parsed.identite_c9c_tuya_prouvee -or
              $text.Contains('SECRET_FAKE_CP') -or
              $text.Contains('SECRET_FAKE_TOKEN')) {
-              throw 'Failed mock ADB processing or anonymity'
+              throw ('Mock failed: flags=' + $parsed.valeur_cp_potentielle_dans_journal +
+                     '/' + $parsed.rapprochement_cache + '/' +
+                     $parsed.chargement_liste_aosu + '/' +
+                     $parsed.chargement_liste_tuya)
           }
       - name: Fake USB unauthorized device produces precise safe diagnostic
         shell: powershell
