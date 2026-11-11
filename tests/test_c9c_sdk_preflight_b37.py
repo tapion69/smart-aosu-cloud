@@ -9,7 +9,7 @@ BASE=ROOT/'custom_components'/'smart_aosu_cloud'
 SRC=(BASE/'c9c_sdk_preflight_b37.py').read_text(encoding='utf8')
 TREE=ast.parse(SRC)
 FUNCS=[n for n in TREE.body if isinstance(n,ast.FunctionDef)]
-N={'Any':object}
+N={'Any':object, '_ALLOWED_CONTAINERS':('data','result','device','deviceBean','deviceInfo','productBean','p2pConfig','session','config','rtcConfig')}
 exec(compile(ast.Module(body=FUNCS,type_ignores=[]),'<offline>','exec'),N)
 AUDIT=N['summarize_native_prerequisites_b37']
 TARGET='FAKE_TUYA_ID'
