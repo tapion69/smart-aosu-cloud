@@ -89,6 +89,22 @@ class C9CAutonomeTests(unittest.TestCase):
                          camera_sn='one-c9c-sn',camera_coop='exact-coop'),
                          ('a','identite_exacte'))
 
+    def test_unverified_standalone_identity_never_authorizes_offer(self):
+        allowed=TOPO['standalone_c9c_video_identity_verified']
+        self.assertTrue(allowed('identite_exacte'))
+        for selection in (
+            'appareil_tuya_unique_sans_categorie_video',
+            'camera_tuya_unique_non_confirmee',
+            'correspondance_ambigue', 'aucune_camera_tuya_identifiable',
+            None, '', 'correspondance_exacte'):
+            with self.subTest(selection=selection):
+                self.assertFalse(allowed(selection))
+        source=(COMP/'tuya_rtc_inventory.py').read_text(encoding='utf-8')
+        guard=source.index('not standalone_c9c_video_identity_verified(selection)')
+        send=source.index("out['signalisation_mqtt']=run_tuya_mqtt_offer(")
+        self.assertLess(guard,send)
+        self.assertIn("'c9c_identite_non_prouvee_offre_bloquee'",source)
+
     def test_manual_video_only_path_and_no_ptz_card(self):
         init=(COMP/'__init__.py').read_text()
         service_name='demarrer_video_c9c_autonome_beta'
