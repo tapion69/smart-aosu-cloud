@@ -133,7 +133,9 @@ def probe_c9c_detail(client):
             reverse = probe_c9c_reverse_cp(
                 client, parsed, sn, cache, params=params, headers=headers,
                 known_aosu_device_id=getattr(
-                    client, '_standalone_c9c_device_id', None))
+                    client, '_standalone_c9c_device_id', None),
+                tuya_detail_cache=getattr(
+                    client, '_c9c_reverse_uuid_cache', None))
             return {**base, **report, "liaison_inverse_cp": reverse,
                     "appels_http": 1 + reverse["appels_http"]}
         except (requests.RequestException, ValueError, TypeError, KeyError):
