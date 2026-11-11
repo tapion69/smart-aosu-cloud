@@ -317,19 +317,33 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         'http_non_200','categorie_tuya_non_video',
         'identifiants_tuya_contradictoires','references_cp_contradictoires',
         'references_cp_multiples_ambigues','champs_identite_manquants',
-        'reference_cp_incoherente','reponse_non_conforme']
+        'reference_cp_incoherente','reponse_non_conforme',
+        'reponse_sans_coop_uuid','coop_uuid_retourne_sans_device_id',
+        'reponse_plusieurs_entrees_non_concluante','entree_mal_formee']
         .includes(reverse.etat)?reverse.etat:'non_confirmee';
       const sourceAosu=['aucune','fiche_SN','inventaire_SN'].includes(
         reverse.source_device_id_aosu)?reverse.source_device_id_aosu:'aucune';
-      const n=reverse.candidats_cp_essayes;
-      const count=Number.isInteger(n)&&n>=0&&n<=5?n:0;
+      const available=reverse.candidats_cp_disponibles;
+      const availableCount=Number.isInteger(available)&&available>=0&&available<=5
+        ?available:0;
       const sources=['aucune','dev_id_tuya','cp_device_id_tuya',
         'cp_device_id_fiche_tuya','coop_uuid_tuya','uuid_tuya',
         'dev_uuid_tuya','device_uuid_tuya','cp_uuid_tuya'];
+      const tested=sources.includes(reverse.type_reference_testee)
+        ?reverse.type_reference_testee:'aucune';
       const matched=sources.includes(reverse.type_reference_resolue)
         ?reverse.type_reference_resolue:'aucune';
+      const shape=reverse.structure_reponse_cp||{};
+      const number=Number.isInteger(shape.entrees)&&shape.entrees>=0
+        &&shape.entrees<=30?shape.entrees:0;
       this._message('Fiche AOSU : obtenue ; liaison inverse : '+lookupState+
-        ' ; références interrogées : '+count+
+        ' ; références disponibles : '+availableCount+
+        ' ; référence testée : '+tested+
+        ' ; entrées AOSU : '+number+
+        ' ; coopUUID présent : '+yes(shape.coop_uuid_present)+
+        ' ; deviceId présent : '+yes(shape.device_id_present)+
+        ' ; modèle présent : '+yes(shape.dev_model_present)+
+        ' ; type appareil présent : '+yes(shape.dev_type_present)+
         ' ; référence retrouvée : '+matched+
         ' ; référence CP résolue : '+yes(reverse.reference_cp_resolue)+
         ' ; identifiant AOSU confirmé par : '+sourceAosu+
