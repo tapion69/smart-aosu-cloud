@@ -503,6 +503,21 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 if not target or not getattr(client, '_standalone_c9c_sn', None):
                     return {**out, 'etat': 'rtc_non_lance_c9c_non_identifiee',
                             'methode_selection_rtc': selection}
+                # The unique-Tuya-device heuristic is good enough for
+                # consented READS, never for active camera traffic. The
+                # beta39 Thing-4 RTC id match only proves a Tuya-to-Tuya
+                # relationship, not the AOSU C9C serial's identity.
+                if ((standalone_c9c_video_test or standalone_c9c_wake_only
+                     or standalone_c9c_wake_then_video)
+                        and selection != 'identite_exacte'):
+                    return {**out,
+                            'etat':'c9c_identite_aosu_tuya_non_prouvee',
+                            'methode_selection_rtc':selection,
+                            'offre_sdp_envoyee':False,
+                            'commande_camera':0,
+                            'commandes_ptz':0,
+                            'session_video_creee':False,
+                            'secrets_retournes':False}
                 out['methode_selection_rtc'] = selection
                 if standalone_c9c_mqtt_watch:
                     # Only cached/loaded Tuya metadata, no extra network call.
