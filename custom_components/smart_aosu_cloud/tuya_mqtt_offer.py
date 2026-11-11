@@ -344,6 +344,21 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                     result['abonnement_signalisation_accepte']=True
                     diag['etape']='abonnement_confirme'
                     diag['abonnement_confirme']=True
+                    # Experimental standalone C9C only: the outgoing SDP
+                    # must not be published without a local ICE candidate.
+                    # Prepare the UDP responder before waking/sending. A
+                    # failed bind gives one fixed diagnostic, no SDP and no
+                    # camera command. C5L/H1L keep their previous path.
+                    if interactive_ice and use_moto_id:
+                        ice=ControlledIceB85(media.ice_password)
+                        ice_candidate=ice.start()
+                        if not ice_candidate:
+                            result['etat']='ice_local_indisponible_offre_non_envoyee'
+                            result['candidat_ice_b85_publie']=False
+                            diag['etape']='preparation_ice_impossible'
+                            diag['fin_attente']='non_lancee'
+                            return result
+                        diag['ice_pret_avant_offre']=True
                     confirmed_at = None
                     if wake_before_offer:
                         from .c9c_wake_probe import try_wake_c9c_on_open_socket
@@ -389,8 +404,11 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                     # New b85 ICE controlled-role responder; never active in
                     # manual read-only/signaling-only diagnostics.
                     if interactive_ice:
-                        ice=ControlledIceB85(media.ice_password)
-                        ice_candidate=ice.start()
+                        # Standalone C9C prepared its candidate before any
+                        # offer. Legacy modes preserve their existing timing.
+                        if ice is None:
+                            ice=ControlledIceB85(media.ice_password)
+                            ice_candidate=ice.start()
                         if ice_candidate:
                             candidate_msg={
                                 'header':{
