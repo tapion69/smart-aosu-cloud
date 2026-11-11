@@ -727,7 +727,7 @@ async def async_setup(hass,config):
                     if alignment.get('rtc_id_egale_dev_id_tuya') in id_results
                     else 'identifiant_non_verifiable',
                 'configuration_sdk_json':
-                    alignment.get('config_json_convertible_par_sdk') is True,
+                    alignment.get('config_p2p_objet_present') is True,
                 'sdp_python_ipc_v4':
                     alignment.get('preparation_python_ipc_v4_possible') is True,
                 'sdp_python_sdk_classique':
