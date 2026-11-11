@@ -678,14 +678,20 @@ async def async_setup(hass,config):
         comparison=comparison if isinstance(comparison,dict) else {}
         rtc_names=('acceptee','p2p_id','session_tid','p2p_policy',
                    'p2p_specified_type','session_id','password','token',
-                   'skill','p2p_type_thing4')
+                   'skill','p2p_type_thing4',
+                   'camera_info_id_racine_present',
+                   'branche_thing4_compatible_avec_champs')
         shape_allowed={'objet','chaine','formes_multiples','absent'}
+        type_allowed={'thing_4','p2p_2','tutk_1','autre','absent'}
         def rtc_public(label):
             obj=comparison.get(label)
             obj=obj if isinstance(obj,dict) else {}
             f=obj.get('p2p_config_format')
+            ty=obj.get('p2p_specified_type_categorie')
             return {**{key:obj.get(key) is True for key in rtc_names},
-                    'p2p_config_format':f if f in shape_allowed else 'absent'}
+                    'p2p_config_format':f if f in shape_allowed else 'absent',
+                    'p2p_specified_type_categorie':
+                        ty if ty in type_allowed else 'absent'}
         names=(
             'fiche_tuya_acceptee','rtc_ipc_v4_accepte',
             'fiche_tuya_memes_identifiants','type_p2p_thing4_present',
@@ -695,7 +701,7 @@ async def async_setup(hass,config):
             'p2p_id_champ_present','ipc_session_id_present',
             'client_tid_champ_present')
         return {
-            'diagnostic':'aosu_c9c_sdk_preparation_b38',
+            'diagnostic':'aosu_c9c_sdk_preparation_b39',
             'etat':raw.get('etat') if raw.get('etat') in statuses else 'autre',
             'schema':{name:safe.get(name) is True for name in names},
             'comparaison_rtc_b38':{
