@@ -39,7 +39,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       <ha-card>
         <h3>C9C autonome — essai vidéo P2P</h3>
         <div id="view" class="view"></div>
-        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="fullb31">Diagnostic complet</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="tuyadetail27">Fiche Tuya</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="sdkb25">Analyser SDK APK</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
+        <div class="actions"><button id="play">▶ Essayer la vidéo</button><button id="wakeplay">▶ Réveil + vidéo</button><button id="stop">■ Arrêter</button><button id="screen">⛶ Plein écran</button><button id="state">État</button><button id="fullb31">Diagnostic complet</button><button id="identity">Vérifier identité</button><button id="detail">Fiche AOSU</button><button id="tuyadetail27">Fiche Tuya</button><button id="sdk37">Préparation SDK</button><button id="rtc">Examiner RTC</button><button id="v4rtc">Comparer RTC IPC</button><button id="webrtcaudit">Comparer WebRTC</button><button id="ipcv2b24">Examiner IPC v2</button><button id="sdkb25">Analyser SDK APK</button><button id="webrtcchannel">Tester canal WebRTC</button><button id="observe">Observer MQTT</button><button id="wake">Tester le réveil</button></div>
         <p id="notice" role="status">Bêta : protocole vidéo C5L non validé sur C9C. PTZ volontairement désactivé. Aucun démarrage automatique.</p>
       </ha-card>`;
     this.shadowRoot.getElementById('play').addEventListener('click',()=>void this._play(false));
@@ -50,6 +50,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this.shadowRoot.getElementById('identity').addEventListener('click',()=>void this._identity());
     this.shadowRoot.getElementById('detail').addEventListener('click',()=>void this._detail());
     this.shadowRoot.getElementById('tuyadetail27').addEventListener('click',()=>void this._tuyaDetail27());
+    this.shadowRoot.getElementById('sdk37').addEventListener('click',()=>void this._sdk37());
     this.shadowRoot.getElementById('rtc').addEventListener('click',()=>void this._rtc());
     this.shadowRoot.getElementById('v4rtc').addEventListener('click',()=>void this._v4rtc());
     this.shadowRoot.getElementById('webrtcaudit').addEventListener('click',()=>void this._webrtc(false));
@@ -286,6 +287,57 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; identité AOSU/Tuya prouvée : '+yes(x.identite_aosu_tuya_etablie)+
         '. Le type P2P SDK ne prouve ni la liaison AOSU/Tuya ni la vidéo. Aucune offre, réveil, vidéo ni PTZ.');
     }finally{
+      this._busy=false;
+      if(btn)btn.disabled=false;
+    }
+  }
+  async _sdk37() {
+    if(this._busy)return;
+    this._busy=true;
+    const btn=this.shadowRoot.getElementById('sdk37');
+    if(btn)btn.disabled=true;
+    this._message('Lecture des prérequis du SDK Thing : fiche Tuya et RTC (aucune vidéo ni PTZ)…');
+    try {
+      const res=await this._service('diagnostiquer_sdk_p2p_c9c_b37',{
+        confirmation_lecture_sdk:true
+      });
+      const d=res?.response||res;
+      if(!d || typeof d.etat!=='string')return;
+      if(d.etat!=='sdk_b37_lecture_terminee'){
+        const states=['limite_sdk_b37_cinq_minutes',
+          'rtc_non_lance_c9c_non_identifiee',
+          'session_perdue_ou_expiree_confirmation_login_requise',
+          'login_UID_non_reussi','limite_login_une_heure',
+          'limite_inventaire_30_minutes','test_deja_en_cours',
+          'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+          'lecture_maisons_refusee','groupes_non_identifies',
+          'erreur_api_tuya','erreur_execution_sans_details',
+          'sdk_b37_lecture_seule_uniquement'];
+        this._message('Préparation SDK : '+(states.includes(d.etat)?d.etat:'non_disponible')+
+          '. Aucune vidéo ni commande caméra.');
+        return;
+      }
+      const x=d.schema||{},yes=k=>x[k]===true?'oui':'non';
+      const lines=[
+        'Préparation SDK B37 : lecture terminée (sans vidéo/commande).',
+        'Fiche Tuya : '+yes('fiche_tuya_acceptee')+
+          ' ; même ID Tuya : '+yes('fiche_tuya_memes_identifiants')+
+          ' ; skills Thing 4 : '+yes('type_p2p_thing4_present'),
+        'Clé locale disponible : '+yes('cle_locale_presente')+
+          ' ; productBean : '+yes('product_bean_present')+
+          ' ; catégorie caméra sp : '+yes('categorie_camera_sp_presente'),
+        'RTC IPC-v4 : '+yes('rtc_ipc_v4_accepte')+
+          ' ; configuration P2P : '+yes('p2p_config_structure_presente')+
+          ' ; p2pPolicy : '+yes('p2p_policy_champ_present'),
+        'sessionTid : '+yes('session_tid_champ_present')+
+          ' ; p2pId : '+yes('p2p_id_champ_present')+
+          ' ; sessionId : '+yes('ipc_session_id_present')+
+          ' ; clientTid : '+yes('client_tid_champ_present'),
+        'Métadonnées de lecture seulement : la création native ThingIPCSdk, '+
+          'la liaison AOSU/Tuya et la vidéo ne sont PAS prouvées.'
+      ];
+      this._message(lines.join('\n'));
+    } finally {
       this._busy=false;
       if(btn)btn.disabled=false;
     }
