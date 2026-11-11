@@ -315,11 +315,22 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         'reference_cp_resolue_identite_non_confirmee',
         'schema_non_reconnu','serveur_refuse','reponse_ambigue',
         'http_non_200','categorie_tuya_non_video',
-        'identifiants_tuya_contradictoires','references_cp_contradictoires']
+        'identifiants_tuya_contradictoires','references_cp_contradictoires',
+        'references_cp_multiples_ambigues','champs_identite_manquants',
+        'reference_cp_incoherente','reponse_non_conforme']
         .includes(reverse.etat)?reverse.etat:'non_confirmee';
       const sourceAosu=['aucune','fiche_SN','inventaire_SN'].includes(
         reverse.source_device_id_aosu)?reverse.source_device_id_aosu:'aucune';
+      const n=reverse.candidats_cp_essayes;
+      const count=Number.isInteger(n)&&n>=0&&n<=5?n:0;
+      const sources=['aucune','dev_id_tuya','cp_device_id_tuya',
+        'cp_device_id_fiche_tuya','coop_uuid_tuya','uuid_tuya',
+        'dev_uuid_tuya','device_uuid_tuya','cp_uuid_tuya'];
+      const matched=sources.includes(reverse.type_reference_resolue)
+        ?reverse.type_reference_resolue:'aucune';
       this._message('Fiche AOSU : obtenue ; liaison inverse : '+lookupState+
+        ' ; références interrogées : '+count+
+        ' ; référence retrouvée : '+matched+
         ' ; référence CP résolue : '+yes(reverse.reference_cp_resolue)+
         ' ; identifiant AOSU confirmé par : '+sourceAosu+
         ' ; liaison prouvée : '+yes(reverse.liaison_exacte_confirmee)+
