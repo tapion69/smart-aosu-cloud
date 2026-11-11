@@ -323,8 +323,11 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const bool=(obj,key)=>obj[key]===true?'oui':'non';
       const format=obj=>['objet','chaine','formes_multiples','absent']
         .includes(obj.p2p_config_format)?obj.p2p_config_format:'absent';
+      const category=obj=>['thing_4','p2p_2','tutk_1','autre','absent']
+        .includes(obj.p2p_specified_type_categorie)
+        ?obj.p2p_specified_type_categorie:'absent';
       const lines=[
-        'Préparation SDK B38 : deux configurations RTC comparées, sans vidéo.',
+        'Préparation SDK B39 : branche caméra Thing (lecture seule, sans vidéo).',
         'Fiche Tuya : '+yes('fiche_tuya_acceptee')+
           ' ; même ID Tuya : '+yes('fiche_tuya_memes_identifiants')+
           ' ; skills Thing 4 : '+yes('type_p2p_thing4_present')+
@@ -339,13 +342,18 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
           ' ; p2pId : '+bool(sdk,'p2p_id')+
           ' ; sessionTid : '+bool(sdk,'session_tid')+
           ' ; p2pPolicy : '+bool(sdk,'p2p_policy'),
-        'SDK classique : p2pSpecifiedType '+bool(sdk,'p2p_specified_type')+
-          ' ; sessionId '+bool(sdk,'session_id')+
+        'SDK classique : p2pSpecifiedType '+category(sdk)+
+          ' ; id racine RTC '+bool(sdk,'camera_info_id_racine_present')+
+          ' ; branche Thing-4 cohérente '+bool(sdk,'branche_thing4_compatible_avec_champs'),
+        'IPC-v4 : p2pSpecifiedType '+category(v4)+
+          ' ; id racine RTC '+bool(v4,'camera_info_id_racine_present'),
+        'SDK classique : sessionId '+bool(sdk,'session_id')+
           ' ; mot de passe '+bool(sdk,'password')+
-          ' ; token '+bool(sdk,'token')+
+          ' ; token API '+bool(sdk,'token')+
           ' ; skill '+bool(sdk,'skill'),
-        'clientTid : créé localement par le SDK Android ; aucune valeur lue ici.',
-        'Liaison caméra et vidéo non prouvées ; aucune session init, offre MQTT ni PTZ.'
+        'Dans le DEX : type 4 utilise CameraInfoBean.id et p2pConfig ; type 2 suit p2pId/initString.',
+        'clientTid créé localement par le SDK ; identité et vidéo toujours non prouvées.',
+        'Aucune session init, offre MQTT ni PTZ.'
       ];
       this._message(lines.join('\n'));
     } finally {
