@@ -73,3 +73,27 @@ Exécution locale (avec l'APK personnel, jamais commité) :
 ```bash
 python tools/aosu_c9c_sdk_python_coverage.py "/chemin/vers/Aosu_5.10.12_21839.apks.apk"
 ```
+
+## 11 novembre 2026 — vecteurs cryptographiques exécutés
+
+Des tests exécutant les fonctions réelles
+`_pkcs7`, `_encrypt` et `_signal_frame` de Smart AOSU
+ont été ajoutés dans
+`tests/test_c9c_mqtt_reference_vectors.py`, avec la
+référence publique indépendante MIT
+`roquerodrigo/tuya-ipc-p2p-sdk`.
+
+- Format 2.2/AES-ECB/PKCS7/CRC32 et offre ASCII : **concordants**,
+  octet par octet, sur les exemples synthétiques testés.
+- Unicode JSON : **divergence** `ensure_ascii=False` dans
+  le Python actuel contre la sérialisation par défaut de la
+  référence ; aucune preuve que ce cas se produit dans une offre.
+- `sigQry` protocole 22 avant 302 : également envoyé
+  dans le SDK Python indépendant, ne pas le supprimer sur la
+  seule base de son emplacement littéral dans les DEX AOSU.
+
+**Cette concordance porte sur une implémentation indépendante
+et non sur un enregistrement binaire natif de la C9C AOSU.**
+Elle permet de déprioriser une réécriture générale de CRC/AES,
+mais ne prouve ni la livraison d'une offre ni la compatibilité
+de la caméra. L'identité et la session restent à démontrer.

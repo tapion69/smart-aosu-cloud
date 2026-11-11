@@ -52,8 +52,9 @@ class TestVectors(unittest.TestCase):
                        separators=(",",":")).encode("utf-8")
         expected=frame(raw)
         self.assertNotEqual(actual,expected)
-        self.assertEqual(actual[:15],expected[:15] if actual[3:7]==expected[3:7] else
-                         actual[:3]+actual[3:7]+expected[7:15])
+        # CRC differs when the plaintext JSON encoding differs, while
+        # the plaintext-independent sequence and 4-byte source stay identical.
+        self.assertEqual(actual[7:15],expected[7:15])
     def test_crc_detects_mutation(self):
         broken=bytearray(ns["_signal_frame"](KEY,4,SOURCE,302,{"header":{},"msg":{}}))
         broken[-1]^=1
