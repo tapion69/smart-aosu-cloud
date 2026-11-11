@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import time
 from typing import Any
+import requests
 
 _ENDPOINT = 'https://api-eu.aosulife.com/v1/dev/getListByCoopUUIDList'
 _NON_VIDEO = frozenset(('gw', 'gateway', 'hub', 'switch', 'socket', 'sensor',
@@ -125,5 +126,5 @@ def probe_c9c_reverse_cp(client: Any, detail: Any, serial: str,
         status = _check_reply(response.json(), candidate, did)
         return {**out, 'etat': status, 'appels_http': 1,
                 'liaison_exacte_confirmee': status == 'liaison_exacte_confirmee'}
-    except (OSError, ValueError, TypeError, KeyError):
+    except (requests.RequestException, OSError, ValueError, TypeError, KeyError):
         return {**out, 'etat': 'erreur_reseau_ou_json', 'appels_http': 1}
