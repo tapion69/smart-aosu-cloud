@@ -112,9 +112,45 @@ def summarize_native_prerequisites_b37(*, tuya_device: Any,
     }
 
 
+def _camera_info_root_b39(raw: Any, *, accepted: bool) -> dict:
+    """Get only the expected RTC CameraInfoBean envelope, not nested ICE IDs."""
+    if not accepted or not isinstance(raw, dict):
+        return {}
+    node = raw
+    for _ in range(3):
+        if isinstance(node.get('data'), dict):
+            node = node['data']
+        elif isinstance(node.get('result'), dict):
+            node = node['result']
+        else:
+            break
+    return node if isinstance(node, dict) else {}
+
+
+def _specified_type_b39(value: Any) -> str:
+    """Fixed category, never return a server-defined identifier or text."""
+    if type(value) is int or (
+        isinstance(value, str) and value in ('1', '2', '4')):
+        try:
+            number = int(value)
+        except (ValueError, TypeError):
+            return 'autre'
+        return ('thing_4' if number == 4 else
+                'p2p_2' if number == 2 else
+                'tutk_1' if number == 1 else 'autre')
+    return 'absent' if value is None else 'autre'
+
+
 def _rtc_sdk_fields_b38(raw: Any, *, accepted: bool) -> dict:
     """Public field-presence report, without decoding private config strings."""
     nodes = _objects(raw) if accepted else []
+    camera_info = _camera_info_root_b39(raw, accepted=accepted)
+    # SDK processCameraInfo reads CameraInfoBean.id for specified type 4,
+    # NOT CameraInfoBean.p2pId. Never mine nested session or ICE 'id' keys.
+    camera_id = camera_info.get('id')
+    info_id = (isinstance(camera_id, str) and 0 < len(camera_id.strip()) <= 256
+               and camera_id == camera_id.strip())
+    specified = _specified_type_b39(camera_info.get('p2pSpecifiedType'))
     p2p_values = [obj.get('p2pConfig') for obj in nodes
                   if 'p2pConfig' in obj]
     has_map = any(isinstance(v, dict) for v in p2p_values)
@@ -125,6 +161,10 @@ def _rtc_sdk_fields_b38(raw: Any, *, accepted: bool) -> dict:
     return {
         'acceptee': accepted is True,
         'p2p_id': _present(nodes, ('p2pId', 'p2pID', 'p2p_id')),
+        'camera_info_id_racine_present': info_id is True,
+        'p2p_specified_type_categorie': specified,
+        'branche_thing4_compatible_avec_champs':
+            specified == 'thing_4' and info_id and p2p_shape != 'absent',
         'session_tid': _present(nodes, ('sessionTid',)),
         'p2p_policy': any(obj.get('p2pPolicy') is not None for obj in nodes),
         'p2p_specified_type': any(
@@ -152,7 +192,7 @@ def compare_rtc_sdk_b38(ipc_v4: Any, classic: Any, *,
     ipc = _rtc_sdk_fields_b38(ipc_v4, accepted=ipc_accepted)
     sdk = _rtc_sdk_fields_b38(classic, accepted=classic_accepted)
     return {
-        'diagnostic': 'aosu_c9c_sdk_rtc_comparison_b38',
+        'diagnostic': 'aosu_c9c_sdk_rtc_comparison_b39',
         'ipc_v4': ipc,
         'rtc_sdk_classique': sdk,
         'p2p_id_seulement_classique': sdk['p2p_id'] and not ipc['p2p_id'],
