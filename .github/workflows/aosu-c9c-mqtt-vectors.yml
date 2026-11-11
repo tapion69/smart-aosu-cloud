@@ -1,0 +1,21 @@
+name: AOSU C9C MQTT envelope reference vectors
+on:
+  push:
+    paths:
+      - 'tests/test_c9c_mqtt_reference_vectors.py'
+      - 'custom_components/smart_aosu_cloud/tuya_mqtt_offer.py'
+      - '.github/workflows/aosu-c9c-mqtt-vectors.yml'
+  workflow_dispatch:
+jobs:
+  vectors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - run: python -m unittest discover -s tests -p 'test_c9c_mqtt_reference_vectors.py' -v
