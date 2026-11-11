@@ -67,7 +67,7 @@ class TestThing4MediaPrepB40(unittest.TestCase):
         self.assertTrue(r['preparation_python_sdk_classique_possible'])
         self.assertEqual(r['rtc_id_egale_dev_id_tuya'],'identifiant_tuya_egal')
         self.assertTrue(r['sdk_classique_et_python_alignes_sur_champs'])
-        self.assertTrue(r['config_json_convertible_par_sdk'])
+        self.assertTrue(r['config_p2p_objet_present'])
         self.assertTrue(r['type_classique_thing4'])
         for false_flag in (
             'sdk_native_thing4_execute','parite_json_fastjson_validee',
