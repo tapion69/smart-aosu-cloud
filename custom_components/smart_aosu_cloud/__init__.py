@@ -644,6 +644,57 @@ async def async_setup(hass,config):
             'identifiants_retournes':False,'secrets_retournes':False,
         }
 
+    async def diagnostiquer_sdk_p2p_c9c_b37(call):
+        """Manual, read-only native Thing SDK prerequisite fields on C9C."""
+        if call.data.get('confirmation_lecture_sdk') is not True:
+            raise ServiceValidationError('Confirmer la lecture des prerequis SDK')
+        loaded=[e for e in hass.config_entries.async_entries(DOMAIN)
+                if getattr(e,'runtime_data',None)]
+        if len(loaded)!=1:
+            raise ServiceValidationError('Une seule configuration Smart AOSU active requise')
+        runtime=loaded[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('C9C autonome unique sans station requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct avant le diagnostic SDK')
+        raw=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,tester_rtc=True,
+            standalone_c9c_sdk_b37_audit=True,
+            tester_mqtt=False,tester_offre_mqtt=False,
+            tester_relais_tcp=False,tester_kcp=False,tester_media=False))
+        statuses={'sdk_b37_lecture_terminee','sdk_b37_lecture_seule_uniquement',
+                  'limite_sdk_b37_cinq_minutes',
+                  'rtc_non_lance_c9c_non_identifiee',
+                  'session_perdue_ou_expiree_confirmation_login_requise',
+                  'login_UID_non_reussi','limite_login_une_heure',
+                  'limite_inventaire_30_minutes','test_deja_en_cours',
+                  'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+                  'lecture_maisons_refusee','groupes_non_identifies',
+                  'erreur_api_tuya','erreur_execution_sans_details'}
+        safe=raw.get('sdk_preparation_b37')
+        safe=safe if isinstance(safe,dict) else {}
+        names=(
+            'fiche_tuya_acceptee','rtc_ipc_v4_accepte',
+            'fiche_tuya_memes_identifiants','type_p2p_thing4_present',
+            'cle_locale_presente','product_bean_present',
+            'categorie_camera_sp_presente','p2p_config_structure_presente',
+            'p2p_policy_champ_present','session_tid_champ_present',
+            'p2p_id_champ_present','ipc_session_id_present',
+            'client_tid_champ_present')
+        return {
+            'diagnostic':'aosu_c9c_sdk_preparation_b37',
+            'etat':raw.get('etat') if raw.get('etat') in statuses else 'autre',
+            'schema':{name:safe.get(name) is True for name in names},
+            'appels_reseau':min(10,max(0,raw.get('appel_reseau',0)))
+                if type(raw.get('appel_reseau')) is int else 0,
+            'preuve_liaison_aosu_tuya':False,
+            'parite_sdk_native':False,'video_autorisee':False,
+            'publications_mqtt':0,'commandes_camera':0,
+            'commandes_ptz':0,'video_lancee':False,
+            'identifiants_retournes':False,'secrets_retournes':False,
+        }
+
     async def diagnostiquer_fiche_c9c_autonome(call):
         """Manual read-only AOSU detailed device lookup for one standalone C9C."""
         if call.data.get('confirmation_lecture_fiche') is not True:
@@ -2427,6 +2478,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_fiche_tuya_c9c_b27',
                                  diagnostiquer_fiche_tuya_c9c_b27,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'diagnostiquer_sdk_p2p_c9c_b37',
+                                 diagnostiquer_sdk_p2p_c9c_b37,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_fiche_c9c_autonome',
                                  diagnostiquer_fiche_c9c_autonome,
