@@ -97,3 +97,35 @@ et non sur un enregistrement binaire natif de la C9C AOSU.**
 Elle permet de déprioriser une réécriture générale de CRC/AES,
 mais ne prouve ni la livraison d'une offre ni la compatibilité
 de la caméra. L'identité et la session restent à démontrer.
+
+## Écart supplémentaire : candidat ICE conditionnel (étude hors réseau)
+
+Dans `tuya_mqtt_offer.py`, le chemin d'offre manuelle
+définit explicitement :
+
+```python
+interactive_ice=(live_preview is not None and tester_media and tester_kcp)
+```
+
+Le candidat ICE local n'est publié que dans cette branche
+(`if interactive_ice`). Le script réduit sa fenêtre de réponse
+à 9 secondes si la branche est désactivée, contre 20 secondes
+en mode interactif.
+
+Dans le code MIT indépendant
+`roquerodrigo/tuya-ipc-p2p-sdk`,
+`StreamSession.async_start` appelle
+`_async_gather_candidates` après l'offre, puis attend jusqu'à
+20 secondes la réponse SDP ; les candidats produits par
+`IceResponder` sont publiés en MQTT. Cette différence de
+séquencement est **vérifiable dans les deux codes**.
+
+**N'en déduisons pas** que la caméra de l'utilisateur exige
+ce candidat avant de répondre : aucun essai contrôlé sur
+la C9C n'a isolé ce facteur, et une identification exacte du
+périphérique est toujours manquante. Pour la prochaine version,
+conserver comme prérequis la correspondance AOSU/Tuya,
+puis tester seulement la différence ICE en gardant tous les
+autres paramètres constants.
+
+Nouveau test d'offre interdit tant que l'identité est heuristique.
