@@ -25,7 +25,7 @@ from .c9c_webrtc_channel_b23 import subscribe_webrtc_once
 from .c9c_tuya_device_b27 import summarize_tuya_device_b27
 from .c9c_full_audit_b31 import run_full_c9c_audit_b31
 from .c9c_cp_reverse_read import extract_tuya_detail_cp_candidates
-from .c9c_sdk_preflight_b37 import summarize_native_prerequisites_b37, compare_rtc_sdk_b38
+from .c9c_sdk_preflight_b37 import summarize_native_prerequisites_b37, compare_rtc_sdk_b38, summarize_thing4_media_alignment_b40
 
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
@@ -560,6 +560,27 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     classic if accepted_classic else None,
                     ipc_accepted=accepted_rtc,
                     classic_accepted=accepted_classic)
+                # Use the actual Python media-bootstrap validator on both
+                # already fetched configs. No publish, no camera, no transport.
+                # The SDP is generated transiently in RAM and NEVER returned
+                # to the card or saved on the client.
+                def _media_flags_b40(payload, valid):
+                    if not valid:
+                        return {}
+                    try:
+                        report, _volatile = inspect_rtc_media(
+                            payload, target,
+                            all_devices.get(target, {}).get('localKey',''),
+                            session.uid)
+                        return {'offre_sdp_aes_kcp_preparee':
+                                report.get('offre_sdp_aes_kcp_preparee') is True}
+                    except (ValueError, TypeError, KeyError, AttributeError):
+                        return {}
+                out['sdk_alignment_b40']=summarize_thing4_media_alignment_b40(
+                    classic=classic if accepted_classic else None,
+                    target=target,classic_accepted=accepted_classic,
+                    v4_media=_media_flags_b40(rtc,accepted_rtc),
+                    classic_media=_media_flags_b40(classic,accepted_classic))
                 return {**out,'etat':'sdk_b37_lecture_terminee'}
             if standalone_c9c_full_audit_b31:
                 # One explicit manual diagnostic; no MQTT, wake, media or PTZ.
