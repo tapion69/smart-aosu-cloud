@@ -320,3 +320,45 @@ La beta32 et les trois caméras C5L/H1L fonctionnelles restent intactes.
 Ne pas lancer un nouvel essai SDP avant vérification hors réseau
 de la parité SDK et preuve exacte d'identité. Le rapport complet
 propose deux voies techniques (pont SDK autorisé ou moteur indépendant).
+
+## 11 novembre 2026 — progression de l'analyse vidéo native
+
+### Audit automatisé SDK Android / moteur Home Assistant
+
+- Nouveau script `tools/aosu_c9c_sdk_python_coverage.py`.
+- Test direct local sur l'APK complet AOSU 5.10.12 : **12 références
+  SDK positives** (création P2P, fournisseur/catégorie/skills,
+  p2pPolicy, sessionTid, clientTid, IPC, état local, décision LAN,
+  configuration MQTT et deux bibliothèques natives).
+- Tests synthétiques publiés et réussis dans GitHub Actions :
+  https://github.com/tapion69/smart-aosu-cloud/actions/runs/42980890378
+- Rapport : `docs/C9C_MATRICE_SDK_PYTHON_2026-11-11.md`.
+
+### Comparaison binaire AES/CRC avec SDK Python indépendant MIT
+
+- Nouveau test `tests/test_c9c_mqtt_reference_vectors.py`
+  exécutant les véritables fonctions de `tuya_mqtt_offer.py`.
+- Enveloppe MQTT 2.2 et offre **ASCII** : tramage, CRC32,
+  AES-ECB et PKCS7 conformes aux vecteurs synthétiques
+  indépendants de `roquerodrigo/tuya-ipc-p2p-sdk`.
+- Chaîne `sigQry` protocole 22 précédant 302 présente dans
+  l'implémentation indépendante. Le commentaire antérieur
+  « seulement Wi-Fi » ne permet **pas** de rejeter cette requête.
+- JSON avec Unicode : `ensure_ascii=False` actuellement, alors
+  que l'implémentation indépendante laisse `ensure_ascii=True` ;
+  différence observable hors réseau, aucune preuve d'impact réel C9C.
+- **Cette parité concerne le SDK Python indépendant, pas
+  le moteur natif AOSU** ; elle n'autorise pas à conclure
+  que l'offre a été effectivement délivrée.
+- Rapport : `docs/C9C_VECTEURS_MQTT_2026-11-11.md`.
+
+### Prochaine correction utile
+
+Concentrer les travaux hors réseau sur les paramètres de session
+et de politique P2P, et sur la preuve du **même appareil
+AOSU ↔ Tuya**. Examiner les différences d'identité, de
+sélection du fournisseur, de rafraîchissement des clés,
+de routage et de candidats ICE. Ne pas publier un nouveau test
+caméra ou une beta33 sans modification démontrée et
+testable. Aucun changement des trois caméras C5L/H1L
+fonctionnelles ; HA toujours **0.8.13-beta32**.
