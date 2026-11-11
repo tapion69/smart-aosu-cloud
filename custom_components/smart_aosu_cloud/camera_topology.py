@@ -60,23 +60,39 @@ def select_tuya_standalone_target(devices, *, camera_sn, camera_coop):
     if not isinstance(devices, dict) or not devices:
         return None, 'inventaire_tuya_absent'
     matches = []
+    contradictory = False
+    sn_fields = ('sn', 'deviceSn', 'serialNumber', 'serialNo')
+    coop_fields = ('devId', 'deviceId', 'uuid', 'devUuid',
+                   'deviceUuid', 'cpDeviceId')
     def objects(item):
         if not isinstance(item, dict):
             return []
         return [item] + [item[k] for k in ('productBean', 'product', 'productInfo',
                 'deviceBean', 'deviceInfo') if isinstance(item.get(k), dict)]
     for dev_id, item in devices.items():
-        for obj in objects(item):
-            if ((camera_sn and any(obj.get(k) == camera_sn for k in
-                   ('sn','deviceSn','serialNumber','serialNo'))) or
-                (camera_coop and any(obj.get(k) == camera_coop for k in
-                   ('devId','deviceId','uuid','devUuid','deviceUuid','cpDeviceId')))):
-                matches.append(dev_id)
-                break
+        records = objects(item)
+        serials = [obj[k] for obj in records for k in sn_fields
+                   if isinstance(obj.get(k), str) and obj[k]]
+        cp_ids = [obj['cpDeviceId'] for obj in records
+                  if isinstance(obj.get('cpDeviceId'), str) and obj['cpDeviceId']]
+        serial_match = bool(camera_sn) and camera_sn in serials
+        coop_match = bool(camera_coop) and any(
+            obj.get(k) == camera_coop for obj in records for k in coop_fields)
+        if not serial_match and not coop_match:
+            continue
+        # A positive match in one field must never overrule another explicit
+        # contradictory field on that same target. Tuya devId/uuid are not
+        # interchangeable with a CP ID, so only a real cpDeviceId contradicts
+        # a provided AOSU CP reference.
+        if ((camera_sn and any(value != camera_sn for value in serials)) or
+                (camera_coop and any(value != camera_coop for value in cp_ids))):
+            contradictory = True
+            continue
+        matches.append(dev_id)
+    if contradictory or len(matches) > 1:
+        return None, 'correspondance_ambigue'
     if len(matches) == 1:
         return matches[0], 'identite_exacte'
-    if matches:
-        return None, 'correspondance_ambigue'
     # A Tuya account can contain gateways, switches and sensors in addition
     # to the one standalone C9C. These must not make an otherwise unique IPC
     # ambiguous. Never guess if zero or multiple video candidates remain.
