@@ -3,7 +3,7 @@
 AOSU Android 5.10.12 declares POST /v1/dev/getListByCoopUUIDList with the
 form field coopUUID[]. Its UUIDInfoWebDataItem exposes coopUUID + deviceId.
 Only an actual ID returned by the authenticated Tuya inventory may be queried.
-The result must resolve to the *same* AOSU deviceId as the SN-matched detail.
+A reverse result can establish a proven link only when it matches a\nSN-verified AOSU deviceId, otherwise it is diagnostic evidence alone.
 
 No camera, MQTT, PTZ, wake, media, secret logging, persistent identity or
 automatic authorization for video. The caller enforces a 1-hour cooldown.
@@ -53,9 +53,8 @@ def _aosu_detail_identity(detail: Any, serial: str) -> tuple[bool, str | None]:
             if node['sn'] == serial and _id(node.get('deviceId')):
                 matches.append(node['deviceId'])
         if depth < 5:
-            for key in ('list', 'device', 'deviceInfo', 'data', 'info'):
-                if isinstance(node.get(key), (dict, list)):
-                    todo.append((node[key], depth + 1))
+            todo.extend((value, depth + 1) for value in list(node.values())[:40]
+                        if isinstance(value, (dict, list)))
     # Duplicate representations of exactly one SN are fine; a second
     # different SN is contradictory and must not authorize any lookup.
     if not serials or any(item != serial for item in serials):
