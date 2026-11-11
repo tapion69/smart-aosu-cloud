@@ -202,6 +202,83 @@ def _tuya_candidate(cache: Any, *, now: float,
     return (next(iter(cp_ids)), 'cp_device_id_tuya') if cp_ids else (dev_id, 'dev_id_tuya')
 
 
+def _one_sdk_cp_reference(candidates: list[tuple[str, str]]
+                          ) -> tuple[str, str] | None:
+    """Select ONE real Tuya UUID for the Android SDK's firstOrNull lookup.
+
+    Android DeviceWebService.getDeviceInfoByCorpUuid takes the first result.
+    A multi-reference query can return incomplete/placeholder rows; this test
+    isolates one candidate without inventing or transforming any identifier.
+    """
+    priorities = (
+        'cp_device_id_fiche_tuya', 'coop_uuid_tuya', 'cp_uuid_tuya',
+        'uuid_tuya', 'dev_uuid_tuya', 'device_uuid_tuya',
+        'cp_device_id_tuya', 'dev_id_tuya',
+    )
+    if not candidates or len(candidates) > 5:
+        return None
+    allowed = set(priorities)
+    if any(source not in allowed or not _id(value)
+           for source, value in candidates):
+        return None
+    return min(candidates, key=lambda item: priorities.index(item[0]))
+
+
+def _single_sdk_reply(raw: Any, source: str, candidate: str,
+                      expected_device_id: str | None
+                      ) -> tuple[str, str, bool, dict]:
+    """Classify the exact SDK item fields, never return raw JSON or IDs.
+
+    This test deliberately refuses to infer any identity from an absent ID,
+    a server echo of the requested UUID or more than one returned item.
+    """
+    shape = {
+        'entrees': 0, 'coop_uuid_present': False,
+        'device_id_present': False, 'coop_uuid_egal_demande': False,
+        'bind_info_present': False, 'dev_model_present': False,
+        'dev_type_present': False, 'svc_type_present': False,
+        'plusieurs_entrees': False,
+    }
+    if not isinstance(raw, dict) or type(raw.get('errno')) is not int:
+        return 'reponse_non_conforme', 'aucune', False, shape
+    if raw['errno'] != 0:
+        return 'serveur_refuse', 'aucune', False, shape
+    data = raw.get('data')
+    rows = data.get('list') if isinstance(data, dict) else None
+    if not isinstance(rows, list) or len(rows) > 30:
+        return 'schema_non_reconnu', 'aucune', False, shape
+    shape['entrees'] = len(rows)
+    shape['plusieurs_entrees'] = len(rows) > 1
+    if not rows:
+        return 'reference_non_resolue', 'aucune', False, shape
+    # Explicitly inspect only model fields verified in the AOSU 5.10.12
+    # classes15.dex UUIDInfoWebDataItem. Do not show any vendor key or value.
+    for row in rows:
+        if not isinstance(row, dict):
+            return 'entree_mal_formee', 'aucune', False, shape
+        shape['coop_uuid_present'] |= _id(row.get('coopUUID'))
+        shape['device_id_present'] |= _id(row.get('deviceId'))
+        shape['coop_uuid_egal_demande'] |= row.get('coopUUID') == candidate
+        shape['bind_info_present'] |= isinstance(row.get('bindInfo'), dict)
+        shape['dev_model_present'] |= isinstance(row.get('devModel'), str) and bool(row['devModel'])
+        shape['dev_type_present'] |= type(row.get('devType')) is int
+        shape['svc_type_present'] |= isinstance(row.get('svcType'), str) and bool(row['svcType'])
+    if len(rows) != 1:
+        return 'reponse_plusieurs_entrees_non_concluante', 'aucune', False, shape
+    row = rows[0]
+    if not _id(row.get('coopUUID')):
+        return 'reponse_sans_coop_uuid', 'aucune', False, shape
+    if row['coopUUID'] != candidate:
+        return 'reference_cp_incoherente', 'aucune', False, shape
+    if not _id(row.get('deviceId')):
+        return 'coop_uuid_retourne_sans_device_id', source, False, shape
+    if expected_device_id is None:
+        return 'reference_cp_resolue_identite_non_confirmee', source, True, shape
+    if row['deviceId'] != expected_device_id:
+        return 'autre_appareil_aosu', source, True, shape
+    return 'liaison_exacte_confirmee', source, True, shape
+
+
 def _check_batch_reply(raw: Any, candidates: list[tuple[str, str]],
                        expected_device_id: str | None
                        ) -> tuple[str, str, bool]:
@@ -276,6 +353,8 @@ def probe_c9c_reverse_cp(client: Any, detail: Any, serial: str,
            'id_aosu_inventaire_present': False,
            'reference_cp_resolue': False,
            'candidats_cp_essayes': 0,
+           'candidats_cp_disponibles': 0,
+           'type_reference_testee': 'aucune',
            'type_reference_resolue': 'aucune',
            'appels_http': 0, 'liaison_exacte_confirmee': False,
            'commandes_camera': 0, 'commandes_ptz': 0, 'video_lancee': False,
@@ -296,7 +375,13 @@ def probe_c9c_reverse_cp(client: Any, detail: Any, serial: str,
     if not candidates:
         return {**out, 'etat': source}
     out['source_identifiant'] = source
-    out['candidats_cp_essayes'] = len(candidates)
+    out['candidats_cp_disponibles'] = len(candidates)
+    selected = _one_sdk_cp_reference(candidates)
+    if selected is None:
+        return {**out, 'etat': 'aucune_reference_cp_valide'}
+    selected_type, candidate = selected
+    out['type_reference_testee'] = selected_type
+    out['candidats_cp_essayes'] = 1
     # Even with no deviceId in the AOSU detail or getList, we can make
     # ONE read-only reverse query and report presence without proving identity.
     try:
@@ -304,15 +389,16 @@ def probe_c9c_reverse_cp(client: Any, detail: Any, serial: str,
         request_headers['Content-Type'] = 'application/x-www-form-urlencoded'
         response = client.session.post(
             _ENDPOINT, params=params,
-            data=[('coopUUID[]', value) for _source, value in candidates],
+            data=[('coopUUID[]', candidate)],
             headers=request_headers, timeout=(8, 20), verify=True,
             allow_redirects=False)
         if response.status_code != 200:
             return {**out, 'etat': 'http_non_200', 'appels_http': 1}
         if len(response.content) > 262144:
             return {**out, 'etat': 'reponse_trop_grande', 'appels_http': 1}
-        status, matched_source, cp_resolved = _check_batch_reply(
-            response.json(), candidates, did)
+        status, matched_source, cp_resolved, shape = _single_sdk_reply(
+            response.json(), selected_type, candidate, did)
+        out['structure_reponse_cp'] = shape
         out['reference_cp_resolue'] = cp_resolved
         out['type_reference_resolue'] = matched_source
         return {**out, 'etat': status, 'appels_http': 1,
