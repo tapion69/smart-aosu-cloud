@@ -208,3 +208,57 @@ def compare_rtc_sdk_b38(ipc_v4: Any, classic: Any, *,
         'secrets_retournes': False,
         'identifiants_retournes': False,
     }
+
+
+def summarize_thing4_media_alignment_b40(*, classic: Any, target: str,
+                                        classic_accepted: bool,
+                                        v4_media: Any,
+                                        classic_media: Any) -> dict:
+    """True offline comparison of existing Python AES/KCP SDP preparation.
+
+    The caller may construct an SDP in *volatile* memory using the existing
+    inspect_rtc_media function. This classifier only consumes fixed bool flags
+    and compares CameraInfoBean.id with the known Tuya device ID. It returns
+    no SDP, key, token, string from a server or device ID.
+
+    Matching Tuya IDs does not prove that this is the AOSU C9C.
+    A successful Python SDP does not prove that the native Thing-4 camera
+    accepts the MQTT offer; the provider's signaling parity is unverified.
+    """
+    root = _camera_info_root_b39(classic, accepted=classic_accepted)
+    value = root.get('id')
+    id_valid = (isinstance(value, str) and 1 <= len(value) <= 256
+                and value == value.strip() and value.isprintable())
+    target_valid = (isinstance(target, str) and bool(target)
+                    and len(target) <= 256)
+    source = ('identifiant_tuya_egal' if id_valid and target_valid
+              and value == target else
+              'identifiant_tuya_different' if id_valid and target_valid
+              else 'identifiant_non_verifiable')
+    mode = _specified_type_b39(root.get('p2pSpecifiedType'))
+    config = root.get('p2pConfig')
+    format_ready = isinstance(config, dict) and bool(config)
+    v4_ready = (isinstance(v4_media, dict)
+                and v4_media.get('offre_sdp_aes_kcp_preparee') is True)
+    classic_ready = (isinstance(classic_media, dict)
+                     and classic_media.get('offre_sdp_aes_kcp_preparee') is True)
+    can_compare = classic_accepted is True and mode == 'thing_4'
+    return {
+        'diagnostic': 'aosu_c9c_thing4_media_alignment_b40',
+        'etat': 'comparaison_effectuee' if can_compare else 'comparaison_partielle',
+        'rtc_id_egale_dev_id_tuya': source,
+        'type_classique_thing4': mode == 'thing_4',
+        'config_json_convertible_par_sdk': format_ready,
+        'preparation_python_ipc_v4_possible': v4_ready,
+        'preparation_python_sdk_classique_possible': classic_ready,
+        'sdk_classique_et_python_alignes_sur_champs': (
+            can_compare and source == 'identifiant_tuya_egal'
+            and format_ready and classic_ready),
+        'sdk_native_thing4_execute': False,
+        'parite_json_fastjson_validee': False,
+        'parite_signalisation_native_validee': False,
+        'identite_aosu_c9c_prouvee': False,
+        'offre_sdp_envoyee': False,
+        'commandes_camera': 0, 'commandes_ptz': 0,
+        'secrets_retournes': False, 'identifiants_retournes': False,
+    }
