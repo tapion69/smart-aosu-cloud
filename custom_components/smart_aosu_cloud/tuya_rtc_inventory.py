@@ -25,7 +25,7 @@ from .c9c_webrtc_channel_b23 import subscribe_webrtc_once
 from .c9c_tuya_device_b27 import summarize_tuya_device_b27
 from .c9c_full_audit_b31 import run_full_c9c_audit_b31
 from .c9c_cp_reverse_read import extract_tuya_detail_cp_candidates
-from .c9c_sdk_preflight_b37 import summarize_native_prerequisites_b37
+from .c9c_sdk_preflight_b37 import summarize_native_prerequisites_b37, compare_rtc_sdk_b38
 
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
@@ -523,8 +523,11 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 return {**out,'etat':'rtc_non_lance_c5l_non_identifiee',
                         'methode_selection_rtc':'aucune'}
             if standalone_c9c_sdk_b37_audit:
-                # Exactly TWO read-only Tuya account endpoints, no MQTT,
-                # SDP, P2P, wake, video, or PTZ command.
+                # Three bounded read-only Tuya account GET-style methods:
+                # device detail, IPC-v4 RTC config and the classic RTC config
+                # used by Android CameraBusiness.requestCameraInfo.
+                # NEVER call thing.m.rtc.session.init: it can create a session.
+                # No MQTT, SDP, P2P, wake, video or PTZ command.
                 if not interactive_live and now < _LAST_RTC.get(client_key,0):
                     return {**out,'etat':'limite_sdk_b37_cinq_minutes'}
                 _LAST_RTC[client_key]=now+300
@@ -541,6 +544,22 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     expected_tuya_id=target,
                     detail_accepted=accepted_detail,
                     rtc_accepted=accepted_rtc)
+                # Already accepted in the independent beta31 cloud audit.
+                # Treat any failure as a partial result, never expose it.
+                try:
+                    classic,classic_safe=read(
+                        'thing.m.rtc.config.get',{'devId':target})
+                    accepted_classic=(
+                        classic_safe.get('serveur_accepte') is True
+                        and classic_safe.get('rejet_explicite') is not True)
+                except Exception:
+                    classic=None
+                    accepted_classic=False
+                out['sdk_comparaison_b38']=compare_rtc_sdk_b38(
+                    rtc if accepted_rtc else None,
+                    classic if accepted_classic else None,
+                    ipc_accepted=accepted_rtc,
+                    classic_accepted=accepted_classic)
                 return {**out,'etat':'sdk_b37_lecture_terminee'}
             if standalone_c9c_full_audit_b31:
                 # One explicit manual diagnostic; no MQTT, wake, media or PTZ.
