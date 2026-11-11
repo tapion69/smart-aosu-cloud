@@ -248,7 +248,7 @@ def summarize_thing4_media_alignment_b40(*, classic: Any, target: str,
         'etat': 'comparaison_effectuee' if can_compare else 'comparaison_partielle',
         'rtc_id_egale_dev_id_tuya': source,
         'type_classique_thing4': mode == 'thing_4',
-        'config_json_convertible_par_sdk': format_ready,
+        'config_p2p_objet_present': format_ready,
         'preparation_python_ipc_v4_possible': v4_ready,
         'preparation_python_sdk_classique_possible': classic_ready,
         'sdk_classique_et_python_alignes_sur_champs': (
