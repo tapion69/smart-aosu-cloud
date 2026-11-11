@@ -359,7 +359,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
             ?alignment.rtc_id_vers_dev_id:'identifiant_non_verifiable'),
         'Préparation SDP Python : IPC-v4 '+bool(alignment,'sdp_python_ipc_v4')+
           ' ; SDK classique '+bool(alignment,'sdp_python_sdk_classique')+
-          ' ; configuration JSON Thing '+bool(alignment,'configuration_sdk_json'),
+          ' ; p2pConfig objet Thing '+bool(alignment,'configuration_sdk_json'),
         'Champs Thing-4 cohérents avec le constructeur Python : '+
           bool(alignment,'champs_sdk_python_coherents')+
           ' (sans parité de signalisation)',
