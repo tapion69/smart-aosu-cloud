@@ -56,11 +56,12 @@ def cache(devices=None, age=0):
 
 
 class TestReverseIdentity(unittest.TestCase):
-    def run_probe(self, body=GOOD, c=None, detail=DETAIL):
+    def run_probe(self, body=GOOD, c=None, detail=DETAIL, known=None):
         client = Client(body)
         result = probe(client, detail, SN, c if c is not None else cache(),
                        params={'signed': 'PRIVATE_SIGNING_PARAMETER'},
-                       headers={'Auth': 'PRIVATE_HEADER'})
+                       headers={'Auth': 'PRIVATE_HEADER'},
+                       known_aosu_device_id=known)
         return client, result
 
     def test_exact_reverse_binding_only_with_same_aosu_device(self):
@@ -111,11 +112,52 @@ class TestReverseIdentity(unittest.TestCase):
             {'errno': 0, 'data': {'list': [{'sn': 'OTHER_SN', 'deviceId': AOSU}]}},
             {'errno': 0, 'data': {'list': [
                 {'sn': SN, 'deviceId': AOSU}, {'sn': SN, 'deviceId': 'OTHER_DEVICE'}]}},
-            {'errno': 0, 'data': {'list': [{'sn': SN}]}},
+
         ):
             client, report = self.run_probe(detail=detail)
             self.assertEqual(client.session.calls, 0)
-            self.assertEqual(report['etat'], 'device_id_aosu_non_confirme')
+            self.assertEqual(report['etat'], 'numero_serie_aosu_non_confirme')
+
+    def test_missing_aosu_device_id_still_runs_readonly_lookup(self):
+        # The real beta33 screen showed SN concordant but no deviceId.
+        detail={'errno':0,'data':{'sn':SN}}
+        client, report=self.run_probe(detail=detail)
+        self.assertEqual(client.session.calls, 1)
+        self.assertEqual(report['etat'],
+                         'reference_cp_resolue_identite_non_confirmee')
+        self.assertTrue(report['reference_cp_resolue'])
+        self.assertFalse(report['liaison_exacte_confirmee'])
+        self.assertEqual(report['source_device_id_aosu'],'aucune')
+        self.assertFalse(report['id_aosu_fiche_present'])
+        self.assertFalse(report['id_aosu_inventaire_present'])
+
+    def test_sn_matched_aosu_getlist_can_confirm_reversed_id(self):
+        detail={'errno':0,'data':{'sn':SN}}
+        client,report=self.run_probe(detail=detail,known=AOSU)
+        self.assertEqual(client.session.calls,1)
+        self.assertTrue(report['liaison_exacte_confirmee'])
+        self.assertEqual(report['source_device_id_aosu'],'inventaire_SN')
+        self.assertTrue(report['id_aosu_inventaire_present'])
+        self.assertFalse(report['id_aosu_fiche_present'])
+        # If the two AOSU endpoints contradict one another, don't query.
+        client,report=self.run_probe(known='WRONG_AOSU_ID')
+        self.assertEqual(client.session.calls,0)
+        self.assertEqual(report['etat'],'identifiants_aosu_contradictoires')
+
+    def test_status_not_proof_when_no_aosu_id_or_contradictory_reverse(self):
+        missing={'errno':0,'data':{'sn':SN}}
+        client,report=self.run_probe(
+            body={'errno':0,'data':{'list':[]}},detail=missing)
+        self.assertEqual(report['etat'],'reference_non_resolue')
+        self.assertFalse(report['reference_cp_resolue'])
+        client,report=self.run_probe(
+            body={'errno':0,'data':{'list':[{'coopUUID':TUYA,
+                                          'deviceId':'SOME_UNKNOWN_AOSU_ID'}]}},
+            detail=missing)
+        self.assertEqual(report['etat'],
+                         'reference_cp_resolue_identite_non_confirmee')
+        self.assertFalse(report['liaison_exacte_confirmee'])
+        self.assertNotIn('SOME_UNKNOWN_AOSU_ID',json.dumps(report))
 
     def test_explicit_cp_field_preferred_to_tuya_dev_id(self):
         c = cache({TUYA: {'devId': TUYA, 'cpDeviceId': 'CP_FROM_TUYA'}})
