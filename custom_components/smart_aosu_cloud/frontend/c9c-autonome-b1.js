@@ -311,11 +311,17 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const lookupState=['liaison_exacte_confirmee','reference_non_resolue',
         'autre_appareil_aosu','inventaire_tuya_absent','inventaire_tuya_expire',
         'inventaire_tuya_non_unique','device_id_aosu_non_confirme',
+        'numero_serie_aosu_non_confirme','identifiants_aosu_contradictoires',
+        'reference_cp_resolue_identite_non_confirmee',
         'schema_non_reconnu','serveur_refuse','reponse_ambigue',
         'http_non_200','categorie_tuya_non_video',
         'identifiants_tuya_contradictoires','references_cp_contradictoires']
         .includes(reverse.etat)?reverse.etat:'non_confirmee';
+      const sourceAosu=['aucune','fiche_SN','inventaire_SN'].includes(
+        reverse.source_device_id_aosu)?reverse.source_device_id_aosu:'aucune';
       this._message('Fiche AOSU : obtenue ; liaison inverse : '+lookupState+
+        ' ; référence CP résolue : '+yes(reverse.reference_cp_resolue)+
+        ' ; identifiant AOSU confirmé par : '+sourceAosu+
         ' ; liaison prouvée : '+yes(reverse.liaison_exacte_confirmee)+
         ' ; références présentes : '+yes(data.references_connues_presentes)+
         ' ; SN concordant : '+yes(data.numero_serie_concordant)+
