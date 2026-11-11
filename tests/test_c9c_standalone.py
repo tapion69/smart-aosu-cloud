@@ -60,6 +60,39 @@ class C9CAutonomeTests(unittest.TestCase):
         self.assertIsNone(choose({'a':{'sn':'same'},'b':{'sn':'same'}},camera_sn='same',camera_coop=None)[0])
 
 
+    def test_conflicting_strong_identity_never_resolves_target(self):
+        choose=TOPO['select_tuya_standalone_target']
+        cases=[
+            # Matching AOSU serial alone cannot override an explicit wrong CP ID.
+            ({'a':{'sn':'AOSU_SYNTH','cpDeviceId':'OTHER_CP'}},
+             'AOSU_SYNTH','EXPECTED_CP'),
+            # Matching CP alone cannot override an explicit wrong AOSU serial.
+            ({'a':{'cpDeviceId':'EXPECTED_CP','serialNo':'OTHER_SN'}},
+             'AOSU_SYNTH','EXPECTED_CP'),
+            # Conflicting serial fields in nested records are not a sound match.
+            ({'a':{'sn':'AOSU_SYNTH','deviceInfo':{'deviceSn':'OTHER_SN'}}},
+             'AOSU_SYNTH',None),
+            # A contradictory target must not be discarded so another device
+            # can be silently accepted as the uniquely exact match.
+            ({'a':{'sn':'AOSU_SYNTH','cpDeviceId':'OTHER_CP'},
+              'b':{'sn':'AOSU_SYNTH','cpDeviceId':'EXPECTED_CP'}},
+             'AOSU_SYNTH','EXPECTED_CP'),
+        ]
+        for devices,sn,coop in cases:
+            with self.subTest(devices=sorted(devices)):
+                self.assertEqual(choose(devices,camera_sn=sn,camera_coop=coop),
+                                 (None,'correspondance_ambigue'))
+        # Different Tuya devId/UUID is NOT a conflicting CP ID. The field
+        # explicitly called cpDeviceId is the only valid CP contradiction.
+        good={'a':{'sn':'AOSU_SYNTH','devId':'OPAQUE_TUYA_ID',
+                   'cpDeviceId':'EXPECTED_CP'}}
+        self.assertEqual(choose(good,camera_sn='AOSU_SYNTH',
+                                camera_coop='EXPECTED_CP'),
+                         ('a','identite_exacte'))
+        self.assertFalse(TOPO['standalone_c9c_video_identity_verified'](
+            choose({'a':{'sn':'AOSU_SYNTH','cpDeviceId':'OTHER_CP'}},
+                   camera_sn='AOSU_SYNTH',camera_coop='EXPECTED_CP')[1]))
+
     def test_one_tuya_device_without_camera_category_for_manual_video(self):
         """Observed external install: one C9C, one Tuya device, no IPC category.
 
