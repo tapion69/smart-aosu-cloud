@@ -131,7 +131,9 @@ def probe_c9c_detail(client):
             # This optional second READ occurs only during this manual,
             # one-hour-cooldown diagnostic. No video route is activated.
             reverse = probe_c9c_reverse_cp(
-                client, parsed, sn, cache, params=params, headers=headers)
+                client, parsed, sn, cache, params=params, headers=headers,
+                known_aosu_device_id=getattr(
+                    client, '_standalone_c9c_device_id', None))
             return {**base, **report, "liaison_inverse_cp": reverse,
                     "appels_http": 1 + reverse["appels_http"]}
         except (requests.RequestException, ValueError, TypeError, KeyError):
