@@ -19,7 +19,10 @@ class Stub:
 class TestOfflineCPCacheRouting(unittest.TestCase):
     def test_static_facts_never_claim_runtime_identity(self):
         r=TOOL['summarize']({'classes11.dex':Stub(),'classes15.dex':Stub()},17)
-        self.assertEqual(len(r['facts']),12)
+        self.assertEqual(len(r['facts']),14)
+        self.assertTrue(r['facts']['repository_joins_aosu_tuya_by_cp_id'])
+        self.assertTrue(r['facts']['platform_selector_reads_cp_uuid'])
+        self.assertEqual(r['diagnostic'],'aosu_cp_cache_route_offline_v4')
         self.assertTrue(all(r['facts'].values()))
         self.assertTrue(r['facts']['platform_event_reads_cp_device_id'])
         self.assertTrue(r['facts']['platform_event_looks_up_aosu_device'])
@@ -36,6 +39,13 @@ class TestOfflineCPCacheRouting(unittest.TestCase):
         r=TOOL['summarize']({'classes11.dex':Stub(False),'classes15.dex':Stub(False)},17)
         self.assertFalse(any(r['facts'].values()))
         self.assertFalse(r['runtime_device_identity_confirmed'])
+    def test_new_sdk_facts_are_not_runtime_identity(self):
+        r=TOOL['summarize']({'classes11.dex':Stub(),'classes15.dex':Stub()},17)
+        self.assertTrue(r['facts']['platform_selector_reads_cp_uuid'])
+        self.assertFalse(r['runtime_device_identity_confirmed'])
+        self.assertFalse(r['external_c9c_cp_id_recovered'])
+        self.assertFalse(r['secrets_exported'])
+
     def test_single_thing_device_still_heuristic(self):
         select=TOPOLOGY['select_tuya_standalone_target']
         result=select({'ty':{'productId':'PRODUCT','skills':{'p2pType':4}}},
