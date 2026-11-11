@@ -296,7 +296,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this._busy=true;
     const btn=this.shadowRoot.getElementById('sdk37');
     if(btn)btn.disabled=true;
-    this._message('Lecture des prérequis du SDK Thing : fiche Tuya et RTC (aucune vidéo ni PTZ)…');
+    this._message('Comparaison RTC SDK classique et IPC-v4 (lecture seule, sans vidéo/PTZ)…');
     try {
       const res=await this._service('diagnostiquer_sdk_p2p_c9c_b37',{
         confirmation_lecture_sdk:true
@@ -318,23 +318,34 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         return;
       }
       const x=d.schema||{},yes=k=>x[k]===true?'oui':'non';
+      const cmp=d.comparaison_rtc_b38||{};
+      const v4=cmp.ipc_v4||{},sdk=cmp.rtc_sdk_classique||{};
+      const bool=(obj,key)=>obj[key]===true?'oui':'non';
+      const format=obj=>['objet','chaine','formes_multiples','absent']
+        .includes(obj.p2p_config_format)?obj.p2p_config_format:'absent';
       const lines=[
-        'Préparation SDK B37 : lecture terminée (sans vidéo/commande).',
+        'Préparation SDK B38 : deux configurations RTC comparées, sans vidéo.',
         'Fiche Tuya : '+yes('fiche_tuya_acceptee')+
           ' ; même ID Tuya : '+yes('fiche_tuya_memes_identifiants')+
-          ' ; skills Thing 4 : '+yes('type_p2p_thing4_present'),
-        'Clé locale disponible : '+yes('cle_locale_presente')+
-          ' ; productBean : '+yes('product_bean_present')+
-          ' ; catégorie caméra sp : '+yes('categorie_camera_sp_presente'),
-        'RTC IPC-v4 : '+yes('rtc_ipc_v4_accepte')+
-          ' ; configuration P2P : '+yes('p2p_config_structure_presente')+
-          ' ; p2pPolicy : '+yes('p2p_policy_champ_present'),
-        'sessionTid : '+yes('session_tid_champ_present')+
-          ' ; p2pId : '+yes('p2p_id_champ_present')+
-          ' ; sessionId : '+yes('ipc_session_id_present')+
-          ' ; clientTid : '+yes('client_tid_champ_present'),
-        'Métadonnées de lecture seulement : la création native ThingIPCSdk, '+
-          'la liaison AOSU/Tuya et la vidéo ne sont PAS prouvées.'
+          ' ; skills Thing 4 : '+yes('type_p2p_thing4_present')+
+          ' ; clé locale : '+yes('cle_locale_presente'),
+        'RTC IPC-v4 : '+bool(v4,'acceptee')+
+          ' ; p2pConfig : '+format(v4)+
+          ' ; p2pId : '+bool(v4,'p2p_id')+
+          ' ; sessionTid : '+bool(v4,'session_tid')+
+          ' ; p2pPolicy : '+bool(v4,'p2p_policy'),
+        'RTC SDK classique : '+bool(sdk,'acceptee')+
+          ' ; p2pConfig : '+format(sdk)+
+          ' ; p2pId : '+bool(sdk,'p2p_id')+
+          ' ; sessionTid : '+bool(sdk,'session_tid')+
+          ' ; p2pPolicy : '+bool(sdk,'p2p_policy'),
+        'SDK classique : p2pSpecifiedType '+bool(sdk,'p2p_specified_type')+
+          ' ; sessionId '+bool(sdk,'session_id')+
+          ' ; mot de passe '+bool(sdk,'password')+
+          ' ; token '+bool(sdk,'token')+
+          ' ; skill '+bool(sdk,'skill'),
+        'clientTid : créé localement par le SDK Android ; aucune valeur lue ici.',
+        'Liaison caméra et vidéo non prouvées ; aucune session init, offre MQTT ni PTZ.'
       ];
       this._message(lines.join('\n'));
     } finally {
