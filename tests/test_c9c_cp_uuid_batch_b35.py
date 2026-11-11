@@ -143,6 +143,20 @@ class TestUUIDBatchB35(unittest.TestCase):
                                  [('coopUUID[]',DID)])
                 self.assertEqual(r['candidats_cp_essayes'],1)
 
+    def test_fresh_uuid_can_reuse_30min_same_account_inventory(self):
+        inv=inventory()
+        inv['created']=time.monotonic()-1200
+        client,result=run(reply([{'coopUUID':UUID,'deviceId':AOSU_ID}]),
+                          inventory_cache=inv)
+        self.assertEqual(len(client.session.calls),1)
+        self.assertEqual(result['candidats_cp_essayes'],3)
+        self.assertEqual(result['type_reference_resolue'],'uuid_tuya')
+        self.assertFalse(result['liaison_exacte_confirmee'])
+        inv['created']=time.monotonic()-1900
+        client,result=run(reply([]),inventory_cache=inv)
+        self.assertEqual(len(client.session.calls),0)
+        self.assertEqual(result['etat'],'inventaire_tuya_expire')
+
     def test_no_camera_or_secrets_in_source(self):
         src=SCRIPT.read_text()
         self.assertIn("allow_redirects=False",src)
