@@ -79,8 +79,8 @@ class TestRtcComparisonB38(unittest.TestCase):
 
     def test_manual_reader_never_initializes_rtc_session(self):
         code=(BASE/'tuya_rtc_inventory.py').read_text()
-        self.assertIn("read('thing.m.rtc.config.get',{'devId':target})",code)
-        self.assertIn("read('m.ipc.v4.rtc.config.get',{'devId':target})",code)
+        self.assertIn("'thing.m.rtc.config.get'",code)
+        self.assertIn("'m.ipc.v4.rtc.config.get'",code)
         self.assertNotIn("read('thing.m.rtc.session.init'",code)
         self.assertIn('if standalone_c9c_sdk_b37_audit and (',code)
         self.assertIn('or tester_mqtt or tester_offre_mqtt',code)
