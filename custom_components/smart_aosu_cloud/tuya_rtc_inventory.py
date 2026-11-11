@@ -510,6 +510,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 if ((standalone_c9c_video_test or standalone_c9c_wake_only
                      or standalone_c9c_wake_then_video)
                         and selection != 'identite_exacte'):
+                    # Never reuse credentials from an earlier manual probe.
+                    client._tuya_oem_media_bootstrap=None
                     return {**out,
                             'etat':'c9c_identite_aosu_tuya_non_prouvee',
                             'methode_selection_rtc':selection,
