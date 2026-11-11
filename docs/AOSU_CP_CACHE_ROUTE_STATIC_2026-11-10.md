@@ -99,3 +99,45 @@ indices, et conserve les indicateurs explicites
 `external_c9c_cp_id_recovered=false`.
 
 **Version installable inchangée : 0.8.13-beta32.**
+
+## Complément du 11 novembre — jointure finale et référence cpUuid (v4)
+
+L'APK complète 5.10.12 a été inspectée localement, **sans réseau** et sans
+publier le binaire ou les données de l'installation. Deux nouveaux constats
+ont été établis en vérifiant les références de champs et de méthodes dans
+`classes15.dex`, puis ajoutés aux tests synthétiques de l'outil d'audit :
+
+1. `DeviceInfoRepoImpl.o000oOoO` lit
+   `GzDeviceInfo.cpDeviceId` ainsi que
+   `PlatformDeviceInfo.cpDeviceId`, puis appelle
+   `GzDeviceInfo.setCpDataInfo`. Le rapprochement CP apparaît donc aussi
+   dans la **fusion finale du dépôt d'appareils**, et pas seulement dans
+   l'écoute d'événements ou la liste du fournisseur.
+2. `DeviceInfoExtKt.OooO0O0` lit
+   `GzDeviceInfo.cpDeviceInfo` et
+   `PlatformDeviceInfo.cpUuid`. Cela montre l'existence d'une
+   **seconde référence de plateforme**, mais **pas** qu'elle est égale
+   à `cpDeviceId`, à un numéro de série AOSU ou à un ID Tuya.
+
+L'audit `tools/aosu_cp_cache_route_offline.py` vérifie désormais
+**14 indices statiques** et reste strictement hors ligne. Les booléens
+`runtime_device_identity_confirmed` et
+`external_c9c_cp_id_recovered` restent toujours `false`.
+
+### Conséquence pour la C9C autonome
+
+L'absence de `cpDeviceId` dans les deux réponses AOSU déjà explorées
+n'est **pas** réparée par la seule existence de `cpUuid` dans l'APK.
+Ne pas substituer ces identifiants arbitrairement et ne pas inventer
+une valeur pour un endpoint exigeant la référence CP.
+
+Le sélecteur C9C de la branche expérimentale rejette désormais aussi
+une éventuelle **contradiction explicite** entre le numéro de série
+AOSU, un CP ID fourni et les champs Tuya de la cible. Une telle
+contradiction bloque toute offre vidéo ; les diagnostics de lecture
+restent accessibles. Aucun composant C5L/H1L ni `main` n'a été modifié.
+
+**Décision :** maintenir `0.8.13-beta32` sur Home Assistant.
+Pour pouvoir autoriser un essai vidéo, obtenir un lien d'identité
+concordant d'une source autorisée ou un protocole d'intégration
+officiellement exploitable ; les références DEX seules ne suffisent pas.
