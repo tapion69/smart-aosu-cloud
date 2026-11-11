@@ -9,7 +9,7 @@ SRC = (ROOT / 'tools' / 'aosu_c9c_native_p2p_route_offline.py').read_text()
 TREE = ast.parse(SRC)
 SUM = next(node for node in TREE.body if isinstance(node, ast.FunctionDef)
            and node.name == 'summarize')
-NS = {}
+NS = {'DexIndex': type('DexIndexStub', (), {})}
 exec(compile(ast.Module(body=[SUM], type_ignores=[]), '<audit>', 'exec'), NS)
 
 
