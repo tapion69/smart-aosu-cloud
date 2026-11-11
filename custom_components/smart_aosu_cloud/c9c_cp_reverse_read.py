@@ -120,7 +120,24 @@ def extract_tuya_detail_cp_candidates(payload: Any, target: str) -> tuple[tuple[
 
 def _candidate_batch(cache: Any, detail_cache: Any, *, now: float
                      ) -> tuple[list[tuple[str, str]], str]:
-    base, source = _tuya_candidate(cache, now=now)
+    # Fiche Tuya can legitimately reuse the same-account inventory for up to
+    # 30 minutes. Accept that longer age ONLY with a freshly read, verified
+    # detailed UUID entry for the single cached target.
+    verified_recent_detail = False
+    if (isinstance(cache, dict)
+            and isinstance(cache.get('devices'), dict)
+            and len(cache['devices']) == 1
+            and isinstance(detail_cache, dict)):
+        observed = detail_cache.get('created')
+        candidates_from_detail = detail_cache.get('candidates')
+        verified_recent_detail = (
+            type(observed) in (int, float)
+            and 0 <= now - observed <= 600
+            and detail_cache.get('target') == next(iter(cache['devices']))
+            and isinstance(candidates_from_detail, tuple)
+            and 1 <= len(candidates_from_detail) <= 4)
+    base, source = _tuya_candidate(
+        cache, now=now, max_age=1800 if verified_recent_detail else 600)
     if base is None:
         return [], source
     candidates = [(source, base)]
@@ -153,12 +170,13 @@ def _candidate_batch(cache: Any, detail_cache: Any, *, now: float
     return candidates, 'fiche_tuya_et_inventaire'
 
 
-def _tuya_candidate(cache: Any, *, now: float) -> tuple[str | None, str]:
+def _tuya_candidate(cache: Any, *, now: float,
+                    max_age: float = 600) -> tuple[str | None, str]:
     """A single actual Tuya device ID, never a guessed/proxied identifier."""
     if not isinstance(cache, dict) or not isinstance(cache.get('devices'), dict):
         return None, 'inventaire_tuya_absent'
     created = cache.get('created')
-    if type(created) not in (float, int) or not 0 <= now-created <= 600:
+    if type(created) not in (float, int) or not 0 <= now-created <= max_age:
         return None, 'inventaire_tuya_expire'
     devices = cache['devices']
     if len(devices) != 1:
