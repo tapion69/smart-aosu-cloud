@@ -14,7 +14,8 @@ from .tuya_uid_gateway import (TuyaAuthSession, OEMGatewayError,
 from .tuya_media_bootstrap import inspect_rtc_media
 from .tuya_mqtt_signaling import run_tuya_mqtt_signalisation
 from .tuya_mqtt_offer import run_tuya_mqtt_offer
-from .camera_topology import select_tuya_standalone_target
+from .camera_topology import (select_tuya_standalone_target,
+                              standalone_c9c_video_identity_verified)
 from .c9c_rtc_schema import summarize_c9c_rtc_schema
 from .c9c_moto_signal import resolve_rtc_moto_id
 from .c9c_mqtt_classify import inspect_sleep_dp149
@@ -486,6 +487,15 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     return {**out, 'etat': 'rtc_non_lance_c9c_non_identifiee',
                             'methode_selection_rtc': selection}
                 out['methode_selection_rtc'] = selection
+                # Experimental C9C: never publish an offer or wake a device
+                # selected only by uniqueness, category, or a missing CP ID.
+                # Preserve heuristic targets for read-only identity diagnostics.
+                if (standalone_c9c_video_test and
+                        not standalone_c9c_video_identity_verified(selection)):
+                    return {**out,
+                            'etat':'c9c_identite_non_prouvee_offre_bloquee',
+                            'offre_sdp_envoyee':False,
+                            'commande_camera':0}
                 if standalone_c9c_mqtt_watch:
                     # Only cached/loaded Tuya metadata, no extra network call.
                     # This never establishes the state of a sleeping camera.
