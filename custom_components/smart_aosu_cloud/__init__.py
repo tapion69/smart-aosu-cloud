@@ -674,6 +674,18 @@ async def async_setup(hass,config):
                   'erreur_api_tuya','erreur_execution_sans_details'}
         safe=raw.get('sdk_preparation_b37')
         safe=safe if isinstance(safe,dict) else {}
+        comparison=raw.get('sdk_comparaison_b38')
+        comparison=comparison if isinstance(comparison,dict) else {}
+        rtc_names=('acceptee','p2p_id','session_tid','p2p_policy',
+                   'p2p_specified_type','session_id','password','token',
+                   'skill','p2p_type_thing4')
+        shape_allowed={'objet','chaine','formes_multiples','absent'}
+        def rtc_public(label):
+            obj=comparison.get(label)
+            obj=obj if isinstance(obj,dict) else {}
+            f=obj.get('p2p_config_format')
+            return {**{key:obj.get(key) is True for key in rtc_names},
+                    'p2p_config_format':f if f in shape_allowed else 'absent'}
         names=(
             'fiche_tuya_acceptee','rtc_ipc_v4_accepte',
             'fiche_tuya_memes_identifiants','type_p2p_thing4_present',
@@ -686,6 +698,17 @@ async def async_setup(hass,config):
             'diagnostic':'aosu_c9c_sdk_preparation_b37',
             'etat':raw.get('etat') if raw.get('etat') in statuses else 'autre',
             'schema':{name:safe.get(name) is True for name in names},
+            'comparaison_rtc_b38':{
+                'ipc_v4':rtc_public('ipc_v4'),
+                'rtc_sdk_classique':rtc_public('rtc_sdk_classique'),
+                'p2p_id_seulement_classique':
+                    comparison.get('p2p_id_seulement_classique') is True,
+                'p2p_id_absent_des_deux':
+                    comparison.get('p2p_id_absent_des_deux') is True,
+                'client_tid_produit_localement_par_sdk':True,
+                'session_init_appelee':False,
+                'identite_c9c_etablie':False,
+                'video_autorisee':False},
             'appels_reseau':min(10,max(0,raw.get('appel_reseau',0)))
                 if type(raw.get('appel_reseau')) is int else 0,
             'preuve_liaison_aosu_tuya':False,
