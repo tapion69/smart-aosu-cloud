@@ -114,3 +114,13 @@ def select_tuya_standalone_target(devices, *, camera_sn, camera_coop):
             return None, 'appareil_tuya_unique_categorie_non_video'
         return dev_id, 'appareil_tuya_unique_sans_categorie_video'
     return None, 'aucune_camera_tuya_identifiable'
+
+
+def standalone_c9c_video_identity_verified(selection: object) -> bool:
+    """Only an exact AOSU/Tuya link may authorize an experimental video offer.
+
+    Unique device/category fallbacks remain useful for read-only diagnostics,
+    but never establish the intended destination for an active MQTT/RTC send.
+    No network access, device lookup or private identifier is needed here.
+    """
+    return selection == 'identite_exacte'
