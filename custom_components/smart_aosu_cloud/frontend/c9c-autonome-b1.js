@@ -295,7 +295,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
     this._busy=true;
     const btn=this.shadowRoot.getElementById('detail');
     if(btn)btn.disabled=true;
-    this._message('Lecture unique de la fiche AOSU : aucune vidéo ni PTZ…');
+    this._message('Fiche AOSU et recherche du lien CP (lecture seule, aucune vidéo ni PTZ)…');
     try {
       const response=await this._service('diagnostiquer_fiche_c9c_autonome',{
         confirmation_lecture_fiche:true
@@ -307,7 +307,17 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         return;
       }
       const yes=(v)=>v===true?'oui':'non';
-      this._message('Fiche AOSU : obtenue ; références présentes : '+yes(data.references_connues_presentes)+
+      const reverse=data.liaison_inverse_cp||{};
+      const lookupState=['liaison_exacte_confirmee','reference_non_resolue',
+        'autre_appareil_aosu','inventaire_tuya_absent','inventaire_tuya_expire',
+        'inventaire_tuya_non_unique','device_id_aosu_non_confirme',
+        'schema_non_reconnu','serveur_refuse','reponse_ambigue',
+        'http_non_200','categorie_tuya_non_video',
+        'identifiants_tuya_contradictoires','references_cp_contradictoires']
+        .includes(reverse.etat)?reverse.etat:'non_confirmee';
+      this._message('Fiche AOSU : obtenue ; liaison inverse : '+lookupState+
+        ' ; liaison prouvée : '+yes(reverse.liaison_exacte_confirmee)+
+        ' ; références présentes : '+yes(data.references_connues_presentes)+
         ' ; SN concordant : '+yes(data.numero_serie_concordant)+
         ' ; SN contradictoire : '+yes(data.numero_serie_contradictoire)+
         ' ; lien référence/ID Tuya : '+yes(data.correspondance_reference_tuya)+

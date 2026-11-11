@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'custom_components/smart_aosu_cloud/api.py'
+      - 'custom_components/smart_aosu_cloud/c9c_cp_reverse_read.py'
+      - 'custom_components/smart_aosu_cloud/c9c_detail_probe.py'
+      - 'tests/test_c9c_cp_reverse_read.py'
       - 'custom_components/smart_aosu_cloud/c9c_cp_reference_b32.py'
       - 'custom_components/smart_aosu_cloud/camera_topology.py'
       - 'custom_components/smart_aosu_cloud/__init__.py'
@@ -30,5 +33,9 @@ jobs:
         run: node --check custom_components/smart_aosu_cloud/frontend/c9c-autonome-b1.js
       - name: Test C9C exact identity, conflict and privacy
         run: python -m unittest discover -s tests -p 'test_c9c_cp_reference_b32.py' -v
+      - name: Read-only reverse AOSU CP proof and no-secret regression
+        run: python -m unittest discover -s tests -p 'test_c9c_cp_reverse_read.py' -v
+      - name: Existing C9C detail probe regression
+        run: python -m unittest discover -s tests -p 'test_c9c_detail_probe.py' -v
       - name: Legacy C5L/H1L topology and C9C selection tests
         run: python -m unittest discover -s tests -p 'test_c9c_standalone.py' -v

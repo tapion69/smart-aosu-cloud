@@ -7,6 +7,7 @@ from __future__ import annotations
 import time
 import requests
 from .identity_audit import TARGET_INFO, summarize_info
+from .c9c_cp_reverse_read import probe_c9c_reverse_cp
 
 
 def _valid(value):
@@ -123,8 +124,15 @@ def probe_c9c_detail(client):
             if len(response.content) > 262144:
                 return {**base, "etat": "reponse_trop_grande", "appels_http": 1}
             parsed = response.json()
-            report = summarize_c9c_detail(
-                parsed, sn, getattr(client, "_tuya_oem_inventory_cache", None))
-            return {**base, **report, "appels_http": 1}
+            cache = getattr(client, "_tuya_oem_inventory_cache", None)
+            report = summarize_c9c_detail(parsed, sn, cache)
+            # AOSU's Android SDK exposes getListByCoopUUIDList, which can
+            # resolve a *real Tuya inventory ID* back to the AOSU deviceId.
+            # This optional second READ occurs only during this manual,
+            # one-hour-cooldown diagnostic. No video route is activated.
+            reverse = probe_c9c_reverse_cp(
+                client, parsed, sn, cache, params=params, headers=headers)
+            return {**base, **report, "liaison_inverse_cp": reverse,
+                    "appels_http": 1 + reverse["appels_http"]}
         except (requests.RequestException, ValueError, TypeError, KeyError):
             return {**base, "etat": "erreur_lecture", "appels_http": 1}
