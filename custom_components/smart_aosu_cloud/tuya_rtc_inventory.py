@@ -24,6 +24,7 @@ from .c9c_webrtc_probe_b23 import inspect_webrtc_hints
 from .c9c_webrtc_channel_b23 import subscribe_webrtc_once
 from .c9c_tuya_device_b27 import summarize_tuya_device_b27
 from .c9c_full_audit_b31 import run_full_c9c_audit_b31
+from .c9c_cp_reverse_read import extract_tuya_detail_cp_candidates
 
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
@@ -526,6 +527,10 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 if not interactive_live and now < _LAST_RTC.get(client_key,0):
                     return {**out,'etat':'limite_fiche_tuya_cinq_minutes'}
                 _LAST_RTC[client_key]=now+300
+                # Replace, never append, previous private UUID evidence.
+                # Only one account-authenticated detail response is retained
+                # as up to four validated ID strings, TTL 10 min, no secrets.
+                client._c9c_reverse_uuid_cache=None
                 detail,detail_safe=read('thing.m.device.get',{'devId':target})
                 out['fiche_tuya_api_acceptee']=detail_safe['serveur_accepte']
                 if not detail_safe['serveur_accepte'] or detail_safe['rejet_explicite']:
@@ -534,6 +539,11 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     detail,expected_device_id=target,
                     aosu_sn=getattr(client,'_standalone_c9c_sn',None),
                     aosu_coop=getattr(client,'_standalone_c9c_coop_id',None))
+                client._c9c_reverse_uuid_cache={
+                    'created':time.monotonic(),
+                    'target':target,
+                    'candidates':extract_tuya_detail_cp_candidates(
+                        detail,target)}
                 return {**out,'etat':'fiche_tuya_obtenue'}
             # Drop previous provisional media credentials before minting any new RTC config.
             client._tuya_oem_media_bootstrap=None
