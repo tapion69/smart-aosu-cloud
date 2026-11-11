@@ -54,7 +54,7 @@ class TestThing4MediaPrepB40(unittest.TestCase):
         v4_report,v4_private=inspect(v,TARGET,KEY,UID)
         summary=align(classic=c,target=target,
                       classic_accepted=classic_accepted,
-                      v4_media=classic_report if False else v4_report,
+                      v4_media=v4_report,
                       classic_media=classic_report)
         return summary,classic_private,v4_private
 
