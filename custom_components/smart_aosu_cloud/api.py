@@ -275,7 +275,7 @@ class AosuCloudClient:
                     and 1 <= len(raw_aosu_id) <= 256
                     and raw_aosu_id == raw_aosu_id.strip()
                     and raw_aosu_id.isprintable()
-                    and not any(c.isspace() or c in '#+\\r\\n\\0' for c in raw_aosu_id)
+                    and not any(c.isspace() or c in '#+' or ord(c) < 32 for c in raw_aosu_id)
                     else None)
             else:
                 self._standalone_c9c_sn=None
