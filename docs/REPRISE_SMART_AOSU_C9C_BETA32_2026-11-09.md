@@ -362,3 +362,46 @@ de routage et de candidats ICE. Ne pas publier un nouveau test
 caméra ou une beta33 sans modification démontrée et
 testable. Aucun changement des trois caméras C5L/H1L
 fonctionnelles ; HA toujours **0.8.13-beta32**.
+
+## Expérience ICE C9C du 11 novembre — branche dédiée
+
+**Branche isolée** :
+`experiment/c9c-ice-preflight`
+https://github.com/tapion69/smart-aosu-cloud/tree/experiment/c9c-ice-preflight
+
+Commit de l'expérience :
+`729e3dbcb150bdcaeabf066d6d928db91e6dc6f8`.
+
+La beta32 pouvait envoyer `sigQry` et son offre 302 avant
+de vérifier que le candidat ICE local avait réellement
+été préparé par `ControlledIceB85.start()`. Lorsque
+l'UDP ou l'adresse IPv4 locale étaient indisponibles,
+le chemin échouait ensuite sans candidat, après envoi
+de l'offre.
+
+Le correctif expérimental crée le candidat ICE **après
+l'abonnement MQTT mais avant le réveil de la caméra
+et avant tout message d'offre**, uniquement en mode
+direct interactif C9C autonome (`use_moto_id=True`).
+Si le candidat ne peut pas être créé, le code répond
+`ice_local_indisponible_offre_non_envoyee` et
+ferme le socket ICE sans réveil ni offre.
+
+Le flux C5L et C9C3CA11/H1L garde son chemin existant.
+L'offre, les compteurs et les messages MQTT ne sont
+pas modifiés lorsqu'un candidat ICE est valide.
+
+**Tests 100 % hors réseau réussis** :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/42984633857
+
+Ils utilisent un faux broker TLS/MQTT, simulent les cas
+candidat indisponible et valide, et vérifient l'absence
+de publications MQTT quand le précontrôle échoue.
+Les tests de topologie legacy et les tests de tramage
+MQTT réussissent aussi.
+
+**Statut** : travail expérimental, non fusionné sur main,
+aucune beta33 installable. La caméra autonome reste
+non identifiée précisément dans le compte Tuya.
+Aucune conclusion ne permet d'affirmer que ce précontrôle
+suffira à rétablir le SDP ou la vidéo.
