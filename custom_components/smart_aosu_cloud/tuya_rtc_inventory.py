@@ -25,6 +25,7 @@ from .c9c_webrtc_channel_b23 import subscribe_webrtc_once
 from .c9c_tuya_device_b27 import summarize_tuya_device_b27
 from .c9c_full_audit_b31 import run_full_c9c_audit_b31
 from .c9c_cp_reverse_read import extract_tuya_detail_cp_candidates
+from .c9c_sdk_preflight_b37 import summarize_native_prerequisites_b37
 
 _LOCK = threading.Lock()
 _LAST_RUN: dict[int, float] = {}
@@ -212,7 +213,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                            standalone_c9c_webrtc_channel:bool=False,
                            standalone_c9c_ipc_v2_audit:bool=False,
                            standalone_c9c_tuya_detail_audit:bool=False,
-                           standalone_c9c_full_audit_b31:bool=False):
+                           standalone_c9c_full_audit_b31:bool=False,
+                           standalone_c9c_sdk_b37_audit:bool=False):
     """Explicitly consented camera stream, or conservative manual one-shot diagnostic.
 
     interactive_live is an internal flag: it is accepted only with the real
@@ -305,6 +307,20 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
         or tester_mqtt or tester_offre_mqtt or tester_relais_tcp
         or tester_kcp or tester_media or capturer_media_localement):
         return {'etat':'fiche_tuya_c9c_lecture_seule_uniquement',
+                'appel_reseau':0,'commande_camera':0,
+                'secrets_retournes':False}
+    if standalone_c9c_sdk_b37_audit and (
+        standalone_c9c_video_test or standalone_c9c_rtc_audit
+        or standalone_c9c_wake_only or standalone_c9c_wake_then_video
+        or standalone_c9c_webrtc_audit or standalone_c9c_webrtc_channel
+        or standalone_c9c_mqtt_watch or standalone_c9c_v4_rtc_audit
+        or standalone_c9c_ipc_v2_audit or standalone_c9c_tuya_detail_audit
+        or standalone_c9c_full_audit_b31 or interactive_live
+        or tester_rtc is not True
+        or confirmation_envoi_mot_de_passe is not True
+        or tester_mqtt or tester_offre_mqtt or tester_relais_tcp
+        or tester_kcp or tester_media or capturer_media_localement):
+        return {'etat':'sdk_b37_lecture_seule_uniquement',
                 'appel_reseau':0,'commande_camera':0,
                 'secrets_retournes':False}
     if standalone_c9c_full_audit_b31 and (
@@ -476,7 +492,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     or standalone_c9c_wake_only or standalone_c9c_webrtc_audit
                     or standalone_c9c_ipc_v2_audit
                     or standalone_c9c_tuya_detail_audit
-                    or standalone_c9c_full_audit_b31):
+                    or standalone_c9c_full_audit_b31
+                    or standalone_c9c_sdk_b37_audit):
                 # The C5L-specific selector is intentionally NOT reused here:
                 # any unrelated C5L match must never override a C9C selection.
                 target, selection = select_tuya_standalone_target(
@@ -505,6 +522,26 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
             else:
                 return {**out,'etat':'rtc_non_lance_c5l_non_identifiee',
                         'methode_selection_rtc':'aucune'}
+            if standalone_c9c_sdk_b37_audit:
+                # Exactly TWO read-only Tuya account endpoints, no MQTT,
+                # SDP, P2P, wake, video, or PTZ command.
+                if not interactive_live and now < _LAST_RTC.get(client_key,0):
+                    return {**out,'etat':'limite_sdk_b37_cinq_minutes'}
+                _LAST_RTC[client_key]=now+300
+                detail,detail_safe=read('thing.m.device.get',{'devId':target})
+                accepted_detail=(detail_safe.get('serveur_accepte') is True
+                                 and detail_safe.get('rejet_explicite') is not True)
+                rtc,rtc_safe=read('m.ipc.v4.rtc.config.get',{'devId':target})
+                accepted_rtc=(rtc_safe.get('serveur_accepte') is True
+                              and rtc_safe.get('rejet_explicite') is not True)
+                out['sdk_preparation_b37']=summarize_native_prerequisites_b37(
+                    tuya_device=all_devices.get(target,{}) or {},
+                    tuya_detail=detail if accepted_detail else None,
+                    rtc_response=rtc if accepted_rtc else None,
+                    expected_tuya_id=target,
+                    detail_accepted=accepted_detail,
+                    rtc_accepted=accepted_rtc)
+                return {**out,'etat':'sdk_b37_lecture_terminee'}
             if standalone_c9c_full_audit_b31:
                 # One explicit manual diagnostic; no MQTT, wake, media or PTZ.
                 if not interactive_live and now < _LAST_RTC.get(client_key,0):
