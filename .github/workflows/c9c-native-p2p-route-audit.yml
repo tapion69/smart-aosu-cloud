@@ -1,0 +1,25 @@
+name: C9C native P2P route audit (offline, no camera)
+
+on:
+  push:
+    paths:
+      - 'tools/aosu_c9c_native_p2p_route_offline.py'
+      - 'tests/test_aosu_c9c_native_p2p_route_offline.py'
+      - '.github/workflows/c9c-native-p2p-route-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  sdk-native-route:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax of offline-only SDK parser
+        run: python -m compileall -q tools
+      - name: Regression of safe public SDK route flags
+        run: python -m unittest discover -s tests -p 'test_aosu_c9c_native_p2p_route_offline.py' -v
