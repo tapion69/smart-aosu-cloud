@@ -137,6 +137,7 @@ class AosuCloudClient:
         self._camera_sn_index=[]  # 3 cameras, excluding the H1L base
         self._standalone_c9c_sn=None  # RAM only; candidate for explicit VIDEO test
         self._standalone_c9c_coop_id=None  # RAM only, never published
+        self._standalone_c9c_device_id=None  # SN-matched getList deviceId; RAM only
         self._standalone_c9c_cp_source='absente'  # safe enum, not an ID
         self._c5l_sn=None  # private RAM-only target for manual discovery
         self._c5l_coop_present=False
@@ -265,10 +266,22 @@ class AosuCloudClient:
                 private_cp,cp_source=extract_c9c_cp_reference(standalone[0])
                 self._standalone_c9c_coop_id=private_cp
                 self._standalone_c9c_cp_source=cp_source
+                # AOSU getInfoBySn does not always return a deviceId. Prefer
+                # the explicit deviceId of the same SN-matched getList record,
+                # if present; never infer it from Tuya or another camera.
+                raw_aosu_id=standalone[0].get('deviceId')
+                self._standalone_c9c_device_id=(
+                    raw_aosu_id if isinstance(raw_aosu_id,str)
+                    and 1 <= len(raw_aosu_id) <= 256
+                    and raw_aosu_id == raw_aosu_id.strip()
+                    and raw_aosu_id.isprintable()
+                    and not any(c.isspace() or c in '#+\\r\\n\\0' for c in raw_aosu_id)
+                    else None)
             else:
                 self._standalone_c9c_sn=None
                 self._standalone_c9c_coop_id=None
                 self._standalone_c9c_cp_source='absente'
+                self._standalone_c9c_device_id=None
             # One private target for the opt-in read-only identity audit.
             # APK conversion path: UUIDInfoWebDataItem.coopUUID -> GzDeviceInfo.cpDeviceId.
             c5l = [r for r in records if isinstance(r,dict) and r.get('model')=='C5L'
