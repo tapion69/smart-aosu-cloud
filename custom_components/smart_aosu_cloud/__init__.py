@@ -676,6 +676,10 @@ async def async_setup(hass,config):
         safe=safe if isinstance(safe,dict) else {}
         comparison=raw.get('sdk_comparaison_b38')
         comparison=comparison if isinstance(comparison,dict) else {}
+        alignment=raw.get('sdk_alignment_b40')
+        alignment=alignment if isinstance(alignment,dict) else {}
+        id_results={'identifiant_tuya_egal','identifiant_tuya_different',
+                    'identifiant_non_verifiable'}
         rtc_names=('acceptee','p2p_id','session_tid','p2p_policy',
                    'p2p_specified_type','session_id','password','token',
                    'skill','p2p_type_thing4',
@@ -701,7 +705,7 @@ async def async_setup(hass,config):
             'p2p_id_champ_present','ipc_session_id_present',
             'client_tid_champ_present')
         return {
-            'diagnostic':'aosu_c9c_sdk_preparation_b39',
+            'diagnostic':'aosu_c9c_sdk_preparation_b40',
             'etat':raw.get('etat') if raw.get('etat') in statuses else 'autre',
             'schema':{name:safe.get(name) is True for name in names},
             'comparaison_rtc_b38':{
@@ -714,6 +718,24 @@ async def async_setup(hass,config):
                 'client_tid_produit_localement_par_sdk':True,
                 'session_init_appelee':False,
                 'identite_c9c_etablie':False,
+                'video_autorisee':False},
+            'alignement_thing4_b40':{
+                'comparaison_type4':
+                    alignment.get('type_classique_thing4') is True,
+                'rtc_id_vers_dev_id':
+                    alignment.get('rtc_id_egale_dev_id_tuya')
+                    if alignment.get('rtc_id_egale_dev_id_tuya') in id_results
+                    else 'identifiant_non_verifiable',
+                'configuration_sdk_json':
+                    alignment.get('config_json_convertible_par_sdk') is True,
+                'sdp_python_ipc_v4':
+                    alignment.get('preparation_python_ipc_v4_possible') is True,
+                'sdp_python_sdk_classique':
+                    alignment.get('preparation_python_sdk_classique_possible') is True,
+                'champs_sdk_python_coherents':
+                    alignment.get('sdk_classique_et_python_alignes_sur_champs') is True,
+                'identite_aosu_tuya_prouvee':False,
+                'parite_signalisation_native_prouvee':False,
                 'video_autorisee':False},
             'appels_reseau':min(10,max(0,raw.get('appel_reseau',0)))
                 if type(raw.get('appel_reseau')) is int else 0,
