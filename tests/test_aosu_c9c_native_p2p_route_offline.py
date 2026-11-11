@@ -9,7 +9,9 @@ SRC = (ROOT / 'tools' / 'aosu_c9c_native_p2p_route_offline.py').read_text()
 TREE = ast.parse(SRC)
 SUM = next(node for node in TREE.body if isinstance(node, ast.FunctionDef)
            and node.name == 'summarize')
-NS = {'DexIndex': type('DexIndexStub', (), {})}
+NS = {'DexIndex': type('DexIndexStub', (), {}),
+      '_FILES': ('classes6.dex', 'classes16.dex'),
+      '_NATIVE': '/camera/middleware/p2p/ThingSmartCameraP2PSync;'}
 exec(compile(ast.Module(body=[SUM], type_ignores=[]), '<audit>', 'exec'), NS)
 
 
