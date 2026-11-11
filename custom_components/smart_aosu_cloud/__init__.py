@@ -695,7 +695,7 @@ async def async_setup(hass,config):
             'p2p_id_champ_present','ipc_session_id_present',
             'client_tid_champ_present')
         return {
-            'diagnostic':'aosu_c9c_sdk_preparation_b37',
+            'diagnostic':'aosu_c9c_sdk_preparation_b38',
             'etat':raw.get('etat') if raw.get('etat') in statuses else 'autre',
             'schema':{name:safe.get(name) is True for name in names},
             'comparaison_rtc_b38':{
