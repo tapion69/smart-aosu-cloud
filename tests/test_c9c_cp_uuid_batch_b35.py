@@ -1,4 +1,4 @@
-"""C9C beta35: actual Tuya device UUIDs, single read-only AOSU batch."""
+"""C9C UUID source and privacy regression (beta35 discovery, beta36 isolation)."""
 import json
 import runpy
 import time
@@ -86,18 +86,18 @@ class TestUUIDBatchB35(unittest.TestCase):
             N['extract_tuya_detail_cp_candidates'](
                 {'data':{'devId':DID,'productBean':{'uuid':'PRODUCT_UUID'}}},DID),())
 
-    def test_one_batch_request_and_no_proof_without_aosu_id(self):
-        c,r=run(reply([{'coopUUID':UUID,'deviceId':AOSU_ID}]))
+    def test_one_uuid_sdk_style_request_and_no_proof_without_aosu_id(self):
+        c,r=run(reply([{'coopUUID':CPUUID,'deviceId':AOSU_ID}]))
         self.assertEqual(r['etat'],'reference_cp_resolue_identite_non_confirmee')
         self.assertFalse(r['liaison_exacte_confirmee'])
         self.assertTrue(r['reference_cp_resolue'])
-        self.assertEqual(r['type_reference_resolue'],'uuid_tuya')
-        self.assertEqual(r['candidats_cp_essayes'],3)
+        self.assertEqual(r['type_reference_resolue'],'cp_uuid_tuya')
+        self.assertEqual(r['type_reference_testee'],'cp_uuid_tuya')
+        self.assertEqual(r['candidats_cp_disponibles'],3)
+        self.assertEqual(r['candidats_cp_essayes'],1)
         self.assertEqual(len(c.session.calls),1)
         values=c.session.calls[0][1]['data']
-        self.assertEqual(values,[('coopUUID[]',DID),
-                                 ('coopUUID[]',UUID),
-                                 ('coopUUID[]',CPUUID)])
+        self.assertEqual(values,[('coopUUID[]',CPUUID)])
         for secret in (SN,DID,UUID,CPUUID,AOSU_ID,'PRIVATE_TUYA_KEY',
                        'PRIVATE_SIGNED_PARAM','PRIVATE_SID'):
             self.assertNotIn(secret,json.dumps(r))
@@ -117,7 +117,7 @@ class TestUUIDBatchB35(unittest.TestCase):
         for rows,state in [
             ([{'coopUUID':UUID,'deviceId':AOSU_ID},
               {'coopUUID':CPUUID,'deviceId':AOSU_ID}],
-             'references_cp_multiples_ambigues'),
+             'reponse_plusieurs_entrees_non_concluante'),
             ([{'coopUUID':'UNKNOWN_CP','deviceId':AOSU_ID}],
              'reference_cp_incoherente'),
             ([], 'reference_non_resolue'),
@@ -146,11 +146,12 @@ class TestUUIDBatchB35(unittest.TestCase):
     def test_fresh_uuid_can_reuse_30min_same_account_inventory(self):
         inv=inventory()
         inv['created']=time.monotonic()-1200
-        client,result=run(reply([{'coopUUID':UUID,'deviceId':AOSU_ID}]),
+        client,result=run(reply([{'coopUUID':CPUUID,'deviceId':AOSU_ID}]),
                           inventory_cache=inv)
         self.assertEqual(len(client.session.calls),1)
-        self.assertEqual(result['candidats_cp_essayes'],3)
-        self.assertEqual(result['type_reference_resolue'],'uuid_tuya')
+        self.assertEqual(result['candidats_cp_disponibles'],3)
+        self.assertEqual(result['candidats_cp_essayes'],1)
+        self.assertEqual(result['type_reference_resolue'],'cp_uuid_tuya')
         self.assertFalse(result['liaison_exacte_confirmee'])
         inv['created']=time.monotonic()-1900
         client,result=run(reply([]),inventory_cache=inv)
