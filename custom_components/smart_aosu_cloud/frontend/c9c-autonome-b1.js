@@ -320,6 +320,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const x=d.schema||{},yes=k=>x[k]===true?'oui':'non';
       const cmp=d.comparaison_rtc_b38||{};
       const v4=cmp.ipc_v4||{},sdk=cmp.rtc_sdk_classique||{};
+      const alignment=d.alignement_thing4_b40||{};
       const bool=(obj,key)=>obj[key]===true?'oui':'non';
       const format=obj=>['objet','chaine','formes_multiples','absent']
         .includes(obj.p2p_config_format)?obj.p2p_config_format:'absent';
@@ -327,7 +328,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         .includes(obj.p2p_specified_type_categorie)
         ?obj.p2p_specified_type_categorie:'absent';
       const lines=[
-        'Préparation SDK B39 : branche caméra Thing (lecture seule, sans vidéo).',
+        'Préparation SDK B40 : compatibilité Thing-4 et préparation SDP locale, sans émission.',
         'Fiche Tuya : '+yes('fiche_tuya_acceptee')+
           ' ; même ID Tuya : '+yes('fiche_tuya_memes_identifiants')+
           ' ; skills Thing 4 : '+yes('type_p2p_thing4_present')+
@@ -352,8 +353,18 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
           ' ; token API '+bool(sdk,'token')+
           ' ; skill '+bool(sdk,'skill'),
         'Dans le DEX : type 4 utilise CameraInfoBean.id et p2pConfig ; type 2 suit p2pId/initString.',
-        'clientTid créé localement par le SDK ; identité et vidéo toujours non prouvées.',
-        'Aucune session init, offre MQTT ni PTZ.'
+        'SDK RTC id = devId Tuya : '+
+          (['identifiant_tuya_egal','identifiant_tuya_different',
+            'identifiant_non_verifiable'].includes(alignment.rtc_id_vers_dev_id)
+            ?alignment.rtc_id_vers_dev_id:'identifiant_non_verifiable'),
+        'Préparation SDP Python : IPC-v4 '+bool(alignment,'sdp_python_ipc_v4')+
+          ' ; SDK classique '+bool(alignment,'sdp_python_sdk_classique')+
+          ' ; configuration JSON Thing '+bool(alignment,'configuration_sdk_json'),
+        'Champs Thing-4 cohérents avec le constructeur Python : '+
+          bool(alignment,'champs_sdk_python_coherents')+
+          ' (sans parité de signalisation)',
+        'clientTid créé localement par le SDK ; identité AOSU/Tuya et vidéo non prouvées.',
+        'Aucune offre MQTT, session init ni PTZ.'
       ];
       this._message(lines.join('\n'));
     } finally {
