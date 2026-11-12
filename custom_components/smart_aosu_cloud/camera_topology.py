@@ -185,4 +185,4 @@ def select_tuya_standalone_target_typed(devices, *, camera_sn=None,
     # Only weak non-active discovery; a caller must not send camera
     # commands unless the selection label is a typed exact identity.
     return select_tuya_standalone_target(
-        devices, camera_sn=None, camera_coop=None)
+        devices, camera_sn=camera_sn, camera_coop=None)
