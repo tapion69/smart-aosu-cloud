@@ -79,7 +79,8 @@ from .ptz_packet_size_b69 import audit_packet_size_b69
 from .coordinator import SmartAosuCloudCoordinator
 from .const import CONF_EMAIL, CONF_PASSWORD, DOMAIN, CONF_SCAN_INTERVAL, CONF_STATION_IP, DEFAULT_SCAN_INTERVAL, ALLOWED_SCAN_INTERVALS
 from .network_config import optional_station_ip
-from .camera_topology import select_standalone_c9c_key, select_tuya_standalone_target
+from .camera_topology import (select_standalone_c9c_key,
+    select_tuya_standalone_target, select_tuya_standalone_target_typed)
 from .c9c_identity_diagnostic import inspect_c9c_identity_cache
 from .c9c_detail_probe import probe_c9c_detail
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
@@ -442,7 +443,8 @@ async def async_setup(hass,config):
         result=inspect_c9c_identity_cache(
             data=runtime.data,client=client,cache=cache,
             select_standalone=select_standalone_c9c_key,
-            select_tuya=select_tuya_standalone_target)
+            select_tuya=select_tuya_standalone_target,
+            select_tuya_typed=select_tuya_standalone_target_typed)
         result['actualisation_inventaire_tuya']=refreshed
         result['appels_reseau']=network_calls
         return result
