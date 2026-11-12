@@ -170,7 +170,7 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
         "ty_cp_uuid_aosu_present": ty_uuid is not None,
         "uuid_tuya_present": False,
         "concordance_directe": False,
-        "lien_non_prouve": True,
+        "liaison_video_confirmee": False,
         "identifiants_retournes": False,
     }
     if (ty_uuid is not None and isinstance(detail, dict)
@@ -178,16 +178,19 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
         and detail.get("session_uid") == cache.get("session_uid")
         and isinstance(detail.get("created"), (int, float))
         and 0 <= time.monotonic() - detail["created"] <= 600
+        and isinstance(detail.get("target"), str)
         and detail.get("target") in devices
         and isinstance(detail.get("candidates"), tuple)):
         provenance["fiche_tuya_uuid_recente"] = True
-        uuid_refs = [value for kind, value in detail["candidates"][:5]
-                     if kind == "uuid_tuya" and isinstance(value, str)
-                     and 1 <= len(value) <= 256 and value.isprintable()]
+        uuid_refs = [row[1] for row in detail["candidates"][:5]
+                     if isinstance(row, tuple) and len(row) == 2
+                     and row[0] == "uuid_tuya" and isinstance(row[1], str)
+                     and 1 <= len(row[1]) <= 256
+                     and row[1] == row[1].strip()
+                     and row[1].isprintable()]
         if len(uuid_refs) == 1:
             provenance["uuid_tuya_present"] = True
             provenance["concordance_directe"] = uuid_refs[0] == ty_uuid
-            provenance["lien_non_prouve"] = uuid_refs[0] != ty_uuid
     result["comparaison_ty_cp_uuid"] = provenance
     if select_tuya_typed is not None:
         target, method = select_tuya_typed(
