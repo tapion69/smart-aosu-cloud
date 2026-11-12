@@ -136,7 +136,9 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const device=report.unique_appareil_tuya||{};
       const ty=report.comparaison_ty_cp_uuid||{};
       const yn=v=>v===true?'oui':'non';
-      this._message('Diagnostic : '+report.etat+
+      const backend=report.version_diagnostic==='b42'?'b42':'ancienne_ou_non_confirmee';
+      this._message('Carte b42 ; diagnostic serveur : '+backend+
+        ' ; résultat : '+report.etat+
         (report.cause ? ' ('+report.cause+')' : '')+
         ' ; liaison exacte : '+(match.identite_exacte_confirmee===true?'oui':'non')+
         ' ; SN concordants : '+String(match.serie_exacte_nombre??'?')+
