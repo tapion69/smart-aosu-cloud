@@ -49,3 +49,28 @@ def extract_c9c_cp_reference(record: Any) -> tuple[str | None, str]:
         return next(iter(unique)), "champs_concordants"
     key = next(iter(provided))
     return next(iter(unique)), key
+
+
+def extract_c9c_ty_cp_uuid(record: Any) -> tuple[str | None, str]:
+    """Private authoritative Tuya-platform UUID from an AOSU SN-matched row.
+
+    AOSU Android 5.10.12 DeviceInfoExtKt.OooO0O0 reads
+    GzDeviceInfo.cpDeviceInfo.cpUuid when its Iot platform is Ty.
+    This is a distinct namespace from the coopUUID -> cpDeviceId mapping.
+    Do not guess cpUuid from coopUUID, deviceId, SN or a product UUID.
+    """
+    if not isinstance(record, dict):
+        return None, "fiche_absente"
+    nested = record.get("cpDeviceInfo")
+    if not isinstance(nested, dict):
+        return None, "champ_cp_device_info_absent"
+    value = nested.get("cpUuid")
+    if value is None:
+        return None, "cp_uuid_absent"
+    if not _valid_reference(value):
+        return None, "cp_uuid_invalide"
+    # If root cpUuid is explicitly present, reject contradictory values.
+    root = record.get("cpUuid")
+    if root is not None and (not _valid_reference(root) or root != value):
+        return None, "cp_uuid_contradictoire"
+    return value, "cp_uuid_ty_explicite"
