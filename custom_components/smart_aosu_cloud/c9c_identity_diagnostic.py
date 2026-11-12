@@ -173,7 +173,7 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
         "liaison_video_confirmee": False,
         "identifiants_retournes": False,
     }
-    if (ty_uuid is not None and isinstance(detail, dict)
+    if (isinstance(detail, dict)
         and isinstance(cache.get("session_uid"), str)
         and detail.get("session_uid") == cache.get("session_uid")
         and isinstance(detail.get("created"), (int, float))
@@ -189,8 +189,11 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
                      and row[1] == row[1].strip()
                      and row[1].isprintable()]
         if len(uuid_refs) == 1:
+            # Tuya UUID availability is independent of whether AOSU provided
+            # its own cpUuid; never report a missing Tuya UUID by inference.
             provenance["uuid_tuya_present"] = True
-            provenance["concordance_directe"] = uuid_refs[0] == ty_uuid
+            provenance["concordance_directe"] = (
+                ty_uuid is not None and uuid_refs[0] == ty_uuid)
     result["comparaison_ty_cp_uuid"] = provenance
     if select_tuya_typed is not None:
         target, method = select_tuya_typed(
