@@ -43,7 +43,8 @@ def _exact(objects: list[dict], fields: tuple[str, ...],
 
 
 def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
-                               select_standalone, select_tuya) -> dict:
+                               select_standalone, select_tuya,
+                               select_tuya_typed=None) -> dict:
     """Classify matching evidence; uniqueness does not prove device identity."""
     result = {
         "diagnostic": "aosu_c9c_identite_cache_b5",
@@ -100,9 +101,12 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
     coop = getattr(client, "_standalone_c9c_coop_id", None)
     sn = sn if isinstance(sn, str) and sn else None
     coop = coop if isinstance(coop, str) and coop else None
+    ty_uuid = getattr(client, "_standalone_c9c_ty_cp_uuid", None)
+    ty_uuid = ty_uuid if isinstance(ty_uuid, str) and ty_uuid else None
     result["identite_aosu"] = {
         "numero_serie_present": sn is not None,
         "coop_uuid_present": coop is not None,
+        "ty_cp_uuid_present": ty_uuid is not None,
     }
     if not isinstance(cache, dict) or not isinstance(cache.get("devices"), dict):
         return {**result, "etat": "inventaire_tuya_non_charge"}
@@ -157,9 +161,45 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
                     isinstance(obj.get("localKey"), str) and bool(obj["localKey"])
                     for obj in objs),
             }]
-    target, method = select_tuya(devices, camera_sn=sn, camera_coop=coop)
+    # Read-only view may inspect a previously authenticated Tuya detail
+    # entry. This is the ONLY comparison between AOSU's Ty cpUuid and Tuya's
+    # own uuid, and it is never persisted or used to send a camera command.
+    detail = getattr(client, "_c9c_reverse_uuid_cache", None)
+    provenance = {
+        "fiche_tuya_uuid_recente": False,
+        "ty_cp_uuid_aosu_present": ty_uuid is not None,
+        "uuid_tuya_present": False,
+        "concordance_directe": False,
+        "lien_non_prouve": True,
+        "identifiants_retournes": False,
+    }
+    if (ty_uuid is not None and isinstance(detail, dict)
+        and isinstance(cache.get("session_uid"), str)
+        and detail.get("session_uid") == cache.get("session_uid")
+        and isinstance(detail.get("created"), (int, float))
+        and 0 <= time.monotonic() - detail["created"] <= 600
+        and detail.get("target") in devices
+        and isinstance(detail.get("candidates"), tuple)):
+        provenance["fiche_tuya_uuid_recente"] = True
+        uuid_refs = [value for kind, value in detail["candidates"][:5]
+                     if kind == "uuid_tuya" and isinstance(value, str)
+                     and 1 <= len(value) <= 256 and value.isprintable()]
+        if len(uuid_refs) == 1:
+            provenance["uuid_tuya_present"] = True
+            provenance["concordance_directe"] = uuid_refs[0] == ty_uuid
+            provenance["lien_non_prouve"] = uuid_refs[0] != ty_uuid
+    result["comparaison_ty_cp_uuid"] = provenance
+    if select_tuya_typed is not None:
+        target, method = select_tuya_typed(
+            devices, camera_sn=sn,
+            camera_cp_device_id=coop,
+            camera_ty_cp_uuid=ty_uuid)
+    else:
+        target, method = select_tuya(devices, camera_sn=sn, camera_coop=coop)
     allowed_methods = (
-        "identite_exacte", "correspondance_ambigue",
+        "identite_exacte", "identite_exacte_serie",
+        "identite_exacte_cp_device_id", "identite_exacte_ty_cp_uuid",
+        "correspondance_ambigue",
         "camera_tuya_unique_non_confirmee",
         "cameras_tuya_multiples_ambigues",
         "appareil_tuya_unique_sans_categorie_video",
@@ -168,7 +208,9 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
         "aucune_camera_tuya_identifiable", "inventaire_tuya_absent",
     )
     method = method if method in allowed_methods else "autre_methode"
-    exact = target is not None and method == "identite_exacte"
+    exact = target is not None and method in (
+        "identite_exacte", "identite_exacte_serie",
+        "identite_exacte_cp_device_id", "identite_exacte_ty_cp_uuid")
     result["correspondance"] = {
         "serie_exacte_nombre": strong_sn,
         "serie_egale_id_tuya_nombre": sn_matches_tuya_id,
