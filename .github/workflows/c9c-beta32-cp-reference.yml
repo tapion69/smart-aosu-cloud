@@ -20,6 +20,8 @@ on:
       - 'custom_components/smart_aosu_cloud/__init__.py'
       - 'custom_components/smart_aosu_cloud/frontend/c9c-autonome-b1.js'
       - 'tests/test_c9c_cp_reference_b32.py'
+      - 'tests/test_c9c_ty_cp_uuid_identity.py'
+      - 'custom_components/smart_aosu_cloud/c9c_identity_diagnostic.py'
       - 'tests/test_c9c_standalone.py'
       - '.github/workflows/c9c-beta32-cp-reference.yml'
   workflow_dispatch:
@@ -41,6 +43,8 @@ jobs:
         run: node --check custom_components/smart_aosu_cloud/frontend/c9c-autonome-b1.js
       - name: Test C9C exact identity, conflict and privacy
         run: python -m unittest discover -s tests -p 'test_c9c_cp_reference_b32.py' -v
+      - name: Platform Ty cpUuid exact field identity and cross-session privacy
+        run: python -m unittest discover -s tests -p 'test_c9c_ty_cp_uuid_identity.py' -v
       - name: Read-only reverse AOSU CP proof and no-secret regression
         run: python -m unittest discover -s tests -p 'test_c9c_cp_reverse_read.py' -v
       - name: Tuya UUID batch and AOSU reverse identity safety
