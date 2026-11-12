@@ -3,6 +3,7 @@ name: C9C standalone beta32 CP identity regression
 on:
   push:
     paths:
+      - 'custom_components/smart_aosu_cloud/manifest.json'
       - 'custom_components/smart_aosu_cloud/api.py'
       - 'custom_components/smart_aosu_cloud/c9c_cp_reverse_read.py'
       - 'custom_components/smart_aosu_cloud/c9c_detail_probe.py'
