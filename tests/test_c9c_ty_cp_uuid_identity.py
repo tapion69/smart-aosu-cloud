@@ -149,6 +149,48 @@ class TestTyCpUuidIdentity(unittest.TestCase):
             select_tuya_typed=choose)
         self.assertFalse(bad['comparaison_ty_cp_uuid']['concordance_directe'])
 
+    def test_tuya_uuid_presence_is_independent_from_aosu_uuid(self):
+        inspect = runpy.run_path(str(BASE / 'c9c_identity_diagnostic.py'))[
+            'inspect_c9c_identity_cache']
+        client = types.SimpleNamespace(
+            _standalone_c9c_sn=SN,
+            _standalone_c9c_coop_id=None,
+            _standalone_c9c_ty_cp_uuid=None,
+            _c9c_reverse_uuid_cache={
+                'created':time.monotonic(),
+                'session_uid':'FAKE_SESSION_UID',
+                'target':DEVICEID,
+                'candidates':(('uuid_tuya',TYUUID),)
+            })
+        report=inspect(
+            data={'camera':{'is_camera':True,'model':'C9C','via_device':None}},
+            client=client,
+            cache={'created':time.monotonic(),
+                   'session_uid':'FAKE_SESSION_UID',
+                   'devices':{DEVICEID:{'devId':DEVICEID}}},
+            select_standalone=TOPO['select_standalone_c9c_key'],
+            select_tuya=TOPO['select_tuya_standalone_target'],
+            select_tuya_typed=choose)
+        cp=report['comparaison_ty_cp_uuid']
+        self.assertFalse(cp['ty_cp_uuid_aosu_present'])
+        self.assertTrue(cp['fiche_tuya_uuid_recente'])
+        self.assertTrue(cp['uuid_tuya_present'])
+        self.assertFalse(cp['concordance_directe'])
+        self.assertFalse(report['video_lancee'])
+        for val in (TYUUID,DEVICEID,SN,'FAKE_SESSION_UID'):
+            self.assertNotIn(val,json.dumps(report))
+
+    def test_card_b42_uses_new_versioned_resource_and_backend_marker(self):
+        init=(BASE/'__init__.py').read_text(encoding='utf-8')
+        js=(BASE/'frontend/c9c-autonome-b1.js').read_text(encoding='utf-8')
+        self.assertIn("'/smart-aosu/c9c-autonome-b42.js'",init)
+        self.assertIn("'/smart-aosu/c9c-autonome-b1.js'",init)
+        self.assertIn("result['version_diagnostic']='b42'",init)
+        self.assertIn("Carte b42 ; diagnostic serveur",js)
+        self.assertIn('cpUuid Ty AOSU présent',js)
+        self.assertIn('UUID Tuya récent',js)
+        self.assertIn('cpUuid AOSU = UUID Tuya',js)
+
     def test_existing_c5l_h1l_and_readonly_selector_remain_unchanged(self):
         self.assertTrue(TOPO['has_h1l_video_topology']({
             'base': {'model':'H1L'},
