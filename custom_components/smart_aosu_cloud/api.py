@@ -19,7 +19,7 @@ from .semantics import parse_cover_event_time
 from .oem_identity import extract_login_hints, inspect_login_hints, public_report
 from .event_feed import get_recent_event_feed
 from .provider_audit import summarize_getlist_provider
-from .c9c_cp_reference_b32 import extract_c9c_cp_reference
+from .c9c_cp_reference_b32 import extract_c9c_cp_reference, extract_c9c_ty_cp_uuid
 
 class AosuCloudError(Exception):
     """Protocol/network failure without potentially sensitive server contents."""
@@ -137,6 +137,7 @@ class AosuCloudClient:
         self._camera_sn_index=[]  # 3 cameras, excluding the H1L base
         self._standalone_c9c_sn=None  # RAM only; candidate for explicit VIDEO test
         self._standalone_c9c_coop_id=None  # RAM only, never published
+        self._standalone_c9c_ty_cp_uuid=None  # Ty-only cpDeviceInfo.cpUuid; RAM
         self._standalone_c9c_device_id=None  # SN-matched getList deviceId; RAM only
         self._standalone_c9c_cp_source='absente'  # safe enum, not an ID
         self._c5l_sn=None  # private RAM-only target for manual discovery
@@ -266,6 +267,8 @@ class AosuCloudClient:
                 private_cp,cp_source=extract_c9c_cp_reference(standalone[0])
                 self._standalone_c9c_coop_id=private_cp
                 self._standalone_c9c_cp_source=cp_source
+                self._standalone_c9c_ty_cp_uuid,_cp_uuid_source=(
+                    extract_c9c_ty_cp_uuid(standalone[0]))
                 # AOSU getInfoBySn does not always return a deviceId. Prefer
                 # the explicit deviceId of the same SN-matched getList record,
                 # if present; never infer it from Tuya or another camera.
@@ -281,6 +284,7 @@ class AosuCloudClient:
                 self._standalone_c9c_sn=None
                 self._standalone_c9c_coop_id=None
                 self._standalone_c9c_cp_source='absente'
+                self._standalone_c9c_ty_cp_uuid=None
                 self._standalone_c9c_device_id=None
             # One private target for the opt-in read-only identity audit.
             # APK conversion path: UUIDInfoWebDataItem.coopUUID -> GzDeviceInfo.cpDeviceId.
@@ -367,6 +371,8 @@ class AosuCloudClient:
         self._camera_sn_index.clear()
         self._standalone_c9c_sn=None
         self._standalone_c9c_coop_id=None
+        self._standalone_c9c_ty_cp_uuid=None
+        self._standalone_c9c_device_id=None
         self._standalone_c9c_cp_source='absente'
         self._c5l_sn=None
         self._c5l_coop_present=False
