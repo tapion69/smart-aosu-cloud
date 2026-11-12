@@ -2,6 +2,8 @@
 import ast
 import json
 import runpy
+import time
+import types
 import unittest
 from pathlib import Path
 
@@ -105,6 +107,47 @@ class TestTyCpUuidIdentity(unittest.TestCase):
         self.assertNotIn('print(', (BASE/'c9c_cp_reference_b32.py').read_text())
         ast.parse(api)
         ast.parse(route)
+
+    def test_private_same_session_detail_uuid_report_never_sends_video(self):
+        inspect = runpy.run_path(
+            str(BASE / 'c9c_identity_diagnostic.py')
+        )['inspect_c9c_identity_cache']
+        client = types.SimpleNamespace(
+            _standalone_c9c_sn=SN,
+            _standalone_c9c_coop_id=None,
+            _standalone_c9c_ty_cp_uuid=TYUUID,
+            _c9c_reverse_uuid_cache={
+                'created':time.monotonic(),
+                'session_uid':'FAKE_SESSION_UID',
+                'target':DEVICEID,
+                'candidates':(('uuid_tuya',TYUUID),)
+            }
+        )
+        data={'camera':{'is_camera':True,'model':'C9C','via_device':None}}
+        cache={'created':time.monotonic(),
+               'session_uid':'FAKE_SESSION_UID',
+               'devices':{DEVICEID:{'devId':DEVICEID}}}
+        result=inspect(
+            data=data,client=client,cache=cache,
+            select_standalone=TOPO['select_standalone_c9c_key'],
+            select_tuya=TOPO['select_tuya_standalone_target'],
+            select_tuya_typed=choose)
+        comparison=result['comparaison_ty_cp_uuid']
+        self.assertTrue(comparison['ty_cp_uuid_aosu_present'])
+        self.assertTrue(comparison['uuid_tuya_present'])
+        self.assertTrue(comparison['concordance_directe'])
+        self.assertFalse(result['correspondance']['identite_exacte_confirmee'])
+        self.assertFalse(result['video_lancee'])
+        self.assertEqual(result['commandes_camera'],0)
+        for secret in (TYUUID,DEVICEID,SN,'FAKE_SESSION_UID'):
+            self.assertNotIn(secret,json.dumps(result))
+        client._c9c_reverse_uuid_cache['session_uid']='OTHER_SESSION'
+        bad=inspect(
+            data=data,client=client,cache=cache,
+            select_standalone=TOPO['select_standalone_c9c_key'],
+            select_tuya=TOPO['select_tuya_standalone_target'],
+            select_tuya_typed=choose)
+        self.assertFalse(bad['comparaison_ty_cp_uuid']['concordance_directe'])
 
     def test_existing_c5l_h1l_and_readonly_selector_remain_unchanged(self):
         self.assertTrue(TOPO['has_h1l_video_topology']({
