@@ -652,6 +652,7 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     aosu_coop=getattr(client,'_standalone_c9c_coop_id',None))
                 client._c9c_reverse_uuid_cache={
                     'created':time.monotonic(),
+                    'session_uid':session.uid,
                     'target':target,
                     'candidates':extract_tuya_detail_cp_candidates(
                         detail,target)}
