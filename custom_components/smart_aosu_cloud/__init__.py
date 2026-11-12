@@ -137,6 +137,16 @@ async def async_setup(hass,config):
         ])
     except RuntimeError:
         pass
+    # Beta42: dedicated versioned C9C resource. A fresh URL forces the
+    # Lovelace ES module to reload; the previous B1 path remains compatible.
+    # This alias serves the SAME public JS, not a second custom-element class.
+    try:
+        await hass.http.async_register_static_paths([
+            StaticPathConfig('/smart-aosu/c9c-autonome-b42.js',
+                str(Path(__file__).resolve().parent/'frontend'/'c9c-autonome-b1.js'),False)
+        ])
+    except RuntimeError:
+        pass
     # B142: new named C9 card and C5L 16:9/fullscreen card. Existing resources untouched.
     try:
         await hass.http.async_register_static_paths([
@@ -447,6 +457,7 @@ async def async_setup(hass,config):
             select_tuya_typed=select_tuya_standalone_target_typed)
         result['actualisation_inventaire_tuya']=refreshed
         result['appels_reseau']=network_calls
+        result['version_diagnostic']='b42'
         return result
 
     async def diagnostiquer_c9c_complet_b31(call):
