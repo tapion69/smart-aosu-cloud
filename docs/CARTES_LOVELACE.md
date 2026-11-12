@@ -45,7 +45,21 @@ Cette configuration est différente des C9C3CA11 reliées à une station H1L.
 Le PTZ de ce modèle **n'est pas autorisé** : ne pas utiliser la carte C5L
 qui comporte des flèches PTZ. Ajouter la ressource JS de type module :
 
-- `/smart-aosu/c9c-autonome-b1.js`
+- `/smart-aosu/c9c-autonome-b42.js` (bêta42 et suivantes)
+
+**Important après une mise à jour depuis b1 / bêta41 :** dans
+**Paramètres → Tableaux de bord → Ressources**, remplacer l'ancienne
+ressource JavaScript `/smart-aosu/c9c-autonome-b1.js` par
+`/smart-aosu/c9c-autonome-b42.js`, **sans ajouter les deux**.
+Le fichier précédent reste servi pour les anciennes cartes, mais
+l'ancien module peut rester mémorisé par le navigateur.
+Actualiser ensuite avec `Ctrl+F5` ou ouvrir une nouvelle fenêtre privée.
+
+Le type YAML de la carte ne change **pas**. Le bouton « Vérifier identité »
+doit commencer par `Carte b42 ; diagnostic serveur : b42` pour prouver
+que le JavaScript et le service Home Assistant sont bien à jour.
+Si l'un des deux affiche une version ancienne/non confirmée, ne pas
+interpréter l'absence de `cpUuid` comme un résultat réel du test.
 
 Puis utiliser la vraie entité créée pour la caméra autonome :
 
