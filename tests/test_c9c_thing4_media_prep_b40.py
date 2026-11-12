@@ -101,7 +101,7 @@ class TestThing4MediaPrepB40(unittest.TestCase):
         src=(BASE/'tuya_rtc_inventory.py').read_text()
         self.assertIn('summarize_thing4_media_alignment_b40(',src)
         self.assertIn('report, _volatile = inspect_rtc_media(',src)
-        self.assertIn("selection != 'identite_exacte'",src)
+        self.assertIn("and selection not in (",src)
         self.assertIn("'c9c_identite_aosu_tuya_non_prouvee'",src)
         self.assertLess(src.index("selection != 'identite_exacte'"),
                         src.index("run_tuya_mqtt_offer("))
