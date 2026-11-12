@@ -134,12 +134,18 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const match=report.correspondance||{};
       const aosu=report.identite_aosu||{};
       const device=report.unique_appareil_tuya||{};
+      const ty=report.comparaison_ty_cp_uuid||{};
+      const yn=v=>v===true?'oui':'non';
       this._message('Diagnostic : '+report.etat+
         (report.cause ? ' ('+report.cause+')' : '')+
         ' ; liaison exacte : '+(match.identite_exacte_confirmee===true?'oui':'non')+
         ' ; SN concordants : '+String(match.serie_exacte_nombre??'?')+
         ' ; coopUUID concordants : '+String(match.coop_exact_nombre??'?')+
-        ' ; coopUUID AOSU présent : '+(aosu.coop_uuid_present===true?'oui':'non')+
+        ' ; coopUUID AOSU présent : '+yn(aosu.coop_uuid_present)+
+        ' ; cpUuid Ty AOSU présent : '+yn(aosu.ty_cp_uuid_present)+
+        ' ; UUID Tuya récent : '+yn(ty.uuid_tuya_present)+
+        ' ; cpUuid AOSU = UUID Tuya : '+yn(ty.concordance_directe)+
+        ' (ne prouve pas encore la vidéo)'+
         ' ; catégorie Tuya absente : '+(device.categorie_absente===true?'oui':'non')+
         ' ; modèle Tuya présent : '+(device.modele_present===true?'oui':'non')+
         ' ; sélection RTC : '+String(match.selection_rtc||'non disponible')+
