@@ -46,30 +46,30 @@ class TestTyCpUuidIdentity(unittest.TestCase):
                 self.assertIsNone(uuid)
 
     def test_typed_uuid_links_only_to_tuya_uuid_not_devid(self):
-        devices = {'cam': {'devId': DEVICEID, 'uuid': TYUUID,
+        devices = {DEVICEID: {'devId': DEVICEID, 'uuid': TYUUID,
                            'skills': {'p2pType': 4}}}
         self.assertEqual(choose(devices, camera_sn=SN,
                                 camera_ty_cp_uuid=TYUUID),
-                         ('cam', 'identite_exacte_ty_cp_uuid'))
+                         (DEVICEID, 'identite_exacte_ty_cp_uuid'))
         # AOSU Ty cpUuid equalling an arbitrary Tuya devId is not an
         # identity proof: the original implementation conflated these.
         self.assertEqual(
             choose(devices, camera_sn=SN, camera_ty_cp_uuid=DEVICEID),
-            ('cam', 'appareil_tuya_unique_sans_categorie_video'))
+            (DEVICEID, 'appareil_tuya_unique_sans_categorie_video'))
         self.assertEqual(
-            choose({'cam': {'devId': DEVICEID, 'uuid': TYUUID}},
+            choose({DEVICEID: {'devId': DEVICEID, 'uuid': TYUUID}},
                    camera_sn=SN, camera_cp_device_id=DEVICEID),
-            ('cam', 'appareil_tuya_unique_sans_categorie_video'))
+            (DEVICEID, 'appareil_tuya_unique_sans_categorie_video'))
 
     def test_cp_device_id_and_sn_are_independently_typed(self):
-        devices = {'cam': {'devId': DEVICEID, 'cpDeviceId': CPID}}
+        devices = {DEVICEID: {'devId': DEVICEID, 'cpDeviceId': CPID}}
         self.assertEqual(choose(devices, camera_sn=SN,
                                 camera_cp_device_id=CPID),
-                         ('cam', 'identite_exacte_cp_device_id'))
+                         (DEVICEID, 'identite_exacte_cp_device_id'))
         self.assertEqual(
-            choose({'cam': {'devId': DEVICEID, 'serialNumber': SN}},
+            choose({DEVICEID: {'devId': DEVICEID, 'serialNumber': SN}},
                    camera_sn=SN),
-            ('cam', 'identite_exacte_serie'))
+            (DEVICEID, 'identite_exacte_serie'))
 
     def test_ambiguous_or_contradictory_links_never_select_camera(self):
         ambiguous = {
