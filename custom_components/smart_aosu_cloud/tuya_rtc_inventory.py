@@ -14,7 +14,8 @@ from .tuya_uid_gateway import (TuyaAuthSession, OEMGatewayError,
 from .tuya_media_bootstrap import inspect_rtc_media
 from .tuya_mqtt_signaling import run_tuya_mqtt_signalisation
 from .tuya_mqtt_offer import run_tuya_mqtt_offer
-from .camera_topology import select_tuya_standalone_target
+from .camera_topology import (select_tuya_standalone_target,
+                             select_tuya_standalone_target_typed)
 from .c9c_rtc_schema import summarize_c9c_rtc_schema
 from .c9c_moto_signal import resolve_rtc_moto_id
 from .c9c_mqtt_classify import inspect_sleep_dp149
@@ -496,10 +497,23 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     or standalone_c9c_sdk_b37_audit):
                 # The C5L-specific selector is intentionally NOT reused here:
                 # any unrelated C5L match must never override a C9C selection.
-                target, selection = select_tuya_standalone_target(
-                    all_devices,
-                    camera_sn=getattr(client, '_standalone_c9c_sn', None),
-                    camera_coop=getattr(client, '_standalone_c9c_coop_id', None))
+                if (standalone_c9c_video_test or standalone_c9c_wake_only
+                        or standalone_c9c_wake_then_video):
+                    # Android uses GzDeviceInfo.cpDeviceInfo.cpUuid for
+                    # platform Ty; a CP deviceId is NOT a Tuya devId/uuid.
+                    # Never authorize traffic from a weak matching heuristic.
+                    target, selection = select_tuya_standalone_target_typed(
+                        all_devices,
+                        camera_sn=getattr(client, '_standalone_c9c_sn', None),
+                        camera_cp_device_id=getattr(
+                            client, '_standalone_c9c_coop_id', None),
+                        camera_ty_cp_uuid=getattr(
+                            client, '_standalone_c9c_ty_cp_uuid', None))
+                else:
+                    target, selection = select_tuya_standalone_target(
+                        all_devices,
+                        camera_sn=getattr(client, '_standalone_c9c_sn', None),
+                        camera_coop=getattr(client, '_standalone_c9c_coop_id', None))
                 if not target or not getattr(client, '_standalone_c9c_sn', None):
                     return {**out, 'etat': 'rtc_non_lance_c9c_non_identifiee',
                             'methode_selection_rtc': selection}
@@ -509,7 +523,10 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 # relationship, not the AOSU C9C serial's identity.
                 if ((standalone_c9c_video_test or standalone_c9c_wake_only
                      or standalone_c9c_wake_then_video)
-                        and selection != 'identite_exacte'):
+                        and selection not in (
+                            'identite_exacte_serie',
+                            'identite_exacte_cp_device_id',
+                            'identite_exacte_ty_cp_uuid')):
                     # Never reuse credentials from an earlier manual probe.
                     client._tuya_oem_media_bootstrap=None
                     return {**out,
