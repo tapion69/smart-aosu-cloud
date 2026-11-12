@@ -103,7 +103,7 @@ class TestThing4MediaPrepB40(unittest.TestCase):
         self.assertIn('report, _volatile = inspect_rtc_media(',src)
         self.assertIn("and selection not in (",src)
         self.assertIn("'c9c_identite_aosu_tuya_non_prouvee'",src)
-        self.assertLess(src.index("selection != 'identite_exacte'"),
+        self.assertLess(src.index("and selection not in ("),
                         src.index("run_tuya_mqtt_offer("))
         self.assertNotIn("read('thing.m.rtc.session.init'",src)
         preflight=(BASE/'c9c_sdk_preflight_b37.py').read_text()
