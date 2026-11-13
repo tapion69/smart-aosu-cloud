@@ -136,8 +136,8 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const device=report.unique_appareil_tuya||{};
       const ty=report.comparaison_ty_cp_uuid||{};
       const yn=v=>v===true?'oui':'non';
-      const backend=report.version_diagnostic==='b42'?'b42':'ancienne_ou_non_confirmee';
-      this._message('Carte b42 ; diagnostic serveur : '+backend+
+      const backend=report.version_diagnostic==='b43'?'b43':'ancienne_ou_non_confirmee';
+      this._message('Carte b43 ; diagnostic serveur : '+backend+
         ' ; résultat : '+report.etat+
         (report.cause ? ' ('+report.cause+')' : '')+
         ' ; liaison exacte : '+(match.identite_exacte_confirmee===true?'oui':'non')+
@@ -145,6 +145,7 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         ' ; coopUUID concordants : '+String(match.coop_exact_nombre??'?')+
         ' ; coopUUID AOSU présent : '+yn(aosu.coop_uuid_present)+
         ' ; cpUuid Ty AOSU présent : '+yn(aosu.ty_cp_uuid_present)+
+        ' ; source CP AOSU : '+(['getlist_sn','detail_sn_session'].includes(aosu.ty_cp_uuid_source)?aosu.ty_cp_uuid_source:'aucune')+
         ' ; UUID Tuya récent : '+yn(ty.uuid_tuya_present)+
         ' ; cpUuid AOSU = UUID Tuya : '+yn(ty.concordance_directe)+
         ' (ne prouve pas encore la vidéo)'+
@@ -409,7 +410,8 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
         'references_cp_multiples_ambigues','champs_identite_manquants',
         'reference_cp_incoherente','reponse_non_conforme',
         'reponse_sans_coop_uuid','coop_uuid_retourne_sans_device_id',
-        'reponse_plusieurs_entrees_non_concluante','entree_mal_formee']
+        'reponse_plusieurs_entrees_non_concluante','entree_mal_formee',
+        'non_relancee_beta43']
         .includes(reverse.etat)?reverse.etat:'non_confirmee';
       const sourceAosu=['aucune','fiche_SN','inventaire_SN'].includes(
         reverse.source_device_id_aosu)?reverse.source_device_id_aosu:'aucune';
@@ -426,7 +428,13 @@ class SmartAosuC9CAutonomeB1 extends HTMLElement {
       const shape=reverse.structure_reponse_cp||{};
       const number=Number.isInteger(shape.entrees)&&shape.entrees>=0
         &&shape.entrees<=30?shape.entrees:0;
-      this._message('Fiche AOSU : obtenue ; liaison inverse : '+lookupState+
+      const detailSource=['cp_uuid_detail_sn_verifie','cp_uuid_absent_du_detail',
+        'numero_serie_absent','numero_serie_contradictoire',
+        'cp_uuid_contradictoire','detail_non_conforme','detail_refuse',
+        'structure_non_reconnue'].includes(data.ty_cp_uuid_detail_source)
+        ?data.ty_cp_uuid_detail_source:'non_disponible';
+      this._message('Fiche AOSU : obtenue ; cpUuid Ty source détail : '+detailSource+
+        ' ; liaison inverse : '+lookupState+
         ' ; références disponibles : '+availableCount+
         ' ; référence testée : '+tested+
         ' ; entrées AOSU : '+number+
