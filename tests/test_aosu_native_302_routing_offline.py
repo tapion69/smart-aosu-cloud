@@ -100,7 +100,7 @@ class TestP2P302Route(unittest.TestCase):
         struct.pack_into('<I',data,0x400+24,1)
         names=N['_read_elf_dynsyms'](bytes(data))
         self.assertEqual(names,{'ThingP2PConnect_v3'})
-        self.assertNotIn('OTHER_UNTRUSTED',json.dumps(names))
+        self.assertNotIn('OTHER_UNTRUSTED',json.dumps(sorted(names)))
 
     def test_private_apk_never_committed_or_called_from_ci(self):
         self.assertIn('hashlib.sha256(raw_archive)',SOURCE)
