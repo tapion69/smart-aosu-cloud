@@ -18,7 +18,7 @@ from pathlib import Path
 from aosu_sdk_route_offline import DexIndex
 
 
-def summarize(d: DexIndex, dex_count: int) -> dict:
+def summarize(d: DexIndex, camera_dex: DexIndex, dex_count: int) -> dict:
     source = "/device/mid/TyDeviceInfoSource;"
     init_event = "/device/mid/TyDeviceInfoSource$init$1;"
     callback = "/device/mid/TyDeviceInfoSource$loadDeviceInfoList$1$1;"
@@ -31,7 +31,18 @@ def summarize(d: DexIndex, dex_count: int) -> dict:
     def m(name, method):
         return d.method(name, method)
 
+    camera = camera_dex.method("/ty/TyCameraCenter;", "Oooo000")
+    resolver = camera_dex.method("/ty/TyDeviceCenter;", "Oooo000")
     facts = {
+        "aosu_cp_id_read_before_sdk_translation":
+            camera_dex.field_access(
+                resolver, "/model/GzDeviceInfo;", "cpDeviceId", (0x54,)),
+        "tuya_sdk_translates_identifier_for_camera":
+            camera_dex.calls(
+                camera, "/spi/iot/IotDevice;", "Oooo000"),
+        "thing_camera_created_via_sdk":
+            camera_dex.calls(
+                camera, "/api/IThingIPCCore;", "createCameraP2P"),
         # Platform Ty list retrieval is an IotDevice SDK operation, not an
         # AOSU HTTP getList/getInfoBySn API response.
         "tuya_sdk_async_device_list":
@@ -99,12 +110,14 @@ def analyze(path: Path) -> dict:
             inner = outer
         with inner:
             item = inner.getinfo("classes15.dex")
-            if item.file_size > 20_000_000:
+            item2 = inner.getinfo("classes16.dex")
+            if item.file_size > 20_000_000 or item2.file_size > 20_000_000:
                 raise ValueError("dex_trop_grand")
             raw = inner.read("classes15.dex")
+            raw2 = inner.read("classes16.dex")
             num = len([k for k in inner.namelist()
                        if k.startswith("classes") and k.endswith(".dex")])
-    return summarize(DexIndex(raw), num)
+    return summarize(DexIndex(raw), DexIndex(raw2), num)
 
 
 def main():
