@@ -45,21 +45,28 @@ Cette configuration est différente des C9C3CA11 reliées à une station H1L.
 Le PTZ de ce modèle **n'est pas autorisé** : ne pas utiliser la carte C5L
 qui comporte des flèches PTZ. Ajouter la ressource JS de type module :
 
-- `/smart-aosu/c9c-autonome-b42.js` (bêta42 et suivantes)
+- `/smart-aosu/c9c-autonome-b43.js` (bêta43)
 
-**Important après une mise à jour depuis b1 / bêta41 :** dans
+**Important après une mise à jour depuis b42 :** dans
 **Paramètres → Tableaux de bord → Ressources**, remplacer l'ancienne
-ressource JavaScript `/smart-aosu/c9c-autonome-b1.js` par
-`/smart-aosu/c9c-autonome-b42.js`, **sans ajouter les deux**.
-Le fichier précédent reste servi pour les anciennes cartes, mais
-l'ancien module peut rester mémorisé par le navigateur.
-Actualiser ensuite avec `Ctrl+F5` ou ouvrir une nouvelle fenêtre privée.
+ressource JavaScript `/smart-aosu/c9c-autonome-b42.js` par
+`/smart-aosu/c9c-autonome-b43.js`, **sans ajouter les deux**.
+Si vous êtes encore sur b1, remplacer `b1` de la même manière.
+Les anciens fichiers restent servis, mais le navigateur peut conserver
+leur module JavaScript en mémoire. Actualiser avec `Ctrl+F5`.
 
-Le type YAML de la carte ne change **pas**. Le bouton « Vérifier identité »
-doit commencer par `Carte b42 ; diagnostic serveur : b42` pour prouver
-que le JavaScript et le service Home Assistant sont bien à jour.
-Si l'un des deux affiche une version ancienne/non confirmée, ne pas
-interpréter l'absence de `cpUuid` comme un résultat réel du test.
+Le type YAML de la carte **ne change pas**. Le bouton « Vérifier identité »
+doit commencer par `Carte b43 ; diagnostic serveur : b43` :
+le JavaScript et le service HA doivent indiquer la même version.
+
+Bêta43 : le bouton « Fiche AOSU » lit désormais uniquement
+`getInfoBySn`, déjà disponible, sans relancer la recherche CP inverse
+non concluante des versions précédentes. Il indique si le
+`cpDeviceInfo.cpUuid` a été obtenu de cette **réponse AOSU SN-vérifiée**.
+Si oui, cliquer ensuite sur « Fiche Tuya » puis « Vérifier identité »
+pour une comparaison en mémoire, sans envoi vidéo ou PTZ.
+Une valeur absente du service cloud n'est pas forcément absente
+du cache d'enrichissement Tuya de l'application Android officielle.
 
 Puis utiliser la vraie entité créée pour la caméra autonome :
 
