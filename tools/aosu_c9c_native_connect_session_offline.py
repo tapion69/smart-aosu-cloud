@@ -124,6 +124,60 @@ def summarize_native(elf: bytes) -> dict:
         "network_calls": 0,
         "secrets_or_binary_data_returned": False,
         "facts": {k: v is True for k, v in checked.items()},
+        "native_http_offer_state_facts": summarize_offer_request_gate(elf),
+    }
+
+
+
+def summarize_offer_request_gate(elf: bytes) -> dict[str, bool]:
+    """Exact static control-flow/shape evidence, never execute the RTC offer.
+
+    These AArch64 instructions are pinned to the checked APK SHA-256.
+    This proves a *conditional native path*, not that any specific C9C runs it.
+    """
+    u = lambda address: _u32(elf, address)
+    return {
+        "http_offer_skips_one_native_state": (
+            u(0x69998) == 0xB94E5808
+            and u(0x6999C) == 0x7100051F
+            and u(0x699A0) == 0x54000061
+            and u(0x699A8) == 0x14000182),
+        "http_offer_one_shot_pending_flag": (
+            u(0x699D8) == 0xB94E1E68
+            and u(0x699DC) == 0x34000548
+            and u(0x69A90) == 0x52800028
+            and u(0x69A94) == 0xB90E1E68),
+        "http_offer_sets_15000ms_wait": (
+            _bl_target(elf, 0x69A98) == 0x41700
+            and u(0x69A9C) == 0x52875308
+            and u(0x69AA0) == 0xF9071260
+            and u(0x69AA4) == 0xB90E2A68),
+        "http_offer_requires_internal_config_pointer": (
+            u(0x69AA8) == 0xF941E688
+            and u(0x69AAC) == 0xB4FFF9A8),
+        "http_offer_encodes_sdp_before_http_json": (
+            u(0x69AC4) == 0x911C2260
+            and u(0x69AC8) == 0x91101021
+            and _bl_target(elf, 0x69AD4) == 0x43690
+            and u(0x69AD8) == 0x37FFF840),
+        "http_offer_header_uses_internal_session_and_trace": (
+            u(0x69AEC) == 0x91397260
+            and u(0x69AFC) == 0x913A7260
+            and b"sessionid\x00" in elf
+            and b"trace_id\x00" in elf),
+        "http_offer_has_ice_udp_tcp_token_fields": (
+            b"udp_token\x00" in elf
+            and b"tcp_token\x00" in elf
+            and b"token\x00" in elf
+            and u(0x69C34) == 0x52824D08
+            and u(0x69C44) == 0x52834D08
+            and _bl_target(elf, 0x69C50) == 0x413A0
+            and _bl_target(elf, 0x69C60) == 0x413A0
+            and _bl_target(elf, 0x69C70) == 0x413A0),
+        "http_offer_enqueues_type5_request": (
+            u(0x69F50) == 0x528000A1
+            and _bl_target(elf, 0x69F5C) == 0x40680
+            and b"rtc_session_http_req\x00" in elf),
     }
 
 
