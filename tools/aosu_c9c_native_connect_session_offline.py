@@ -112,12 +112,26 @@ def summarize_native(elf: bytes) -> dict:
         _bl_target(elf, 0x69DB0) == 0x428F0
         and _bl_target(elf, 0x69F5C) == 0x40680
     )
+    # The locally random connect_session also acts as a command/reply key:
+    # a connect caller passes the generated string to a queue waiter;
+    # the waiter compares that key with a reply field (strncmp, max 64).
+    command_reply_match = (
+        _u32(elf, 0x60B0C) == 0xD10283A1
+        and _u32(elf, 0x60B10) == 0x910083E2
+        and _bl_target(elf, 0x60B14) == 0x6011C
+        and _u32(elf, 0x60198) == 0x910132E0
+        and _u32(elf, 0x6019C) == 0x52800802
+        and _u32(elf, 0x601A0) == 0xAA1503E1
+        and _bl_target(elf, 0x601A4) == 0x41EE0
+        and _u32(elf, 0x601A8) == 0x35FFFEC0
+    )
     return {
         "audit": "aosu_c9c_native_connect_session_offline_v1",
         "owner_apk_build": "AOSU_5.10.12",
         "static_sdk_binary_evidence_only": True,
         "c9c_runtime_path_confirmed": False,
         "native_connect_session_equals_mqtt_header_sessionid_proven": False,
+        "native_connect_session_correlates_command_reply": command_reply_match,
         "native_offer_http_required_for_c9c_proven": False,
         "working_ha_video_proven": False,
         "camera_commands": 0,
