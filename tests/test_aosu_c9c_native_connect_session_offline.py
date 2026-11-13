@@ -134,7 +134,7 @@ class TestAosuNativeConnectSession(unittest.TestCase):
 
     def test_http_offer_request_requires_udp_tcp_token_shape(self):
         altered = fake_native()
-        altered[0x119000:0x119010] = b"none" + bytes(12)
+        altered[0x119031:0x11903A] = b"z" * 9  # erase only synthetic udp_token
         state = summarize_native(bytes(altered))["native_http_offer_state_facts"]
         self.assertFalse(state["http_offer_has_ice_udp_tcp_token_fields"])
 
