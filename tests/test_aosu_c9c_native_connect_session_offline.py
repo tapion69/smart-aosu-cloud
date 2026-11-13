@@ -52,6 +52,31 @@ def fake_native() -> bytearray:
     for call, dest in ((0x69D50, 0x43C30), (0x69DB0, 0x428F0),
                        (0x69F5C, 0x40680)):
         struct.pack_into("<I", fake, call, _encode_bl(call, dest))
+    # Synthetic AArch64 instructions for the guarded native HTTP offer path.
+    instructions = {
+        0x69998: 0xB94E5808, 0x6999C: 0x7100051F,
+        0x699A0: 0x54000061, 0x699A8: 0x14000182,
+        0x699D8: 0xB94E1E68, 0x699DC: 0x34000548,
+        0x69A90: 0x52800028, 0x69A94: 0xB90E1E68,
+        0x69A9C: 0x52875308, 0x69AA0: 0xF9071260,
+        0x69AA4: 0xB90E2A68, 0x69AA8: 0xF941E688,
+        0x69AAC: 0xB4FFF9A8, 0x69AC4: 0x911C2260,
+        0x69AC8: 0x91101021, 0x69AD8: 0x37FFF840,
+        0x69AEC: 0x91397260, 0x69AFC: 0x913A7260,
+        0x69C34: 0x52824D08, 0x69C44: 0x52834D08,
+        0x69F50: 0x528000A1,
+    }
+    for offset, word in instructions.items():
+        struct.pack_into("<I", fake, offset, word)
+    for offset, dest in ((0x69A98, 0x41700), (0x69AD4, 0x43690),
+                         (0x69C50, 0x413A0), (0x69C60, 0x413A0),
+                         (0x69C70, 0x413A0)):
+        struct.pack_into("<I", fake, offset, _encode_bl(offset, dest))
+    start = 0x119000
+    for field in (b"sessionid", b"trace_id", b"token",
+                  b"udp_token", b"tcp_token", b"rtc_session_http_req"):
+        fake[start:start + len(field) + 1] = field + b"\0"
+        start += len(field) + 9
     return fake
 
 
@@ -84,12 +109,34 @@ class TestAosuNativeConnectSession(unittest.TestCase):
         result = summarize_native(bytes(fake_native()))
         self.assertEqual(len(result["facts"]), 7)
         self.assertTrue(all(result["facts"].values()))
+        self.assertEqual(len(result["native_http_offer_state_facts"]), 8)
+        self.assertTrue(all(result["native_http_offer_state_facts"].values()))
         self.assertFalse(result["native_connect_session_equals_mqtt_header_sessionid_proven"])
         self.assertFalse(result["native_offer_http_required_for_c9c_proven"])
         self.assertFalse(result["c9c_runtime_path_confirmed"])
         self.assertEqual(result["network_calls"], 0)
         self.assertEqual(result["camera_commands"], 0)
         self.assertFalse(result["secrets_or_binary_data_returned"])
+
+    def test_15_second_guard_is_not_confused_with_mqtt_timeout(self):
+        altered = fake_native()
+        struct.pack_into("<I", altered, 0x69A9C, 0x52800308)
+        state = summarize_native(bytes(altered))["native_http_offer_state_facts"]
+        self.assertFalse(state["http_offer_sets_15000ms_wait"])
+        self.assertTrue(state["http_offer_encodes_sdp_before_http_json"])
+
+    def test_native_offer_does_not_send_without_runtime_context(self):
+        altered = fake_native()
+        struct.pack_into("<I", altered, 0x69AAC, 0)
+        state = summarize_native(bytes(altered))["native_http_offer_state_facts"]
+        self.assertFalse(state["http_offer_requires_internal_config_pointer"])
+        self.assertTrue(state["http_offer_enqueues_type5_request"])
+
+    def test_http_offer_request_requires_udp_tcp_token_shape(self):
+        altered = fake_native()
+        altered[0x119000:0x119010] = b"none" + bytes(12)
+        state = summarize_native(bytes(altered))["native_http_offer_state_facts"]
+        self.assertFalse(state["http_offer_has_ice_udp_tcp_token_fields"])
 
     def test_must_have_native_random_generator_in_each_connect_mode(self):
         data = fake_native()
