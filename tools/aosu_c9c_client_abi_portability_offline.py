@@ -41,7 +41,7 @@ def _section_table(elf: bytes) -> tuple[int, list[dict[str, int]]]:
         start, size = struct.unpack_from("<QQ", elf, off + 24)
         link = struct.unpack_from("<I", elf, off + 40)[0]
         entry_size = struct.unpack_from("<Q", elf, off + 56)[0]
-        if start > len(elf) or size > len(elf) - start:
+        if kind != 8 and (start > len(elf) or size > len(elf) - start):
             raise ValueError("elf_section_outside_file")
         sections.append({"kind": kind, "start": start, "size": size,
                          "link": link, "entry_size": entry_size})
