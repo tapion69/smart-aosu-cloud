@@ -73,7 +73,37 @@ def _hex_media_key(value:object)->bytes | None:
     return key if len(key)==16 else None
 
 
-def inspect_rtc_media(raw:Any, device_id:str, local_key:str, uid:str) -> tuple[dict,PrivateMediaBootstrap|None]:
+def _c9c_rtc_device_password(raw: Any) -> str:
+    """Consume only a bounded, unambiguous password in the RTC envelope.
+
+    Valid envelopes for this manual C9C route: root, root.data,
+    root.result, and a single data/result wrapper below either one.
+    Never walk p2pConfig/session/relay or substitute localKey, UID,
+    a token, or a password from unrelated device metadata.
+    """
+    if not isinstance(raw, dict):
+        return ''
+    nodes = [raw]
+    first = [raw.get(k) for k in ('data', 'result')]
+    nodes.extend(node for node in first if isinstance(node, dict))
+    for node in first:
+        if isinstance(node, dict):
+            nodes.extend(child for k in ('data', 'result')
+                         if isinstance(child := node.get(k), dict))
+    values: set[str] = set()
+    for node in nodes[:7]:
+        if 'password' not in node:
+            continue
+        value = node['password']
+        if (not isinstance(value, str) or not 1 <= len(value) <= 2048
+                or value != value.strip() or not value.isprintable()):
+            return ''
+        values.add(value)
+    return next(iter(values)) if len(values) == 1 else ''
+
+
+def inspect_rtc_media(raw:Any, device_id:str, local_key:str, uid:str,
+                      *, standalone_c9c:bool=False) -> tuple[dict,PrivateMediaBootstrap|None]:
     """Classify fixed known fields and optionally build a media offer in RAM.
 
     A successful RTC read is *not* a completed P2P media handshake. Never treat
@@ -146,7 +176,13 @@ def inspect_rtc_media(raw:Any, device_id:str, local_key:str, uid:str) -> tuple[d
         ice_servers=list(ices) if isinstance(ices,list) else [],
         log_config=dict(p2p.get('log')) if isinstance(p2p.get('log'),dict) else {},
         trace_id=session.get('traceId','') if isinstance(session.get('traceId'),str) else '',
-        device_password=raw.get('password','') if isinstance(raw,dict) and isinstance(raw.get('password',''),str) else '')
+        # Preserve legacy C5L/H1L behavior exactly. For standalone C9C the
+        # camera password can live inside the cloud API's data envelope.
+        # Pass the value only to channel-0 auth, never to service outputs.
+        device_password=(_c9c_rtc_device_password(raw)
+            if standalone_c9c is True else
+            (raw.get('password','') if isinstance(raw,dict)
+             and isinstance(raw.get('password',''),str) else '')))
     report['offre_sdp_aes_kcp_preparee']=True
     report['etat']='offre_locale_preparee_non_envoyee'
     return report,private
