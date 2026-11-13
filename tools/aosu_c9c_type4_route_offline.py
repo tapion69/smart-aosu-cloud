@@ -122,6 +122,62 @@ def summarize(dex: DexIndex) -> dict:
     }
 
 
+def _native_p2p_skill(so: bytes) -> int:
+    """Read only initialized g_p2p_skill from the exact APK's ELF dynsym.
+
+    No native execution, strings export, code, addresses, tokens or SDK binary
+    committed. Symbol/section bounds are validated before reading four bytes.
+    """
+    if len(so) < 64 or so[:6] != b'\x7fELF\x02\x01':
+        raise ValueError('elf64_missing')
+    if struct.unpack_from('<H', so, 18)[0] != 183:
+        raise ValueError('arm64_required')
+    shoff = struct.unpack_from('<Q', so, 40)[0]
+    width, count = struct.unpack_from('<HH', so, 58)
+    if width != 64 or count < 3 or count > 400 or shoff + count*64 > len(so):
+        raise ValueError('bad_sections')
+    sections = []
+    for i in range(count):
+        off = shoff + i*64
+        kind = struct.unpack_from('<I', so, off+4)[0]
+        addr, fileoff, size = struct.unpack_from('<QQQ', so, off+16)
+        link = struct.unpack_from('<I', so, off+40)[0]
+        entsize = struct.unpack_from('<Q', so, off+56)[0]
+        if kind != 8 and (fileoff > len(so) or size > len(so)-fileoff):
+            raise ValueError('bad_section_bounds')
+        sections.append((kind, addr, fileoff, size, link, entsize))
+    found = []
+    for kind, _, off, size, link, entry in sections:
+        if kind != 11:
+            continue
+        if entry != 24 or link >= len(sections):
+            raise ValueError('bad_symbols')
+        strkind, _, string_off, string_size, _, _ = sections[link]
+        if strkind != 3 or string_size > 1_000_000:
+            raise ValueError('bad_dynstr')
+        st = so[string_off:string_off+string_size]
+        for p in range(off, off+size, entry):
+            if p+24 > off+size:
+                break
+            name_off = struct.unpack_from('<I', so, p)[0]
+            shndx = struct.unpack_from('<H', so, p+6)[0]
+            value, sz = struct.unpack_from('<QQ', so, p+8)
+            if name_off >= len(st):
+                continue
+            end = st.find(b'\x00', name_off, min(len(st), name_off+100))
+            if end < 0 or st[name_off:end] != b'g_p2p_skill':
+                continue
+            if shndx >= len(sections) or sz != 4:
+                raise ValueError('skill_symbol_invalid')
+            sekind, vaddr, secoff, secsz, _, _ = sections[shndx]
+            if sekind == 8 or not (vaddr <= value <= vaddr + secsz - 4):
+                raise ValueError('skill_pointer_invalid')
+            found.append(struct.unpack_from('<I', so, secoff+value-vaddr)[0])
+    if len(found) != 1:
+        raise ValueError('skill_symbol_not_unique')
+    return found[0]
+
+
 def analyze(apk: Path) -> dict:
     if apk.stat().st_size > 350_000_000:
         raise ValueError('archive_trop_grande')
@@ -136,7 +192,15 @@ def analyze(apk: Path) -> dict:
             info = inner.getinfo('classes6.dex')
             if info.file_size > 12_000_000:
                 raise ValueError('dex_trop_grand')
-            return summarize(DexIndex(inner.read('classes6.dex')))
+            report = summarize(DexIndex(inner.read('classes6.dex')))
+        with zipfile.ZipFile(io.BytesIO(outer.read(
+                'split_config.arm64_v8a.apk'))) as native:
+            info = native.getinfo('lib/arm64-v8a/libThingP2PSDK.so')
+            if info.file_size > 8_000_000:
+                raise ValueError('native_oversized')
+            report['native_p2p_skill_1635_confirmed'] = (
+                _native_p2p_skill(native.read(info)) == 1635)
+        return report
 
 
 def main() -> None:
