@@ -188,3 +188,30 @@ Les corrections existantes de la branche `fix/c9c-thing4-rtc-password-provenance
 **Cause encore ouverte :** malgré une API RTC plus fidèle, la récupération correcte du mot de passe et la correspondance structurelle de l'initialisation Java, la couche Python ne reproduit pas les états/callbacks de `ThingCameraInterface.connect` ni le routage natif effectif ; de plus l'identité complète AOSU↔Tuya de la C9C extérieure n'a pas été établie. Une nouvelle bêta à tester chez l'utilisateur serait prématurée.
 
 **Prochaine décision technique :** évaluer si le chemin de session **client** Thing-4 peut être porté sous Home Assistant OS, en distinguant strictement les SDK Android client et les SDK Linux destinés au firmware des appareils. Aucune modification des cartes ou services C5L/H1L, et aucun PTZ C9C autonome.
+
+## 12. Vérification directe d'une constante du SDK natif : `p2p_skill=1635`
+
+**Nouveau fait prouvé sur l'APK AOSU 5.10.12 originale, SHA-256 strict :** dans `libThingP2PSDK.so` ARM64, la table de symboles dynamiques ELF contient le symbole global initialisé `g_p2p_skill` (objet de **4 octets**) ; son **contenu initial vaut 1635** (entier little-endian). Ce résultat provient de l'archive originale possédée par l'utilisateur, analysée **sans exécuter la bibliothèque**.
+
+Le champ de l'offre MQTT `p2p_skill: 1635` dans `tuya_mqtt_offer._media_payload` est donc conforme à **la valeur initiale réelle de la bibliothèque native AOSU**. Il ne faut pas le changer par intuition. En revanche, on ne prouve pas ici que le global ne soit jamais modifié avant le direct d'une C9C donnée.
+
+**Attention aux deux notions de `skill` :** `CameraInfoBean.getSkill()` et `ConfigCameraBean.getSkill()` sont des accesseurs de chaîne de caractères dans la couche Java. Le champ numérique de l'en-tête `p2p_skill` provient de la bibliothèque P2P. Leur nom proche **ne permet pas d'affirmer qu'ils se substituent l'un à l'autre**.
+
+Pour `security_level=3`, la preuve est plus limitée : les quatre octets contigus précédant `g_p2p_skill` sont `03 00 00 00`, mais ce voisinage **ne suffit pas à nommer ce champ**. Une capture externe indépendante de la famille Tuya/Thing P2P contient réellement `p2p_skill:1635` et `security_level:3`. Cela renforce l'intérêt de conserver les valeurs actuelles, sans certifier l'état interne de la C9C. Référence externe : https://github.com/thekoma/aventproxy/blob/main/WHITEPAPER.md (sections LAN et IMM cloud, **sur un matériel différent**).
+
+### Hypothèse de session id : divergence entre références, pas de correction aveugle
+
+- Dans notre chemin Python `tuya_mqtt_offer._media_payload`, l'en-tête `header.sessionid` reprend `p2pConfig.session.sessionId` reçu dans la RTC ; un autre identifiant de rendez-vous calculé localement est injecté dans `tcp_token.sessionId`.
+- Le projet Python MIT `roquerodrigo/tuya-ipc-p2p-sdk` suit la **même séparation**, avec la même provenance de `header.sessionid` et un `tcp_token.sessionId` propre au relais.
+- Dans la capture native LAN d'**un autre modèle** du projet Aventproxy, l'en-tête `sessionid` ressemble plutôt à un rendez-vous généré `devId + epoch + aléa`. Ce résultat n'est pas une capture d'offre C9C, et il n'est **pas démontré** que l'offre MQTT AOSU 5.10.12 utilise la même convention.
+
+**Règle de développement : ne pas remplacer l'identifiant de session au hasard.** La prochaine recherche utile est la *provenance exacte* de `connect_session` / `sessionid` pour le parcours Thing-4 avec `p2pSpecifiedType=4`, ainsi que la vérification du routage MQTT / LAN. Cela reste une hypothèse ouverte susceptible d'expliquer l'absence de SDP answer pour HA.
+
+### Régression reproductible sans code propriétaire
+
+- Le script existant `tools/aosu_c9c_type4_route_offline.py` vérifie désormais le symbole `g_p2p_skill` dans l'ELF **de l'APK utilisateur** et retourne uniquement le booléen `native_p2p_skill_1635_confirmed`.
+- `tests/test_aosu_c9c_type4_route_offline.py` vérifie la lecture via ELF synthétique, y compris un symbole de valeur différente et des bornes invalides.
+- GitHub Actions : workflow `Smart AOSU C9C type-4 offline proof`, exécution [43492369006](https://github.com/tapion69/smart-aosu-cloud/actions/runs/43492369006) **réussie** avec les nouveaux tests synthétiques.
+- Aucun paquet réseau, caméra, log sensible ou APK/ELF propriétaire n'a été envoyé au CI.
+
+**Conclusion du point : une valeur a été validée, pas la session.** La caméra C9C autonome n'est toujours pas opérationnelle sur HA. Les trois caméras historiques ainsi que `main` restent inchangées.
