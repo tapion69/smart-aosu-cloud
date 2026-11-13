@@ -34,12 +34,12 @@ class FakeDex:
             words[44] = 0x0838
             words[45] = 11
             return struct.pack('<75H', *words)
-        if fn == 'sendMessageThroughMqtt':
+        if fn in ('sendMessageThroughMqtt','lan302Publish'):
             return b'\x11\x22'
         return b''
     def calls(self, source, cls, name):
         return name in ('send302MessageThroughMqtt','getDeviceBean',
-                        'getPv','getLocalKey','lan302Publish','publish')
+                        'getPv','getLocalKey','lan302Publish','publish','lanControl')
 
 
 class TestP2P302Route(unittest.TestCase):
@@ -67,7 +67,7 @@ class TestP2P302Route(unittest.TestCase):
         self.assertEqual(r['appels_reseau'],0)
         self.assertEqual(r['actions_camera'],0)
         self.assertFalse(r['identifiants_et_secrets_retournes'])
-        self.assertEqual(len(r['faits']),13)
+        self.assertEqual(len(r['faits']),14)
 
     def test_partial_callback_not_reported_as_complete(self):
         r = N['summarize'](FakeDex(), {'ThingP2PSetSignaling'})
