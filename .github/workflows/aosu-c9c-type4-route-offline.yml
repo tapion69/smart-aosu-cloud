@@ -1,0 +1,29 @@
+name: Smart AOSU C9C type-4 offline proof
+
+on:
+  push:
+    branches:
+      - experiment/c9c-native-session-contract
+    paths:
+      - tools/aosu_c9c_type4_route_offline.py
+      - tests/test_aosu_c9c_type4_route_offline.py
+      - .github/workflows/aosu-c9c-type4-route-offline.yml
+  pull_request:
+    paths:
+      - tools/aosu_c9c_type4_route_offline.py
+      - tests/test_aosu_c9c_type4_route_offline.py
+      - .github/workflows/aosu-c9c-type4-route-offline.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-dex-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run type-4 route synthetic tests
+        run: python -m unittest discover -s tests -p 'test_aosu_c9c_type4_route_offline.py' -v
