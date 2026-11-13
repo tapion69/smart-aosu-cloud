@@ -14,13 +14,19 @@ SOURCE = (ROOT/'tools'/'aosu_native_302_routing_offline.py').read_text('utf-8')
 TREE = ast.parse(SOURCE)
 DEFS = [n for n in TREE.body if isinstance(n, ast.FunctionDef)
         and n.name in ('_read_elf_dynsyms','_check_thing_send302_gate',
-                       'summarize')]
+                       '_unique_matching_method','summarize_pv22','summarize')]
 EXPORTS = {
     "native_mqtt_bridge": "_ZN16ThingSmartP2PSDK22SendMessageThroughMQTTEPcS0_j",
     "native_lan_bridge": "_ZN16ThingSmartP2PSDK21SendMessageThroughLANEPcS0_j",
     "native_connection_v3": "ThingP2PConnect_v3",
     "native_http_callback": "ThingP2PSetHttpResult",
     "native_signaling_callback": "ThingP2PSetSignaling",
+    "native_preconnect_v2":
+        "_ZN16ThingSmartP2PSDK28thing_p2p_rtc_pre_connect_v2EPcS0_S0_j",
+    "native_thing_connect_v2":
+        "_ZN16ThingSmartP2PSDK24thing_p2p_rtc_connect_v2EPcS0_S0_jS0_jS0_ii",
+    "native_thing_connect_v3":
+        "_ZN16ThingSmartP2PSDK24thing_p2p_rtc_connect_v3EPcS0_S0_jS0_jS0_iii",
 }
 N = {'struct':struct,'DexIndex':object,'_REQUIRED_EXPORTS':EXPORTS}
 exec(compile(ast.Module(body=DEFS, type_ignores=[]),
@@ -40,6 +46,34 @@ class FakeDex:
     def calls(self, source, cls, name):
         return name in ('send302MessageThroughMqtt','getDeviceBean',
                         'getPv','getLocalKey','lan302Publish','publish','lanControl')
+
+
+class FakePv22Dex:
+    """Synthetic same-name overloads and structural Java call graph."""
+    methods = [
+        ('Lcom/thingclips/sdk/mqtt/ppdpppq;', 'bdpdqbp'),
+        ('Lcom/thingclips/sdk/mqtt/qpbpqpq;', 'bdpdqbp'),
+        ('Lcom/thingclips/sdk/mqtt/qpqddqd;', 'bdpdqbp'),
+        ('Lcom/thingclips/sdk/mqtt/qpqddqd;', 'bdpdqbp'),
+        ('Lcom/thingclips/sdk/mqtt/pbbppqb;', 'bdpdqbp'),
+    ]
+    code = {
+        0: b'\\x00\\x00' + bytes.fromhex('cdcc0c40'),
+        1: b'ENCODER',
+        2: b'SERIALIZER',
+        3: b'BUILDER',
+        4: bytes(50),
+    }
+    relations = {
+        b'\\x00\\x00' + bytes.fromhex('cdcc0c40'):
+            {'checkPvVersion','bdpdqbp'},
+        b'ENCODER': {'bdpdqbp','intToBytes2','contact','getBytes'},
+        b'SERIALIZER': {'toJSONString','encryptWithBytes'},
+        b'BUILDER': {'setData','setProtocol','setT'},
+        bytes(50): {'crc32','intToBytes2'},
+    }
+    def calls(self, raw, cls, name):
+        return name in self.relations.get(raw,set())
 
 
 class TestP2P302Route(unittest.TestCase):
@@ -67,7 +101,7 @@ class TestP2P302Route(unittest.TestCase):
         self.assertEqual(r['appels_reseau'],0)
         self.assertEqual(r['actions_camera'],0)
         self.assertFalse(r['identifiants_et_secrets_retournes'])
-        self.assertEqual(len(r['faits']),14)
+        self.assertEqual(len(r['faits']),17)
 
     def test_partial_callback_not_reported_as_complete(self):
         r = N['summarize'](FakeDex(), {'ThingP2PSetSignaling'})
@@ -75,6 +109,23 @@ class TestP2P302Route(unittest.TestCase):
         self.assertFalse(r['faits']['native_lan_bridge'])
         self.assertTrue(r['faits']['native_signaling_callback'])
         self.assertFalse(r['parite_protocole_thing4_prouvee'])
+
+    def test_original_java_pv22_uses_aes_crc32_and_full_three_fields(self):
+        sdk=FakePv22Dex()
+        fields=N['summarize_pv22'](sdk)
+        self.assertEqual(len(fields),7)
+        self.assertTrue(all(fields.values()))
+        sdk.code[0]=b'\\x00\\x00' * 3
+        fields=N['summarize_pv22'](sdk)
+        self.assertFalse(fields['java_selector_version_2_2'])
+        self.assertTrue(fields['crc32_entete_s_o'])
+
+    def test_native_preconnection_export_not_a_usable_python_sdk(self):
+        sdk=N['summarize'](FakeDex(),set(EXPORTS.values()))
+        for key in ('native_preconnect_v2',
+                    'native_thing_connect_v2','native_thing_connect_v3'):
+            self.assertTrue(sdk['faits'][key])
+        self.assertFalse(sdk['parite_protocole_thing4_prouvee'])
 
     def test_elf_symbols_can_be_read_without_loading_vendor_code(self):
         data=bytearray(1800)
