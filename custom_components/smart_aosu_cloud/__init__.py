@@ -82,6 +82,7 @@ from .network_config import optional_station_ip
 from .camera_topology import (select_standalone_c9c_key,
     select_tuya_standalone_target, select_tuya_standalone_target_typed)
 from .c9c_identity_diagnostic import inspect_c9c_identity_cache
+from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
 from .c9c_detail_probe import probe_c9c_detail
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
 
@@ -143,6 +144,15 @@ async def async_setup(hass,config):
     try:
         await hass.http.async_register_static_paths([
             StaticPathConfig('/smart-aosu/c9c-autonome-b42.js',
+                str(Path(__file__).resolve().parent/'frontend'/'c9c-autonome-b1.js'),False)
+        ])
+    except RuntimeError:
+        pass
+    # Beta43: versioned C9C resource only. B1 and B42 stay available, so
+    # no C5L/H1L resource registration or card type changes.
+    try:
+        await hass.http.async_register_static_paths([
+            StaticPathConfig('/smart-aosu/c9c-autonome-b43.js',
                 str(Path(__file__).resolve().parent/'frontend'/'c9c-autonome-b1.js'),False)
         ])
     except RuntimeError:
@@ -454,10 +464,11 @@ async def async_setup(hass,config):
             data=runtime.data,client=client,cache=cache,
             select_standalone=select_standalone_c9c_key,
             select_tuya=select_tuya_standalone_target,
-            select_tuya_typed=select_tuya_standalone_target_typed)
+            select_tuya_typed=select_tuya_standalone_target_typed,
+            resolve_ty_uuid=resolve_aosu_ty_cp_uuid)
         result['actualisation_inventaire_tuya']=refreshed
         result['appels_reseau']=network_calls
-        result['version_diagnostic']='b42'
+        result['version_diagnostic']='b43'
         return result
 
     async def diagnostiquer_c9c_complet_b31(call):
