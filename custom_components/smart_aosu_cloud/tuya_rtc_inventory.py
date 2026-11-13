@@ -26,6 +26,7 @@ from .c9c_webrtc_channel_b23 import subscribe_webrtc_once
 from .c9c_tuya_device_b27 import summarize_tuya_device_b27
 from .c9c_full_audit_b31 import run_full_c9c_audit_b31
 from .c9c_cp_reverse_read import extract_tuya_detail_cp_candidates
+from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
 from .c9c_sdk_preflight_b37 import summarize_native_prerequisites_b37, compare_rtc_sdk_b38, summarize_thing4_media_alignment_b40
 
 _LOCK = threading.Lock()
@@ -507,8 +508,7 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                         camera_sn=getattr(client, '_standalone_c9c_sn', None),
                         camera_cp_device_id=getattr(
                             client, '_standalone_c9c_coop_id', None),
-                        camera_ty_cp_uuid=getattr(
-                            client, '_standalone_c9c_ty_cp_uuid', None))
+                        camera_ty_cp_uuid=resolve_aosu_ty_cp_uuid(client)[0])
                 else:
                     target, selection = select_tuya_standalone_target(
                         all_devices,
