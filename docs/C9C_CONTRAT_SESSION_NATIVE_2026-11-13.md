@@ -90,3 +90,26 @@ Une nouvelle lecture directe de `classes6.dex` confirme que les méthodes suivan
 **Preuve de liaison :** `ThingSmartCameraP2PSync.requestCameraConfig` (#5947) invoque la **surcharge #4282** ; `ThingSmartCameraP2PSync.innerConnect` (#5914) invoque `requestCameraConfig`. Dans cette chaîne visible, la configuration passe donc par `config.get`, **pas** par `session.init`.
 
 Les autres surcharges existent dans le SDK, mais aucun chemin d'exécution propre à la C9C ne prouve que `session.init` soit requis. Ne pas injecter cet appel sur la seule base de sa présence dans les DEX. Les index sont propres à ce build 5.10.12.
+
+## 8. Trace de la configuration **avant** le connecteur natif
+
+Examen direct du corps de `ThingSmartCameraP2PSync.processCameraInfo` (méthode DEX #5931, `classes6.dex`). Cette méthode prépare un `ConfigCameraBean` à partir de la fiche `CameraInfoBean`, puis appelle `createDeviceIPC` (#5884). `createDeviceIPC` invoque `ICameraP2P.createDevice` avec callback.
+
+Les références de méthode observées dans `processCameraInfo` comprennent :
+- `getP2pSpecifiedType → setP2pType` ;
+- `getId → setP2pId` pour un chemin de configuration ;
+- `getP2PConfigStr → setToken` ;
+- `getSkill → setSkill` ;
+- `DeviceBean.getLocalKey → setLocalKey` ;
+- `CameraInfoBean.getPassword` et `MD5Utils.md5AsBase64` avant `setPassword` dans le même corps ;
+- `setDevId`, `setClientTraceId`, `setConfigJson` et, selon le chemin, informations produit/segmentation vidéo.
+
+En amont, `innerConnect` (#5914) accède à `getP2pPolicy`, `getSessionTid` et `getClientTid` avant d'appeler `processCameraInfo`. `getClientTid` (#5900) construit une valeur locale à partir notamment de l'heure courante. **Le chemin exact emprunté pour la caméra C9C précise n'a pas été tracé à l'exécution** : il faut distinguer les références statiques des valeurs effectivement utilisées.
+
+### Écart de données immédiatement vérifiable côté Python
+
+`PrivateMediaBootstrap` dans `tuya_media_bootstrap.py` conserve des champs extraits du RTC (session, AES, ICE, TCP, localKey, SDP) et un `device_password` ; **il ne construit pas le `ConfigCameraBean` de Thing** ni son contexte complet. `tuya_mqtt_offer._media_payload` ne consomme pas `device_password` et fixe `p2p_skill=1635` ainsi que `security_level=3` sans preuve de leur équivalence avec `CameraInfoBean.getSkill` et la politique native.
+
+Il existe donc un **écart concret de contrat d'initialisation**, indépendamment de la possibilité de déchiffrer le protocole MQTT 2.2. Ce n'est pas une preuve qu'un champ particulier, ajouté à l'offre Python, suffira à faire fonctionner la vidéo.
+
+**Prochaine vérification hors ligne prioritaire :** identifier les conditions de branchement dans `processCameraInfo` pour le P2P type 4 et la façon dont `ConfigCameraBean` est transmis au moteur P2P ; seulement ensuite décider si une adaptation Python portable est réalisable. Aucune nouvelle offre, ni changement de `main`, n'est justifié pour le moment.
