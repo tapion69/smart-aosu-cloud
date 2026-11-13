@@ -15,6 +15,8 @@ import struct
 import zipfile
 from pathlib import Path
 
+from aosu_sdk_route_offline import DexIndex
+
 EXPECTED_APK_SHA256 = (
     "ec176ce3bdd000cd514371137fff6d8b2141bbde061c3fb2ab3892d7a72b52d7"
 )
@@ -125,6 +127,33 @@ def summarize_native(elf: bytes) -> dict:
     }
 
 
+def summarize_java_bridge(dex: DexIndex) -> dict[str, bool]:
+    """Recognize Java HTTP callback/response paths without extracting payloads."""
+    callback = dex.method("/p2p/p2psdk/ThingP2PSDK;", "onHttpRequest")
+    success = dex.method("/p2p/p2psdk/ThingP2PSDK$pdqppqb;", "onSuccess")
+    failure = dex.method("/p2p/p2psdk/ThingP2PSDK$pdqppqb;", "onFailure")
+    proxy_success = dex.method("/p2p/p2psdk/ThingP2PSDK$bdpdqbp;", "onSuccess")
+    facts = {
+        "java_native_http_callback_present": bool(callback),
+        "java_http_proxy_route": bool(callback and dex.calls(
+            callback, "/p2p/api/IHttpProxy;", "onHttpRequest")),
+        "java_http_business_route": bool(callback and dex.calls(
+            callback, "/android/network/Business;", "asyncRequest")),
+        "java_http_post_body_prepared": bool(callback and dex.calls(
+            callback, "/android/network/ThingApiParams;", "setPostData")),
+        "java_business_success_returns_to_native": bool(
+            success and dex.calls(
+                success, "/p2p/p2psdk/ThingP2PSDK;", "setHttpResponse")),
+        "java_business_failure_returns_to_native": bool(
+            failure and dex.calls(
+                failure, "/p2p/p2psdk/ThingP2PSDK;", "setHttpResponse")),
+        "java_proxy_success_returns_to_native": bool(
+            proxy_success and dex.calls(
+                proxy_success, "/p2p/p2psdk/ThingP2PSDK;", "setHttpResponse")),
+    }
+    return facts
+
+
 def analyze(apk: Path) -> dict:
     if not apk.is_file() or apk.stat().st_size > _MAX_APK_BYTES:
         raise ValueError("apk_not_available")
@@ -139,7 +168,17 @@ def analyze(apk: Path) -> dict:
             lib = native.getinfo("lib/arm64-v8a/libThingP2PSDK.so")
             if lib.file_size > _MAX_ELF_BYTES:
                 raise ValueError("elf_oversized")
-            return summarize_native(native.read(lib))
+            result = summarize_native(native.read(lib))
+        base_info = outer.getinfo("base.apk")
+        if base_info.file_size > 260_000_000:
+            raise ValueError("base_apk_oversized")
+        with zipfile.ZipFile(io.BytesIO(outer.read(base_info))) as base:
+            dex_info = base.getinfo("classes6.dex")
+            if dex_info.file_size > 12_000_000:
+                raise ValueError("dex_oversized")
+            dex = DexIndex(base.read(dex_info))
+        result["java_http_bridge_facts"] = summarize_java_bridge(dex)
+        return result
 
 
 def main() -> None:
