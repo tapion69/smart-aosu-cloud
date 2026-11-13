@@ -1,4 +1,4 @@
-# Smart AOSU Cloud — 0.8.13-beta32 (essai C9C autonome, correction identification)
+# Smart AOSU Cloud — 0.8.13-beta43 (C9C autonome : identification AOSU/Tuya expérimentale)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
@@ -22,6 +22,24 @@ Les ressources propriétaires sont importées uniquement depuis l'ordinateur du 
 **Limitations :** les fichiers doivent correspondre précisément au build AOSU 5.10.12 étudié ; une autre version est rejetée. Les cartes Lovelace doivent encore être ajoutées en suivant [docs/CARTES_LOVELACE.md](docs/CARTES_LOVELACE.md). Voir [docs/INSTALLATION_TEST.md](docs/INSTALLATION_TEST.md) pour le détail et [docs/PLAN_TEST.md](docs/PLAN_TEST.md) pour le test physique.
 
 **Confidentialité :** ne publiez jamais APK, OEM ZIP, `profile.json`, mot de passe, jeton, IP, MAC, numéro de série, captures ou logs non expurgés. Une APK modifiée reste soumise aux droits de son éditeur ; chaque testeur doit utiliser des copies qu'il est autorisé à utiliser. Le code original est proposé sous PolyForm Strict 1.0.0, sous réserve des droits de tiers.
+
+## 0.8.13-beta43 — source AOSU Ty cpUuid issue du détail SN
+
+Le compte Tuya retourne un UUID réel pour la C9C autonome, mais le JSON AOSU
+`getList` n'expose pas `cpDeviceInfo.cpUuid`. L'application Android
+reconstitue sa fiche `GzDeviceInfo` en joignant le cache Tuya SDK.
+Cette bêta vérifie **sans aucun envoi vidéo** si `getInfoBySn`,
+la fiche AOSU déjà autorisée, porte ce champ pour le numéro de série
+exact de la caméra. Si oui, la référence reste en mémoire, attachée
+à la session et expire en une heure. Les requêtes inverses CP répétées
+ont été retirées de ce bouton.
+
+Pour forcer la nouvelle carte, remplacer l'ancienne ressource par
+`/smart-aosu/c9c-autonome-b43.js` (même type YAML
+`custom:smart-aosu-c9c-autonome-b1`). Voir
+[le protocole de test bêta43](docs/C9C_BETA43_AOSU_CP_UUID_FICHE_SN_2026-11-13.md).
+L'identification de la C9C autonome et la vidéo native Thing-4
+**ne sont pas encore validées**.
 
 ## C9C autonome — essai vidéo expérimental (0.8.13-beta5)
 
