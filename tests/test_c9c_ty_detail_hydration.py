@@ -100,6 +100,17 @@ class TestC9CDetailHydration(unittest.TestCase):
         c._standalone_c9c_ty_cp_uuid=None
         self.assertEqual(resolve(c),(None,'aucune'))
 
+    def test_missing_aosu_session_blocks_even_getlist_identity(self):
+        c=client()
+        c._standalone_c9c_ty_cp_uuid='OLD_LOGIN_CP_UUID'
+        c._sid=None
+        self.assertEqual(resolve(c),(None,'aucune'))
+        c._sid=SID
+        c._uid=None
+        self.assertEqual(resolve(c),(None,'aucune'))
+        api=(BASE/'api.py').read_text(encoding='utf8')
+        self.assertIn('self._standalone_c9c_ty_cp_uuid=None',api)
+
     def test_failed_detail_invalidates_previous_cached_mapping(self):
         c=client()
         remember(c,detail(),SN)
