@@ -132,3 +132,44 @@ La chaîne de références est statiquement prouvée pour le **SDK embarqué**, 
 La prochaine intervention de code valable doit être **une étude de portabilité de la phase `setCameraConfig → connect`, limitée à C9C autonome**. Si son comportement dépend de routines ARM64 Android propriétaires non réimplémentables de manière légitime et fiable sur HA OS x86-64, il faudra constater cette limite ; ne pas transposer artificiellement la signature Java en paramètres MQTT sans preuve.
 
 **Aucun changement de caméra, de configuration utilisateur, de service PTZ ni de `main` n'a été réalisé.**
+
+## 10. NOUVEAU — branche Thing/P2P type 4 vérifiée sur les instructions DEX réelles
+
+Audit indépendant hors ligne de l'APK originale AOSU 5.10.12, empreinte SHA-256 vérifiée. Cette section complète et affine les sections 8 et 9 ; il ne s'agit **pas** d'une connexion réelle à la C9C.
+
+### Bifurcation vérifiée dans `processCameraInfo` (#5931)
+
+La méthode occupe 14 registres, dont 6 registres d'arguments ; **`v11` désigne bien le troisième argument, `CameraInfoBean`**. Le sélecteur lit `getP2pSpecifiedType` en `v5`.
+
+- À l'instruction 133, `const/4 v6, #4`. L'instruction 134 compare `v5` et `v6` (`if-ne`) et saute au type suivant lorsque le type n'est pas 4.
+- **Pour le type 4**, les instructions 136–160 réalisent `CameraInfoBean.getId → ConfigCameraBean.setP2pId`, `getP2PConfigStr → setToken`, `getSkill → setSkill`.
+- À l'instruction 164 commence une autre bifurcation (`const/4 v6, #2`). **Pour le type 2**, le SDK accède à `CameraInfoBean.getP2pId` puis à `getP2PConfigInitStr` et `getP2PConfigKeyStr` ; il ne s'agit pas du chemin type 4.
+
+**Conséquence nouvelle :** il y a *deux espaces d'identification et deux étapes* à distinguer :
+
+1. Côté **AOSU → SDK**, l'adaptateur `IotDevice.Oooo000` permet d'appeler `createCameraP2P` (pont `cpDeviceId` encore non prouvé à l'exécution sur cette C9C).
+2. Côté **configuration RTC / P2P-4**, `ConfigCameraBean.p2pId` reçoit **`CameraInfoBean.id`**, et non `CameraInfoBean.p2pId`. Dans les réponses RTC de la bêta40, cet `id` était identique au `devId` Tuya **du candidat interrogé**, sans preuve définitive de son identité AOSU.
+
+Ainsi, l'absence de `p2pId` dans un RTC de type 4 **n'est pas une raison suffisante de déclarer la réponse inutilisable**.
+
+### Transmission du `CameraInfoBean` complet au moteur
+
+Après préparation des champs, la méthode `processCameraInfo` effectue un `JSON.toJSONString(v11)` (instruction 308), où `v11` est l'objet **CameraInfoBean entier**. Le résultat `v9` est transmis à `ConfigCameraBean.setConfigJson` (instruction 312).
+
+Dans `IPCThingP2PCamera.connect` (#3998), `ConfigCameraBean.getConfigJson` (instruction 263) est transmis à `ThingCameraInterface.setCameraConfig` (279) **si non vide**, avant un appel à l'une des trois surcharges de `ThingCameraInterface.connect` (302, 335 ou 360, selon les conditions).
+
+La séquence locale `initNativeOnce → IThingP2P.init / initP2PModule` ainsi que `startPreview` ont aussi été vérifiées dans les méthodes concernées. Cela confirme un **contrat d'initialisation plus riche que notre seul payload MQTT**. L'appel `setCameraConfig` est conditionnel : ne pas écrire qu'il est impératif pour chaque type sans autre preuve.
+
+### Réalisation reproductible et garanties
+
+- Outil ajouté à cette branche : `tools/aosu_c9c_type4_route_offline.py`, limité au SHA exact de l'APK originale, qui affiche **8 indicateurs booléens de structure SDK** et aucun identifiant ni secret.
+- Vérification locale sur l'APK réelle : **8/8 indicateurs vrais**.
+- Tests synthétiques ajoutés : `tests/test_aosu_c9c_type4_route_offline.py` ; **6/6 réussis localement**.
+- **Ne pas interpréter le 8/8 comme une vidéo opérationnelle** : il vérifie que les huit faits statiques examinés existent.
+- Pas d'exécution du SDK, pas de caméra sollicitée, pas de MQTT ni de secrets renvoyés, pas d'APK ni de DEX ajouté à GitHub.
+
+### Conséquence sur la stratégie de développement
+
+L'obstacle restant n'est **pas** résolu par l'injection arbitraire de `CameraInfoBean.id`, de `p2p_skill` ou de `configJson` dans une offre MQTT. Il faut encore déterminer si l'initialisation/connexion Thing-4 est réimplémentable proprement et de façon portable, et sous quelles conditions la C9C utilise un routage LAN ou MQTT. Le SDK mobile Android et un SDK Linux **côté appareil** ne sont pas équivalents à un SDK Linux **côté client caméra**.
+
+Pour la suite : conserver les trois caméras historiques intactes, comparer les arguments et états des trois surcharges `connect` sans secret ni émission réseau, puis décider explicitement de la faisabilité du client Home Assistant autonome. **Aucune nouvelle bêta installable ni test utilisateur ne sont justifiés à ce stade.**
