@@ -109,7 +109,7 @@ def summarize(dex: DexIndex, native_exports: set[str]) -> dict:
     jni = dex.method("/p2psdk/ThingP2PSDK;",
                      "sendMessageThroughMqtt")
     lan = dex.method("/p2p/qqpddqd;", "lan302Publish")
-    words = (tuple(struct.unpack_from("<H", sender, i)
+    words = (tuple(struct.unpack_from("<H", sender, i)[0]
                    for i in range(0, len(sender), 2))
              if sender and len(sender) % 2 == 0 else ())
     checked = _check_thing_send302_gate(words)
