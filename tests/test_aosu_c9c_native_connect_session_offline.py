@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from aosu_c9c_native_connect_session_offline import (
-    _bl_target, _u32, summarize_native,
+    _bl_target, _u32, summarize_native, summarize_java_bridge,
 )
 
 
@@ -55,7 +55,31 @@ def fake_native() -> bytearray:
     return fake
 
 
+class FakeJavaDex:
+    """Method-index proxy, not a real or redistributed vendor DEX."""
+    def __init__(self, absent=None):
+        self.absent = absent
+    def method(self, cls, name):
+        if (cls, name) == self.absent:
+            return b""
+        return b"\\x11"
+    def calls(self, code, cls, name):
+        return name in ("onHttpRequest", "asyncRequest", "setPostData",
+                        "setHttpResponse")
+
+
 class TestAosuNativeConnectSession(unittest.TestCase):
+    def test_java_callback_covers_proxy_business_and_native_result(self):
+        facts = summarize_java_bridge(FakeJavaDex())
+        self.assertEqual(len(facts), 7)
+        self.assertTrue(all(facts.values()))
+
+    def test_java_bridge_missing_result_path_not_declared_complete(self):
+        absent = ("/p2p/p2psdk/ThingP2PSDK$pdqppqb;", "onSuccess")
+        facts = summarize_java_bridge(FakeJavaDex(absent))
+        self.assertFalse(facts["java_business_success_returns_to_native"])
+        self.assertTrue(facts["java_business_failure_returns_to_native"])
+
     def test_all_evidence_with_purely_synthetic_elf(self):
         result = summarize_native(bytes(fake_native()))
         self.assertEqual(len(result["facts"]), 7)
