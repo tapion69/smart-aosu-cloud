@@ -113,3 +113,22 @@ En amont, `innerConnect` (#5914) accède à `getP2pPolicy`, `getSessionTid` et `
 Il existe donc un **écart concret de contrat d'initialisation**, indépendamment de la possibilité de déchiffrer le protocole MQTT 2.2. Ce n'est pas une preuve qu'un champ particulier, ajouté à l'offre Python, suffira à faire fonctionner la vidéo.
 
 **Prochaine vérification hors ligne prioritaire :** identifier les conditions de branchement dans `processCameraInfo` pour le P2P type 4 et la façon dont `ConfigCameraBean` est transmis au moteur P2P ; seulement ensuite décider si une adaptation Python portable est réalisable. Aucune nouvelle offre, ni changement de `main`, n'est justifié pour le moment.
+
+## 9. Trace Java complète : initialisation native → configuration → connexion → aperçu
+
+Vérification hors ligne supplémentaire des références de méthodes dans `classes6.dex` de l'APK 5.10.12 exacte :
+
+1. `ThingSmartCameraP2PSync.processCameraInfo` (#5931) appelle `createDeviceIPC` (#5884), lequel invoque `ICameraP2P.createDevice`.
+2. L'implémentation `IPCThingP2PCamera.createDevice` (#4003) appelle **`initNativeOnce`** (#4030) puis `ThingCamera.createCamera`. La méthode `initNativeOnce` appelle explicitement **`ThingIPCSdk.getP2P().init`** et **`ThingCameraEngine.initP2PModule`**.
+3. `IPCThingP2PCamera.connect` (#3998) lit `ConfigCameraBean.getPassword`, `getLocalKey`, `getP2pType`, `isLan`, `getInitString`, `getClientTraceId`, `getToken` et `getSkill`. Il transmet `getConfigJson` à **`ThingCameraInterface.setCameraConfig`**, puis appelle **`ThingCameraInterface.connect`** avec les mécanismes de callbacks et les branches SDK associées.
+4. `IPCThingP2PCamera.startPreview` (#4099) vérifie notamment les états `isConnecting` / `isCameraCreated` puis invoque `ThingCameraInterface.startPreview`.
+
+**Écart de conception désormais très précisément localisé :** notre `tuya_mqtt_offer.py` sait publier des messages MQTT, mais ne crée ni l'équivalent de `ThingCamera`, ni la configuration complète `ConfigCameraBean`, ni la machine de connexion native équivalente à `ThingCameraInterface.setCameraConfig/connect`. Une publication acceptée par le broker ne remplace aucun de ces états.
+
+La chaîne de références est statiquement prouvée pour le **SDK embarqué**, mais le sous-chemin exact activé par la C9C extérieure (choix LAN/MQTT, type, préconnexion effective, arguments binaires) reste inconnu ; ne pas le déclarer confirmé matériellement.
+
+### Décision de développement mise à jour
+
+La prochaine intervention de code valable doit être **une étude de portabilité de la phase `setCameraConfig → connect`, limitée à C9C autonome**. Si son comportement dépend de routines ARM64 Android propriétaires non réimplémentables de manière légitime et fiable sur HA OS x86-64, il faudra constater cette limite ; ne pas transposer artificiellement la signature Java en paramètres MQTT sans preuve.
+
+**Aucun changement de caméra, de configuration utilisateur, de service PTZ ni de `main` n'a été réalisé.**
