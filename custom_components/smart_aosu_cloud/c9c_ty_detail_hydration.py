@@ -85,6 +85,12 @@ def remember_ty_cp_uuid_from_aosu_detail(client: Any, payload: Any,
 
 def resolve_aosu_ty_cp_uuid(client: Any) -> tuple[str | None, str]:
     """Read getList first; then only an unexpired same-SN/session detail."""
+    # Neither a former AOSU account nor a failed session may authorize
+    # active camera traffic, even if an earlier getList was successful.
+    if (not getattr(client, '_sid', None) or
+        not getattr(client, '_uid', None) or
+        not _valid_sn(getattr(client, '_standalone_c9c_sn', None))):
+        return None, 'aucune'
     getlist = getattr(client, '_standalone_c9c_ty_cp_uuid', None)
     if isinstance(getlist, str) and getlist:
         return getlist, 'getlist_sn'
