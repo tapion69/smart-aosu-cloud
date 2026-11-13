@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import time
 from typing import Any
-from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
 
 _VIDEO = frozenset(("sp", "ipc", "camera", "smart_camera"))
 _NON_VIDEO = frozenset(("gw", "gateway", "hub", "switch", "socket",
@@ -45,7 +44,8 @@ def _exact(objects: list[dict], fields: tuple[str, ...],
 
 def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
                                select_standalone, select_tuya,
-                               select_tuya_typed=None) -> dict:
+                               select_tuya_typed=None,
+                               resolve_ty_uuid=None) -> dict:
     """Classify matching evidence; uniqueness does not prove device identity."""
     result = {
         "diagnostic": "aosu_c9c_identite_cache_b5",
@@ -102,7 +102,13 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
     coop = getattr(client, "_standalone_c9c_coop_id", None)
     sn = sn if isinstance(sn, str) and sn else None
     coop = coop if isinstance(coop, str) and coop else None
-    ty_uuid, ty_source = resolve_aosu_ty_cp_uuid(client)
+    if resolve_ty_uuid is not None:
+        ty_uuid, ty_source = resolve_ty_uuid(client)
+    else:
+        # Isolated offline tests may pass only the getList-backed client.
+        ty_uuid = getattr(client, "_standalone_c9c_ty_cp_uuid", None)
+        ty_uuid = ty_uuid if isinstance(ty_uuid, str) and ty_uuid else None
+        ty_source = "getlist_sn" if ty_uuid else "aucune"
     result["identite_aosu"] = {
         "numero_serie_present": sn is not None,
         "coop_uuid_present": coop is not None,
