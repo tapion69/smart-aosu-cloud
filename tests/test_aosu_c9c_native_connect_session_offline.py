@@ -99,7 +99,9 @@ class TestAosuNativeConnectSession(unittest.TestCase):
             summarize_native(bytes(data))
 
     def test_signed_bl_decode_works_and_bounds_are_checked(self):
-        self.assertEqual(_bl_target(bytes.fromhex("e680ff97"), 0x60A88), 0x40E20)
+        code = bytearray(0x60A8C)
+        code[0x60A88:0x60A8C] = bytes.fromhex("e680ff97")
+        self.assertEqual(_bl_target(bytes(code), 0x60A88), 0x40E20)
         self.assertIsNone(_bl_target(b"\0" * 4, 0))
         with self.assertRaises(ValueError):
             _u32(b"", 0)
