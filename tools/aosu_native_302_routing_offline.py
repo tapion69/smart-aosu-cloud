@@ -28,6 +28,12 @@ _REQUIRED_EXPORTS = {
     "native_connection_v3": "ThingP2PConnect_v3",
     "native_http_callback": "ThingP2PSetHttpResult",
     "native_signaling_callback": "ThingP2PSetSignaling",
+    "native_preconnect_v2":
+        "_ZN16ThingSmartP2PSDK28thing_p2p_rtc_pre_connect_v2EPcS0_S0_j",
+    "native_thing_connect_v2":
+        "_ZN16ThingSmartP2PSDK24thing_p2p_rtc_connect_v2EPcS0_S0_jS0_jS0_ii",
+    "native_thing_connect_v3":
+        "_ZN16ThingSmartP2PSDK24thing_p2p_rtc_connect_v3EPcS0_S0_jS0_jS0_iii",
 }
 
 
@@ -101,7 +107,63 @@ def _check_thing_send302_gate(words: tuple[int, ...]) -> dict:
     }
 
 
-def summarize(dex: DexIndex, native_exports: set[str]) -> dict:
+def _unique_matching_method(index: DexIndex, cls: str,
+                            calls: tuple[tuple[str, str], ...],
+                            size: int | None = None) -> bytes:
+    """Select one exact DEX method; reject overload collisions."""
+    choices = [
+        code for idx, (name, _method) in enumerate(index.methods)
+        if name.endswith(cls) and (code := index.code.get(idx))
+        and (size is None or len(code) == size)
+        and all(index.calls(code, target_cls, method)
+                for target_cls, method in calls)
+    ]
+    return choices[0] if len(choices) == 1 else b""
+
+
+def summarize_pv22(index: DexIndex) -> dict[str, bool]:
+    """Structural 2.2 send-encoder evidence from DEX 5, NOT a native packet."""
+    dispatch = _unique_matching_method(
+        index, "/sdk/mqtt/ppdpppq;",
+        (("/android/common/utils/ThingUtil;", "checkPvVersion"),
+         ("/sdk/mqtt/qpbpqpq;", "bdpdqbp")))
+    encoder = _unique_matching_method(
+        index, "/sdk/mqtt/qpbpqpq;",
+        (("/sdk/mqtt/qpqddqd;", "bdpdqbp"),
+         ("/sdk/mqtt/pbbppqb;", "bdpdqbp"),
+         ("/android/common/utils/ByteUtils;", "intToBytes2"),
+         ("/android/common/utils/ByteUtils;", "contact")))
+    serializer = _unique_matching_method(
+        index, "/sdk/mqtt/qpqddqd;",
+        (("/alibaba/fastjson/JSON;", "toJSONString"),
+         ("/android/common/utils/AESUtil;", "encryptWithBytes")))
+    builder = _unique_matching_method(
+        index, "/sdk/mqtt/qpqddqd;",
+        (("/bean/PublishBean2_2;", "setData"),
+         ("/bean/PublishBean2_2;", "setProtocol"),
+         ("/bean/PublishBean2_2;", "setT")))
+    crc = _unique_matching_method(
+        index, "/sdk/mqtt/pbbppqb;",
+        (("/android/common/utils/CRC32Utils;", "crc32"),
+         ("/android/common/utils/ByteUtils;", "intToBytes2")),
+        size=50)
+    return {
+        "java_selector_version_2_2":
+            bool(dispatch and bytes.fromhex("cdcc0c40") in dispatch),
+        "java_encoder_2_2_present": bool(encoder),
+        "json_champs_data_protocole_t": bool(builder),
+        "fastjson_avant_aes": bool(serializer),
+        "aes_octets_chiffres": bool(serializer and
+                                   index.calls(serializer, "/AESUtil;",
+                                               "encryptWithBytes")),
+        "crc32_entete_s_o": bool(crc),
+        "bytes_entete_et_pv": bool(encoder and
+                                  index.calls(encoder, "/String;", "getBytes")),
+    }
+
+
+def summarize(dex: DexIndex, native_exports: set[str],
+              dex5: DexIndex | None = None) -> dict:
     native = {name: ref in native_exports
               for name, ref in _REQUIRED_EXPORTS.items()}
     sender = dex.method("/p2p/utils/P2PMQTTServiceManager;",
@@ -135,6 +197,8 @@ def summarize(dex: DexIndex, native_exports: set[str]) -> dict:
         **checked,
         **native,
     }
+    if dex5 is not None:
+        facts.update(summarize_pv22(dex5))
     return {
         "diagnostic": "aosu_c9c_native_302_routing_offline_v1",
         "code_etendu": "AOSU_5_10_12_ARM64",
@@ -161,6 +225,10 @@ def analyze(path: Path) -> dict:
             if info.file_size > 25_000_000:
                 raise ValueError("dex_trop_grand")
             dex = DexIndex(inner.read("classes6.dex"))
+            info5 = inner.getinfo("classes5.dex")
+            if info5.file_size > 25_000_000:
+                raise ValueError("dex5_trop_grand")
+            dex5 = DexIndex(inner.read("classes5.dex"))
         with zipfile.ZipFile(io.BytesIO(
                 outer.read("split_config.arm64_v8a.apk"))) as native:
             matches = [n for n in native.namelist()
@@ -171,7 +239,7 @@ def analyze(path: Path) -> dict:
             if info.file_size > _MAX_NATIVE_BYTES:
                 raise ValueError("bibliotheque_trop_grande")
             binary = native.read(info)
-    return summarize(dex, _read_elf_dynsyms(binary))
+    return summarize(dex, _read_elf_dynsyms(binary), dex5=dex5)
 
 
 def main() -> None:
