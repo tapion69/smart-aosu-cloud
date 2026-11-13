@@ -7,7 +7,6 @@ from __future__ import annotations
 import time
 import requests
 from .identity_audit import TARGET_INFO, summarize_info
-from .c9c_cp_reverse_read import probe_c9c_reverse_cp
 from .c9c_ty_detail_hydration import remember_ty_cp_uuid_from_aosu_detail
 
 
@@ -131,17 +130,17 @@ def probe_c9c_detail(client):
             cache = getattr(client, "_tuya_oem_inventory_cache", None)
             report = summarize_c9c_detail(parsed, sn, cache)
             report["ty_cp_uuid_detail_source"] = ty_source
-            # AOSU's Android SDK exposes getListByCoopUUIDList, which can
-            # resolve a *real Tuya inventory ID* back to the AOSU deviceId.
-            # This optional second READ occurs only during this manual,
-            # one-hour-cooldown diagnostic. No video route is activated.
-            reverse = probe_c9c_reverse_cp(
-                client, parsed, sn, cache, params=params, headers=headers,
-                known_aosu_device_id=getattr(
-                    client, '_standalone_c9c_device_id', None),
-                tuya_detail_cache=getattr(
-                    client, '_c9c_reverse_uuid_cache', None))
-            return {**base, **report, "liaison_inverse_cp": reverse,
-                    "appels_http": 1 + reverse["appels_http"]}
+            # Historical reverse CP probes (beta33-36) returned no
+            # AOSU deviceId; do not repeat the exhausted extra request.
+            # Beta43 tests a different source: the already-authorized
+            # SN-matched getInfoBySn *directly*, with ONE HTTP read only.
+            return {**base, **report,
+                    "liaison_inverse_cp": {
+                        "etat": "non_relancee_beta43",
+                        "appels_http": 0,
+                        "liaison_exacte_confirmee": False,
+                        "identifiants_retournes": False,
+                        "secrets_retournes": False},
+                    "appels_http": 1}
         except (requests.RequestException, ValueError, TypeError, KeyError):
             return {**base, "etat": "erreur_lecture", "appels_http": 1}
