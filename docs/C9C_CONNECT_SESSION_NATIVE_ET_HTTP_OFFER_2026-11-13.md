@@ -65,3 +65,28 @@ Tracer, toujours **hors ligne**, l'enchaînement entre la commande `connect_v3` 
 Tant que cette relation et l'identité AOSU↔Tuya de la C9C extérieure ne sont pas établies, **aucune offre MQTT de test ni bêta44 ne doivent être préparées**. Les 3 caméras historiques C5L / 2×C9C-H1L (vidéo, PTZ, entités) et `main` `0.8.13-beta43` sont préservées.
 
 **Nature de la conclusion :** découverte architecturale et preuve binaire reproductible, **pas une correction vidéo déjà fonctionnelle**.
+
+## 6. Nouveau : le véritable aller-retour HTTP natif ↔ Java est confirmé dans les DEX
+
+Analyse supplémentaire du **`classes6.dex` original** de la même APK AOSU 5.10.12. La classe `ThingP2PSDK` contient une méthode Java implémentée, `onHttpRequest(String,String,String)` (index DEX `13152`), et une méthode native de retour `setHttpResponse(String,int,String)` (index `13162`).
+
+Des **invocations effectives dans le bytecode**, et non une simple recherche de chaînes, montrent que `onHttpRequest` :
+- peut déléguer à `IHttpProxy.onHttpRequest(..., IHttpProxyResultCallback)` (instruction 46) ;
+- peut, selon son chemin, créer `ThingApiParams` et un corps `setPostData` (instruction 104), puis invoquer `Business.asyncRequest` (instruction 125) ;
+- branche des callbacks, dont les méthodes `ThingP2PSDK$pdqppqb.onSuccess/onFailure` et `ThingP2PSDK$bdpdqbp.onSuccess`, qui invoquent **`ThingP2PSDK.setHttpResponse`** afin de restituer la réponse au moteur natif.
+
+La bibliothèque native expose également `ThingSmartP2PSDK::HttpsRequestCallback` et le chemin JNI de réception de réponse. Le code du SDK comprend donc un **aller-retour d'une requête RTC via Java et le réseau Tuya**. Cela ne prouve **pas** que le chemin `thing.m.rtc.session.offer_1.0` est utilisé à chaque ouverture de la C9C ni que sa simple reproduction garantira une SDP answer.
+
+### Comparaison ciblée avec notre implémentation
+
+`tuya_rtc_inventory.py` authentifie le compte, lit les périphériques et la configuration RTC ; `tuya_mqtt_offer._probe` publie ensuite une `sigQry` 22 et une `offer` 302. Elle **ne reproduit pas** le moteur de session natif fournissant les demandes HTTP via `onHttpRequest` et consommant leurs résultats via `setHttpResponse`.
+
+La différence est plus précise que « il manque une valeur du SDP » : elle concerne la **coordination HTTP/RTC/MQTT d'une session**, avec des réponses que le SDK attend explicitement. Aucune réparation de ce mécanisme ne doit être improvisée en appelant la nouvelle action HTTP, car ses préconditions, sa signature authentifiée et la dépendance à l'état C9C restent à prouver.
+
+### Preuves reproductibles sur GitHub
+
+`tools/aosu_c9c_native_connect_session_offline.py` inspecte à présent à la fois le binaire ELF et le `classes6.dex` local, ne renvoyant que des booléens fixes `java_http_bridge_facts` sans contenu OEM. Les tests synthétiques ont été enrichis pour couvrir les deux branches Java et le retour natif, sans importer ni commiter l'APK.
+
+Exécution CI de la branche consolidée : [run 43499452558](https://github.com/tapion69/smart-aosu-cloud/actions/runs/43499452558) **réussie (8 tests synthétiques)**. La vérification directe sur le DEX original a également montré les références de méthodes indiquées ci-dessus ; ce n'est **pas** une preuve de succès vidéo en conditions réelles.
+
+**Travail utile restant :** tracer, sans émission réseau, les conditions d'appel du callback HTTP dans `libThingP2PSDK.so` et les états déclenchant `thing.m.rtc.session.offer_1.0`, puis vérifier le lien (ou son absence) entre `connect_session` et le `sessionid` MQTT. Ce n'est qu'avec une relation prouvée que nous pourrons concevoir un correctif C9C autonome. Aucune modification de `main` ni des caméras C5L/H1L à ce stade.
