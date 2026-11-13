@@ -1,4 +1,5 @@
 """Only synthetic DEX instruction tests: no APK, camera, account or network."""
+import struct
 import sys
 import unittest
 from pathlib import Path
