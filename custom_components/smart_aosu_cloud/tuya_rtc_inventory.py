@@ -663,9 +663,11 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 return {**out,'etat':'limite_rtc_cinq_minutes'}
             if not interactive_live:
                 _LAST_RTC[client_key]=now+300
-            # The IPC-v4 call is used ONLY for the explicitly confirmed manual
-            # standalone-C9C live test or its read-only v4 diagnostic.
-            # Generic C5L video and all H1L logic keep the previous API.
+            # The native AOSU Thing-4 CameraBusiness.requestCameraInfo
+            # reads thing.m.rtc.config.get, not m.ipc.v4.rtc.config.get.
+            # Use this SDK route ONLY for standalone C9C video. Keep IPC-v4
+            # for its explicit read-only diagnostic and wake-only probes.
+            # C5L and H1L retain their original classic RTC route.
             if standalone_c9c_ipc_v2_audit:
                 # Approved OEM method; explicit one-off read, no RTC/MQTT/P2P.
                 ipc,ipc_safe=read('thing.m.ipc.config.get',{'devId':target})
@@ -686,8 +688,7 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     'rtc_session_presente':ipc_schema['session_presente'],
                 }
                 return {**out,'etat':'ipc_v2_obtenue'}
-            rtc_ipc_v4 = (standalone_c9c_video_test is True or
-                          standalone_c9c_v4_rtc_audit is True or
+            rtc_ipc_v4 = (standalone_c9c_v4_rtc_audit is True or
                           standalone_c9c_wake_only is True or
                           standalone_c9c_webrtc_audit is True)
             rtc_method=('m.ipc.v4.rtc.config.get' if rtc_ipc_v4
