@@ -87,7 +87,9 @@ class TestP2P302Route(unittest.TestCase):
         data[0x300:0x300+len(string_data)]=string_data
         # section 1 = linked string table
         off1=0x100+64
-        struct.pack_into('<IQQ',data,off1+4,3,0x300,len(string_data))
+        struct.pack_into('<I',data,off1+4,3)
+        struct.pack_into('<Q',data,off1+0x18,0x300)
+        struct.pack_into('<Q',data,off1+0x20,len(string_data))
         # section 2 = dynsym
         off2=0x100+128
         struct.pack_into('<I',data,off2+4,11)
