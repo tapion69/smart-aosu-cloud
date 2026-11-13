@@ -72,6 +72,14 @@ def fake_native() -> bytearray:
                          (0x69C50, 0x413A0), (0x69C60, 0x413A0),
                          (0x69C70, 0x413A0)):
         struct.pack_into("<I", fake, offset, _encode_bl(offset, dest))
+    for address, opcode in (
+        (0x60B0C, 0xD10283A1), (0x60B10, 0x910083E2),
+        (0x60198, 0x910132E0), (0x6019C, 0x52800802),
+        (0x601A0, 0xAA1503E1), (0x601A8, 0x35FFFEC0),
+    ):
+        struct.pack_into("<I", fake, address, opcode)
+    for address, dest in ((0x60B14, 0x6011C), (0x601A4, 0x41EE0)):
+        struct.pack_into("<I", fake, address, _encode_bl(address, dest))
     start = 0x119000
     for field in (b"sessionid", b"trace_id", b"token",
                   b"udp_token", b"tcp_token", b"rtc_session_http_req"):
@@ -112,6 +120,7 @@ class TestAosuNativeConnectSession(unittest.TestCase):
         self.assertEqual(len(result["native_http_offer_state_facts"]), 8)
         self.assertTrue(all(result["native_http_offer_state_facts"].values()))
         self.assertFalse(result["native_connect_session_equals_mqtt_header_sessionid_proven"])
+        self.assertTrue(result["native_connect_session_correlates_command_reply"])
         self.assertFalse(result["native_offer_http_required_for_c9c_proven"])
         self.assertFalse(result["c9c_runtime_path_confirmed"])
         self.assertEqual(result["network_calls"], 0)
@@ -137,6 +146,14 @@ class TestAosuNativeConnectSession(unittest.TestCase):
         altered[0x119031:0x11903A] = b"z" * 9  # erase only synthetic udp_token
         state = summarize_native(bytes(altered))["native_http_offer_state_facts"]
         self.assertFalse(state["http_offer_has_ice_udp_tcp_token_fields"])
+
+    def test_connect_session_response_matching_is_distinct_from_rtc_session_id(self):
+        altered = fake_native()
+        struct.pack_into("<I", altered, 0x6019C, 0)
+        report = summarize_native(bytes(altered))
+        self.assertFalse(report["native_connect_session_correlates_command_reply"])
+        self.assertFalse(report["native_connect_session_equals_mqtt_header_sessionid_proven"])
+        self.assertTrue(report["facts"]["local_connect_session_generated_connect"])
 
     def test_must_have_native_random_generator_in_each_connect_mode(self):
         data = fake_native()
