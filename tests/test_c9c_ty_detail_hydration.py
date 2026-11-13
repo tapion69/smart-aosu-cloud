@@ -115,7 +115,7 @@ class TestC9CDetailHydration(unittest.TestCase):
         init=(BASE/'__init__.py').read_text(encoding='utf8')
         js=(BASE/'frontend/c9c-autonome-b1.js').read_text(encoding='utf8')
         self.assertIn('remember_ty_cp_uuid_from_aosu_detail(client, parsed, sn)',probe)
-        self.assertIn("'non_relancee_beta43'",probe)
+        self.assertIn('"non_relancee_beta43"',probe)
         self.assertNotIn('probe_c9c_reverse_cp(',probe)
         self.assertIn('resolve_aosu_ty_cp_uuid(client)[0]',route)
         self.assertIn("'version_diagnostic']='b43'",init)
