@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
-from aosu_c9c_type4_route_offline import _type2_gate, _type4_gate, summarize
+from aosu_c9c_type4_route_offline import _native_p2p_skill, _type2_gate, _type4_gate, summarize
 
 
 class SyntheticDex:
@@ -73,7 +73,47 @@ def fake_valid():
     return d.finish()
 
 
+
+def fake_skill_elf(value: int = 1635, *, machine: int = 183) -> bytes:
+    """Four tiny ELF sections with a synthetic g_p2p_skill symbol."""
+    blob = bytearray(1500)
+    blob[:6] = b'\x7fELF\x02\x01'
+    struct.pack_into('<H', blob, 18, machine)
+    struct.pack_into('<Q', blob, 40, 0x100)
+    struct.pack_into('<HH', blob, 58, 64, 4)
+    names = b'\x00g_p2p_skill\x00'
+    blob[0x300:0x300+len(names)] = names
+    # Section 1: dynstr
+    struct.pack_into('<I', blob, 0x100+64+4, 3)
+    struct.pack_into('<QQQ', blob, 0x100+64+16, 0, 0x300, len(names))
+    # Section 2: dynsym linked to dynstr
+    struct.pack_into('<I', blob, 0x100+128+4, 11)
+    struct.pack_into('<QQQ', blob, 0x100+128+16, 0, 0x400, 48)
+    struct.pack_into('<I', blob, 0x100+128+40, 1)
+    struct.pack_into('<Q', blob, 0x100+128+56, 24)
+    # Section 3: initialized data with virtual address distinct from file offset
+    struct.pack_into('<I', blob, 0x100+192+4, 1)
+    struct.pack_into('<QQQ', blob, 0x100+192+16, 0x160000, 0x500, 32)
+    # Second symbol: name offset 1, section 3, initialized value at +4
+    struct.pack_into('<IBBHQQ', blob, 0x400+24, 1, 0x11, 0, 3, 0x160004, 4)
+    struct.pack_into('<I', blob, 0x504, value)
+    return bytes(blob)
+
+
 class TestNativeType4Route(unittest.TestCase):
+
+    def test_native_named_skill_symbol_matches_verifiable_constant(self):
+        self.assertEqual(_native_p2p_skill(fake_skill_elf()), 1635)
+        self.assertNotEqual(_native_p2p_skill(fake_skill_elf(1636)), 1635)
+
+    def test_native_skill_rejects_wrong_abi_or_bad_symbol_bounds(self):
+        with self.assertRaises(ValueError):
+            _native_p2p_skill(fake_skill_elf(machine=62))
+        damaged = bytearray(fake_skill_elf())
+        struct.pack_into('<Q', damaged, 0x400 + 24 + 8, 0x170000)
+        with self.assertRaises(ValueError):
+            _native_p2p_skill(bytes(damaged))
+
     def test_synthetic_complete_contract(self):
         report = summarize(fake_valid())
         self.assertEqual(len(report['facts']), 8)
