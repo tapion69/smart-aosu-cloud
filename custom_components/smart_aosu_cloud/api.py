@@ -199,6 +199,10 @@ class AosuCloudClient:
         self._oem_identity_hints=None
         self._oem_login_flags=None
         self._standalone_c9c_ty_uuid_detail=None
+        self._standalone_c9c_ty_cp_uuid=None
+        self._standalone_c9c_coop_id=None
+        self._standalone_c9c_device_id=None
+        self._standalone_c9c_sn=None
         p=self._profile
         params,form,headers=proto.build_request_values(
             self._material,self._suffix,self.email,self.password,
@@ -357,6 +361,11 @@ class AosuCloudClient:
             self._sid=None;self._uid=None;self._login_headers=None
             self._oem_identity_hints=None
             self._oem_login_flags=None
+            self._standalone_c9c_ty_uuid_detail=None
+            self._standalone_c9c_ty_cp_uuid=None
+            self._standalone_c9c_coop_id=None
+            self._standalone_c9c_device_id=None
+            self._standalone_c9c_sn=None
             raise
 
     def inspect_oem_uid_status(self):
