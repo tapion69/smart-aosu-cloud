@@ -1,0 +1,27 @@
+name: AOSU Thing-4 native 302 LAN/MQTT routing (offline)
+
+on:
+  push:
+    paths:
+      - 'tools/aosu_native_302_routing_offline.py'
+      - 'tools/aosu_sdk_route_offline.py'
+      - 'tests/test_aosu_native_302_routing_offline.py'
+      - '.github/workflows/aosu-native-302-routing-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-route-mocks-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax only - no proprietary binaries in GitHub
+        run: python -m compileall -q tools/aosu_native_302_routing_offline.py tests/test_aosu_native_302_routing_offline.py
+      - name: Verify Java boolean LAN/MQTT branch and native callbacks (synthetic)
+        run: python -m unittest discover -s tests -p 'test_aosu_native_302_routing_offline.py' -v
