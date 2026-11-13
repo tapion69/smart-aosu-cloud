@@ -42,12 +42,12 @@ def summarize(d: DexIndex, dex_count: int) -> dict:
             d.calls(m(source, "OooO0o"), iot, "OoooO00"),
         "tuya_sdk_cache_lookup_available":
             d.calls(m(source, "OooO0oo"),
-                    "/java/util/concurrent/ConcurrentHashMap;", "get"),
+                    "/util/concurrent/ConcurrentHashMap;", "get"),
         "tuya_sdk_cp_id_cache_index":
             d.field_access(m(source, "OooOOOO"), gz_info,
                            "cpDeviceId", (0x54,)) and
             d.calls(m(source, "OooOOOO"),
-                    "/java/util/concurrent/ConcurrentHashMap;", "putAll"),
+                    "/util/concurrent/ConcurrentHashMap;", "putAll"),
         "aosu_load_device_list_calls_tuya_source":
             d.calls(m(repo_callback, "OooO00o"), source, "OooOOOo"),
         # The SDK event actually attaches PlatformDeviceInfo to the
