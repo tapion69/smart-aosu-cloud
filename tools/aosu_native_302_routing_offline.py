@@ -108,6 +108,7 @@ def summarize(dex: DexIndex, native_exports: set[str]) -> dict:
                         "send302MessageThroughMqtt")
     jni = dex.method("/p2psdk/ThingP2PSDK;",
                      "sendMessageThroughMqtt")
+    lan = dex.method("/p2p/qqpddqd;", "lan302Publish")
     words = (tuple(struct.unpack_from("<H", sender, i)
                    for i in range(0, len(sender), 2))
              if sender and len(sender) % 2 == 0 else ())
@@ -129,6 +130,8 @@ def summarize(dex: DexIndex, native_exports: set[str]) -> dict:
         "sdk_has_mqtt_publish": bool(sender and
             dex.calls(sender,"/android/camera/api/IThingHomeCamera;",
                       "publish")),
+        "sdk_lan_uses_tuya_lan_control": bool(lan and
+            dex.calls(lan, "/sdk/api/IThingDeviceListManager;", "lanControl")),
         **checked,
         **native,
     }
