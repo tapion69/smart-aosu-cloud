@@ -76,3 +76,17 @@ Ce document est public mais ne contient aucun binaire, identifiant, compte, imag
 **Références internes :** `docs/C9C_PV22_CODEC_AND_NATIVE_SESSION_GAP_2026-11-13.md`, `docs/C9C_NATIVE_THING4_SIGNAL_ROUTING_AUDIT_2026-11-13.md`, `docs/C9C_TY_SDK_BRIDGE_STATIC_AUDIT_2026-11-13.md`, `custom_components/smart_aosu_cloud/tuya_mqtt_offer.py`, `tuya_rtc_inventory.py`.
 
 **Référence externe officielle :** https://developer.tuya.com/en/docs/app-development/ipc-key-sample-live?id=Kdmyzhvgvfjmu
+
+## 7. Vérification DEX : deux surcharges RTC distinctes
+
+Une nouvelle lecture directe de `classes6.dex` confirme que les méthodes suivantes ont des **prototypes distincts** :
+
+| Méthode (index DEX) | Paramètres Java résumés | Action interne |
+| --- | --- | --- |
+| `CameraBusiness.requestCameraInfo` (#4281) | `String, ResultListener` | `thing.m.rtc.session.init` |
+| `CameraBusiness.requestCameraInfo` (#4282) | `String, Object, ResultListener` | `thing.m.rtc.config.get` |
+| `CameraBusiness.requestCameraSessionInit` (#4283) | `String, Object, ResultListener` | `thing.m.rtc.session.init` |
+
+**Preuve de liaison :** `ThingSmartCameraP2PSync.requestCameraConfig` (#5947) invoque la **surcharge #4282** ; `ThingSmartCameraP2PSync.innerConnect` (#5914) invoque `requestCameraConfig`. Dans cette chaîne visible, la configuration passe donc par `config.get`, **pas** par `session.init`.
+
+Les autres surcharges existent dans le SDK, mais aucun chemin d'exécution propre à la C9C ne prouve que `session.init` soit requis. Ne pas injecter cet appel sur la seule base de sa présence dans les DEX. Les index sont propres à ce build 5.10.12.
