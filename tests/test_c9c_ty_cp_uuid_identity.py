@@ -180,13 +180,14 @@ class TestTyCpUuidIdentity(unittest.TestCase):
         for val in (TYUUID,DEVICEID,SN,'FAKE_SESSION_UID'):
             self.assertNotIn(val,json.dumps(report))
 
-    def test_card_b42_uses_new_versioned_resource_and_backend_marker(self):
+    def test_card_b43_uses_new_versioned_resource_and_backend_marker(self):
         init=(BASE/'__init__.py').read_text(encoding='utf-8')
         js=(BASE/'frontend/c9c-autonome-b1.js').read_text(encoding='utf-8')
         self.assertIn("'/smart-aosu/c9c-autonome-b42.js'",init)
+        self.assertIn("'/smart-aosu/c9c-autonome-b43.js'",init)
         self.assertIn("'/smart-aosu/c9c-autonome-b1.js'",init)
-        self.assertIn("result['version_diagnostic']='b42'",init)
-        self.assertIn("Carte b42 ; diagnostic serveur",js)
+        self.assertIn("result['version_diagnostic']='b43'",init)
+        self.assertIn("Carte b43 ; diagnostic serveur",js)
         self.assertIn('cpUuid Ty AOSU présent',js)
         self.assertIn('UUID Tuya récent',js)
         self.assertIn('cpUuid AOSU = UUID Tuya',js)
