@@ -173,3 +173,18 @@ La séquence locale `initNativeOnce → IThingP2P.init / initP2PModule` ainsi qu
 L'obstacle restant n'est **pas** résolu par l'injection arbitraire de `CameraInfoBean.id`, de `p2p_skill` ou de `configJson` dans une offre MQTT. Il faut encore déterminer si l'initialisation/connexion Thing-4 est réimplémentable proprement et de façon portable, et sous quelles conditions la C9C utilise un routage LAN ou MQTT. Le SDK mobile Android et un SDK Linux **côté appareil** ne sont pas équivalents à un SDK Linux **côté client caméra**.
 
 Pour la suite : conserver les trois caméras historiques intactes, comparer les arguments et états des trois surcharges `connect` sans secret ni émission réseau, puis décider explicitement de la faisabilité du client Home Assistant autonome. **Aucune nouvelle bêta installable ni test utilisateur ne sont justifiés à ce stade.**
+
+## 11. Consolidation sur la branche de recherche : corrections RTC + contrat type 4
+
+Les corrections existantes de la branche `fix/c9c-thing4-rtc-password-provenance` ont été **copiées sans modification de comportement supplémentaire** vers `experiment/c9c-native-session-contract`. Le dépôt `main` et la branche d'origine sont inchangés.
+
+- `tuya_rtc_inventory.py` : pour la **vidéo active C9C autonome uniquement**, sélection de `thing.m.rtc.config.get` à la place de `m.ipc.v4.rtc.config.get` ; autres chemins de diagnostic conservés.
+- `tuya_media_bootstrap.py` : extraction bornée du mot de passe dans les enveloppes RTC autorisées pour C9C, en mémoire exclusivement ; les anciennes installations utilisent le comportement legacy.
+- Tests existants transférés : `tests/test_c9c_rtc_password_provenance.py`, `tests/test_c9c_rtc_v4_video.py`, ajustement `tests/test_c9c_rtc_v4.py` et workflow d'origine.
+- Tests nouveaux de la chaîne DEX : `tests/test_aosu_c9c_type4_route_offline.py` et `tools/aosu_c9c_type4_route_offline.py`.
+
+**CI GitHub :** contrôle type 4 synthétique réussi (run `43487722155`) ; contrôle C9C identité / RTC de la branche consolidée réussi (run `43488099136`). Ce succès CI n'est **pas une preuve de streaming vidéo**.
+
+**Cause encore ouverte :** malgré une API RTC plus fidèle, la récupération correcte du mot de passe et la correspondance structurelle de l'initialisation Java, la couche Python ne reproduit pas les états/callbacks de `ThingCameraInterface.connect` ni le routage natif effectif ; de plus l'identité complète AOSU↔Tuya de la C9C extérieure n'a pas été établie. Une nouvelle bêta à tester chez l'utilisateur serait prématurée.
+
+**Prochaine décision technique :** évaluer si le chemin de session **client** Thing-4 peut être porté sous Home Assistant OS, en distinguant strictement les SDK Android client et les SDK Linux destinés au firmware des appareils. Aucune modification des cartes ou services C5L/H1L, et aucun PTZ C9C autonome.
