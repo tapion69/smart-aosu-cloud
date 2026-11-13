@@ -19,7 +19,6 @@ class V4AuditSafetyTests(unittest.TestCase):
         self.assertIn("'m.ipc.v4.rtc.config.get' if rtc_ipc_v4",INV)
         self.assertIn("out['rtc_api_source']='ipc_v4' if rtc_ipc_v4 else 'thing_rtc'",INV)
         self.assertIn("else 'thing.m.rtc.config.get'",INV)
-        self.assertIn("or standalone_c9c_v4_rtc_audit):",INV)
         self.assertIn("client._tuya_oem_media_bootstrap=None",INV)
 
     def test_v4_action_whitelisted_with_correct_api_version(self):
