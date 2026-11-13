@@ -709,7 +709,9 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 if standalone_c9c_webrtc_channel:
                     out['webrtc_canal_b23']=subscribe_webrtc_once(
                         client,identity,signer,session,install_id,target,private_msid)
-            media,private=inspect_rtc_media(rtc,target,all_devices[target].get('localKey',''),session.uid)
+            media,private=inspect_rtc_media(
+                rtc,target,all_devices[target].get('localKey',''),session.uid,
+                standalone_c9c=(standalone_c9c_video_test is True))
             out['media_bootstrap']=media
             if standalone_c9c_v4_rtc_audit:
                 out['media_v4_pret']=private is not None
