@@ -8,6 +8,7 @@ import time
 import requests
 from .identity_audit import TARGET_INFO, summarize_info
 from .c9c_cp_reverse_read import probe_c9c_reverse_cp
+from .c9c_ty_detail_hydration import remember_ty_cp_uuid_from_aosu_detail
 
 
 def _valid(value):
@@ -124,8 +125,12 @@ def probe_c9c_detail(client):
             if len(response.content) > 262144:
                 return {**base, "etat": "reponse_trop_grande", "appels_http": 1}
             parsed = response.json()
+            # New data source: the authenticated, SN-matched detail response,
+            # not getList's web-only record. No additional network request.
+            ty_source = remember_ty_cp_uuid_from_aosu_detail(client, parsed, sn)
             cache = getattr(client, "_tuya_oem_inventory_cache", None)
             report = summarize_c9c_detail(parsed, sn, cache)
+            report["ty_cp_uuid_detail_source"] = ty_source
             # AOSU's Android SDK exposes getListByCoopUUIDList, which can
             # resolve a *real Tuya inventory ID* back to the AOSU deviceId.
             # This optional second READ occurs only during this manual,
