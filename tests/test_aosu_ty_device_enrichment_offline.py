@@ -37,9 +37,9 @@ class StubDex:
 class TestTySDKBridgeOffline(unittest.TestCase):
     def test_all_eleven_static_markers_and_no_live_claims(self):
         stub=StubDex()
-        report=audit(stub,17)
+        report=audit(stub,stub,17)
         self.assertEqual(report['dex_count'],17)
-        self.assertEqual(len(report['faits']),11)
+        self.assertEqual(len(report['faits']),14)
         self.assertTrue(all(report['faits'].values()))
         self.assertTrue(report['analyse_statique_seulement'])
         for k in ('liaison_c9c_aosu_tuya_prouvee',
@@ -58,7 +58,8 @@ class TestTySDKBridgeOffline(unittest.TestCase):
         ev='/device/mid/TyDeviceInfoSource$init$1;'
         gz='/model/GzDeviceInfo;'
         missing={((ev,'OooO00o'),gz,'setCpDataInfo')}
-        report=audit(StubDex(missing),17)
+        st=StubDex(missing)
+        report=audit(st,st,17)
         self.assertFalse(
             report['faits']['tuya_sdk_event_enriches_aosu_device'])
         self.assertTrue(
@@ -68,7 +69,7 @@ class TestTySDKBridgeOffline(unittest.TestCase):
     def test_field_and_method_namespace_are_not_conflated(self):
         sdk=StubDex({(('/device/mid/TyDeviceInfoSource;','OooOOOO'),
                     '/model/GzDeviceInfo;','cpDeviceId')})
-        report=audit(sdk,17)
+        report=audit(sdk,sdk,17)
         self.assertFalse(report['faits']['tuya_sdk_cp_id_cache_index'])
         self.assertFalse(report['liaison_c9c_aosu_tuya_prouvee'])
         self.assertEqual(set(report.keys()),
@@ -84,6 +85,7 @@ class TestTySDKBridgeOffline(unittest.TestCase):
     def test_tool_does_not_upload_or_debug_dump_apk_bytes(self):
         self.assertIn("ZipFile", SOURCE)
         self.assertIn("classes15.dex", SOURCE)
+        self.assertIn("classes16.dex", SOURCE)
         self.assertNotIn('requests.',SOURCE)
         self.assertNotIn('mqtt_publish(',SOURCE)
         self.assertNotIn('subprocess.',SOURCE)
