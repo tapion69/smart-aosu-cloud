@@ -15,6 +15,8 @@ on:
       - 'tests/test_c9c_thing4_branch_b39.py'
       - 'tests/test_c9c_thing4_media_prep_b40.py'
       - 'custom_components/smart_aosu_cloud/tuya_rtc_inventory.py'
+      - 'custom_components/smart_aosu_cloud/tuya_media_bootstrap.py'
+      - 'tests/test_c9c_rtc_password_provenance.py'
       - 'tests/test_c9c_cp_uuid_batch_b35.py'
       - 'tests/test_c9c_cp_single_b36.py'
       - 'tests/test_c9c_cp_reverse_read.py'
@@ -66,5 +68,7 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_c9c_ty_detail_hydration.py' -v
       - name: Existing C9C detail probe regression
         run: python -m unittest discover -s tests -p 'test_c9c_detail_probe.py' -v
+      - name: C9C Thing-4 nested RTC password and original channel-0 auth regression
+        run: python -m unittest discover -s tests -p 'test_c9c_rtc_password_provenance.py' -v
       - name: Legacy C5L/H1L topology and C9C selection tests
         run: python -m unittest discover -s tests -p 'test_c9c_standalone.py' -v
