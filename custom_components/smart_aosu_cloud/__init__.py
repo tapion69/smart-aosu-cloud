@@ -83,6 +83,7 @@ from .camera_topology import (select_standalone_c9c_key,
     select_tuya_standalone_target, select_tuya_standalone_target_typed)
 from .c9c_identity_diagnostic import inspect_c9c_identity_cache
 from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
+from .c9c_cp_detail_identity import resolve_aosu_cp_device_id
 from .c9c_sn_application_compare import compare_app_sn_locally
 from .c9c_detail_probe import probe_c9c_detail
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
@@ -480,7 +481,8 @@ async def async_setup(hass,config):
             select_standalone=select_standalone_c9c_key,
             select_tuya=select_tuya_standalone_target,
             select_tuya_typed=select_tuya_standalone_target_typed,
-            resolve_ty_uuid=resolve_aosu_ty_cp_uuid)
+            resolve_ty_uuid=resolve_aosu_ty_cp_uuid,
+            resolve_cp_id=resolve_aosu_cp_device_id)
         result['actualisation_inventaire_tuya']=refreshed
         result['appels_reseau']=network_calls
         result['version_diagnostic']='b43'
