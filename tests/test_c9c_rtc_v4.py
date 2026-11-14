@@ -13,12 +13,12 @@ class V4AuditSafetyTests(unittest.TestCase):
         self.assertIn("standalone_c9c_v4_rtc_audit:bool=False",INV)
         self.assertIn("if standalone_c9c_v4_rtc_audit and (",INV)
         self.assertIn("if standalone_c9c_v4_rtc_audit:\n",INV)
-        self.assertIn("standalone_c9c_video_test is True or",INV)
+        self.assertNotIn("standalone_c9c_video_test is True or\n                          standalone_c9c_v4_rtc_audit",INV)
+        self.assertIn("rtc_ipc_v4 = (standalone_c9c_v4_rtc_audit is True",INV)
         self.assertIn("standalone_c9c_v4_rtc_audit is True",INV)
         self.assertIn("'m.ipc.v4.rtc.config.get' if rtc_ipc_v4",INV)
         self.assertIn("out['rtc_api_source']='ipc_v4' if rtc_ipc_v4 else 'thing_rtc'",INV)
         self.assertIn("else 'thing.m.rtc.config.get'",INV)
-        self.assertIn("or standalone_c9c_v4_rtc_audit):",INV)
         self.assertIn("client._tuya_oem_media_bootstrap=None",INV)
 
     def test_v4_action_whitelisted_with_correct_api_version(self):

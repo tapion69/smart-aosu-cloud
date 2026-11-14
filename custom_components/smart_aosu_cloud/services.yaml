@@ -3190,3 +3190,32 @@ tester_reveil_c9c_autonome:
       required: true
       selector:
         boolean: {}
+
+
+tester_offre_http_thing4_c9c:
+  name: C9C autonome — une seule négociation RTC HTTP (essai b44)
+  description: >-
+    ESSAI EXPERIMENTAL ET MANUEL. Ouvre UNE demande HTTP
+    thing.m.rtc.session.offer v1.0 sur l'unique appareil Tuya de ce compte.
+    La correspondance du candidat avec le SN AOSU n'est pas formellement
+    prouvee : confirmer que cette installation est bien celle de la C9C
+    autonome, sans station H1L. Peut creer un etat de session distant.
+    Pas de MQTT, d'image, de reveil, de PTZ ni de stockage de secrets.
+    Une seule demande toutes les 60 minutes, sans tentative automatique.
+    Fermer la video dans l'application AOSU avant cet essai.
+  fields:
+    confirmation_camera_c9c_autonome:
+      name: Je confirme qu'il s'agit de la seule C9C autonome de ce compte
+      required: true
+      selector:
+        boolean: {}
+    confirmation_cible_unique_non_prouvee:
+      name: J'autorise l'unique cible Tuya, sans correspondance SN prouvee
+      required: true
+      selector:
+        boolean: {}
+    confirmation_offre_http:
+      name: J'autorise une seule creation de session RTC HTTP
+      required: true
+      selector:
+        boolean: {}

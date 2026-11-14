@@ -1222,6 +1222,63 @@ async def async_setup(hass,config):
             'note':'Un compteur nul ne prouve pas que la camera est absente.',
         }
 
+    async def tester_offre_http_thing4_c9c(call):
+        """Single manual C9C RTC HTTP negotiation, NO video/MQTT/PTZ."""
+        flags=('confirmation_camera_c9c_autonome',
+               'confirmation_offre_http',
+               'confirmation_cible_unique_non_prouvee')
+        if any(call.data.get(k) is not True for k in flags):
+            raise ServiceValidationError(
+                'Confirmer C9C unique, cible non prouvee et offre HTTP unique')
+        entries=[e for e in hass.config_entries.async_entries(DOMAIN)
+                 if getattr(e,'runtime_data',None)]
+        if len(entries)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active requise')
+        runtime=entries[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une seule C9C autonome sans H1L requise')
+        if runtime.live_controller.running:
+            raise ServiceValidationError('Arreter le direct avant la demande HTTP')
+        if not getattr(runtime.client,'_standalone_c9c_sn',None):
+            raise ServiceValidationError('Identite AOSU C9C non disponible')
+        raw=await hass.async_add_executor_job(partial(
+            run_tuya_oem_inventory,runtime.client,
+            confirmation_envoi_mot_de_passe=True,tester_rtc=True,
+            tester_mqtt=False,tester_offre_mqtt=False,
+            tester_relais_tcp=False,tester_kcp=False,tester_media=False,
+            standalone_c9c_http_offer_test=True,
+            confirmation_offre_http=True,
+            confirmation_cible_unique_non_prouvee=True))
+        safe=raw.get('offre_http_c9c')
+        safe=safe if isinstance(safe,dict) else {}
+        allowed={
+            'offre_http_test_termine','offre_http_cible_non_autorisee',
+            'offre_http_type4_non_prouve','offre_http_rtc_incompatible',
+            'offre_http_preparation_refusee','limite_offre_http_une_heure',
+            'offre_http_c9c_confirmation_et_exclusivite_requises',
+            'offre_http_hors_mode_interdite','test_deja_en_cours',
+            'session_AOSU_ou_profil_absent','preflight_OEM_invalide',
+            'login_UID_non_reussi','mot_de_passe_AOSU_absent',
+            'lecture_maisons_refusee','groupes_non_identifies',
+            'rtc_non_lance_c9c_non_identifiee','configuration_rtc_refusee',
+            'erreur_api_tuya','erreur_execution_sans_details',
+            'session_perdue_ou_expiree_confirmation_login_requise'}
+        return {
+            'diagnostic':'c9c_thing4_http_one_shot_b44',
+            'etat':raw.get('etat') if raw.get('etat') in allowed else 'non_lance',
+            'requete_http_effectuee':safe.get('requete_http_effectuee') is True
+                or raw.get('requete_http_effectuee') is True,
+            'serveur_accepte':safe.get('serveur_accepte') is True,
+            'rejet_explicite':safe.get('rejet_explicite') is True,
+            'methode_cible':raw.get('methode_selection_rtc')
+                if raw.get('methode_selection_rtc') in (
+                    'identite_typée','candidat_unique_autorise_manuellement')
+                else 'non_confirmee',
+            'offres_mqtt_envoyees':0,'commandes_ptz':0,
+            'video_lancee':False,'identifiants_retournes':False,
+            'secrets_retournes':False,
+        }
+
     async def demarrer_video_c9c_autonome_beta(call):
         """Explicit video-only C5L P2P experiment on one standalone C9C.
 
@@ -2580,6 +2637,9 @@ async def async_setup(hass,config):
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'observer_mqtt_c9c_autonome',
                                  observer_mqtt_c9c_autonome,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'tester_offre_http_thing4_c9c',
+                                 tester_offre_http_thing4_c9c,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'demarrer_video_c9c_autonome_beta',
                                  demarrer_video_c9c_autonome_beta,

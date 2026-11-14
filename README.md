@@ -1,8 +1,41 @@
-# Smart AOSU Cloud — 0.8.13-beta43 (C9C autonome : identification AOSU/Tuya expérimentale)
+# Smart AOSU Cloud — 0.8.13-beta44-rc1 (test HTTP RTC C9C autonome)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
 > La vidéo et le PTZ ont été confirmés en 0.8.10 sur le banc de développement (1× C5L et 2× C9C3CA11 derrière H1L). Cette nouvelle bêta n'a pas été testée physiquement ; ne l'utilisez pas comme unique système de sécurité.
+
+## 0.8.13-beta44-rc1 — essai unique HTTP RTC de la C9C autonome (14 novembre 2026)
+
+Cette version **expérimentale** ajoute une action manuelle
+`smart_aosu_cloud.tester_offre_http_thing4_c9c` pour vérifier si Tuya accepte une offre
+RTC HTTP Thing-4, avec une seule caméra C9C autonome et confirmations explicites.
+**Elle ne constitue pas une correction vidéo** : aucune image, aucun PTZ,
+aucun réveil et aucune offre MQTT ne sont déclenchés par cette action.
+La liaison AOSU ↔ Tuya de la C9C n'est pas certifiée ; l'utilisateur
+doit vérifier l'unique cible avant d'autoriser l'essai.
+L'action peut créer un état de session distant ; l'exécuter une seule fois.
+
+[Procédure complète de l'essai et retour arrière](docs/C9C_PROCEDURE_TEST_HTTP_UNIQUE_2026-11-14.md).
+
+### Mises à jour directement depuis GitHub
+
+Le dépôt comporte déjà `hacs.json` et la structure
+`custom_components/smart_aosu_cloud` nécessaires pour le gérer comme
+**dépôt personnalisé de type intégration** depuis Home Assistant :
+**Paramètres → Marketplace → Ajouter depuis un lien**
+(ou dépôt personnalisé HACS sur une ancienne version).
+URL : `https://github.com/tapion69/smart-aosu-cloud`.
+
+Une fois installé **et géré** par Marketplace/HACS, le dépôt peut recevoir ses
+mises à jour depuis GitHub sans copier manuellement les fichiers ; un
+redémarrage Home Assistant est requis après mise à jour.
+**Un dossier installé précédemment par copie manuelle ne se met pas à jour**
+automatiquement à la suite d'un commit GitHub : ne pas confondre
+publication du dépôt et installation distante.
+Conserver une sauvegarde de la version actuelle avant toute mise à jour.
+
+Cette version est un **candidat d'essai**, non validé physiquement sur la C9C
+autonome du testeur. Ne pas l'utiliser comme unique système de sécurité.
 
 ## Installation (test externe)
 
