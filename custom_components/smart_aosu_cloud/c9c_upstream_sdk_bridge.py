@@ -196,10 +196,12 @@ async def run_one_explicit_sdk_session(
         return _result("rtc_expire_avant_connexion", False, 0, 0)
     if sdk_session_factory is None:
         try:
-            from tuya_ipc_p2p_sdk.stream_session import StreamSession
+            from .c9c_sdk_safe_signaling import SafeAosuStreamSession
         except ImportError:
             raise C9CBackendError("c9c_sdk_python_non_installe") from None
-        sdk_session_factory = StreamSession
+        # Never instantiate upstream MotoClient as-is: it deliberately skips
+        # TLS verification and lacks strict answer origin/recipient checks.
+        sdk_session_factory = SafeAosuStreamSession
 
     frames = 0
 
