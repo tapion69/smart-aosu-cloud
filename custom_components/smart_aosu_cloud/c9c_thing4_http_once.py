@@ -121,6 +121,10 @@ def native_http_form(offer: object, *, target: str) -> dict[str,object]:
     native_header={k:h[k] for k in ("from","to","sessionid",
                                      "moto_id","type","trace_id",
                                      "is_pre","p2p_skill") if k in h}
+    if set(native_header) != {
+            "from","to","sessionid","moto_id","type","trace_id",
+            "is_pre","p2p_skill"}:
+        raise ValueError("c9c_http_native_header_incomplete")
     native_msg={k:body[k] for k in ("sdp","token","udp_token","tcp_token","log")
                 if k in body}
     serialized=json.dumps({"header":native_header,"msg":native_msg},
