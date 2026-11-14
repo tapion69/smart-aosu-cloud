@@ -362,6 +362,40 @@ def do_oem_read(identity:APKIdentity,signer:TuyaSigner,mode:str,
     return status['data'],safe
 
 
+def do_oem_thing4_session_offer_once(identity:APKIdentity, signer:TuyaSigner,
+                                        mode:str, session:TuyaAuthSession,
+                                        *, target:str, form_data:dict, ttid:str,
+                                        device_id:str, endpoint:str=_ENDPOINT,
+                                        explicit_consent:bool=False)->dict:
+    """ONE state-changing RTC offer request on explicit, C9C-only user action.
+
+    AOSU ThingP2PSDK.onHttpRequest splits '_1.0' into action+API version,
+    parses the JSON body and calls ThingApiParams.setPostData. This does not
+    send MQTT or initiate PTZ. No raw response or payload is returned.
+    """
+    if explicit_consent is not True:
+        raise OEMGatewayError('confirmation_offre_http_requise')
+    if not isinstance(session,TuyaAuthSession) or not all(
+            isinstance(getattr(session,k,None),str) and getattr(session,k)
+            for k in ('sid','ecode','uid')):
+        raise OEMGatewayError('session_tuya_absente')
+    if not isinstance(target,str) or not 5 <= len(target) <= 128:
+        raise OEMGatewayError('cible_c9c_invalide')
+    if not isinstance(form_data,dict) or set(form_data)!={'header','msg'}:
+        raise OEMGatewayError('corps_http_non_conforme')
+    header=form_data.get('header')
+    if (not isinstance(header,dict) or header.get('to')!=target or
+            header.get('type')!='offer' or not isinstance(form_data.get('msg'),dict)):
+        raise OEMGatewayError('cible_c9c_invalide')
+    _outer,_decoded,status=_call_api(
+        identity,signer,mode,action='thing.m.rtc.session.offer',
+        api_version='1.0',form_data=form_data,ttid=ttid,
+        device_id=device_id,endpoint=endpoint,session=session)
+    return {'http_ok':True,
+            'serveur_accepte':status['acceptation_explicite'],
+            'rejet_explicite':status['rejet_explicite']}
+
+
 def publish_ptz_stop_once(identity:APKIdentity, signer:TuyaSigner, mode:str,
                           session:TuyaAuthSession, *, dev_id:str, ttid:str,
                           device_id:str, endpoint:str=_ENDPOINT)->dict:
