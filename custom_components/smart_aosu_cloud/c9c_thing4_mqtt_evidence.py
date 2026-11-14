@@ -28,6 +28,10 @@ def _compatible_sdp(value: object) -> bool:
             "a=ice-pwd:" in value)
 
 
+def _positive_int(value: object) -> bool:
+    return type(value) is int and 0 < value <= 1_000_000_000
+
+
 @dataclass(repr=False)
 class C9CMqttSessionEvidence:
     """C9C-only: accept signals for our EXACT camera, user and offer session."""
@@ -92,6 +96,51 @@ class C9CMqttSessionEvidence:
             return "reponse_sdp_incompatible"
         self._answer_validated = True
         return "reponse_sdp_liee_a_notre_session"
+
+    def summarize_existing_relay(self, relay: object, *,
+                                 decoded_jpeg_delta: object = 0) -> dict[str, object]:
+        """Report actual relay/media evidence, not a native P2P connection.
+
+        Only the already completed relay/KCP result and number of *newly*
+        decoded preview JPEG frames are consumed. No network, video decode
+        or camera operation happens here. For C9C use only.
+        """
+        relay = relay if isinstance(relay, dict) else {}
+        kcp = relay.get("kcp")
+        kcp = kcp if isinstance(kcp, dict) else {}
+        media = kcp.get("media_start")
+        media = media if isinstance(media, dict) else {}
+        relay_signed = (relay.get("relais_signature_verifiee") is True
+                        and relay.get("relais_handshake_termine") is True)
+        # An authenticated RELAY challenge is not the camera's authenticated
+        # Thing-4 P2P connection. Keep separate fields and labels.
+        kcp_seen = relay_signed and (
+            kcp.get("conversation_video_detectee") is True or
+            media.get("conversation_video_detectee") is True)
+        encrypted_media = kcp_seen and _positive_int(
+            media.get("paquets_video_chiffres_recus"))
+        decrypted_media = encrypted_media and _positive_int(
+            media.get("paquets_video_dechiffres"))
+        complete_jpeg = decrypted_media and (
+            media.get("image_jpeg_complete_detectee") is True)
+        new_jpeg = (self._answer_validated and relay_signed and
+                    decrypted_media and _positive_int(decoded_jpeg_delta))
+        return {
+            "diagnostic": "aosu_c9c_relais_video_preuves_v1",
+            "reponse_sdp_origine_verifiee": self._answer_validated,
+            "relais_tcp_authentifie": relay_signed,
+            "canal_video_kcp_observe": kcp_seen,
+            "paquets_video_chiffres_observes": encrypted_media,
+            "paquets_video_dechiffres_observes": decrypted_media,
+            "jpeg_complet_en_memoire_detecte": complete_jpeg,
+            "nouvelle_image_preview_decodee": new_jpeg,
+            "video_visible_confirmee": new_jpeg,
+            "connexion_native_thing4_authentifiee": False,
+            "appels_reseau_supplementaires": 0,
+            "commandes_camera_supplementaires": 0,
+            "identifiants_retournes": False,
+            "secrets_retournes": False,
+        }
 
     def safe_status(self) -> dict[str, object]:
         """Strictly fixed labels/booleans/bounded counts; no device IDs."""
