@@ -146,6 +146,57 @@ https://github.com/tapion69/smart-aosu-cloud/actions/runs/43599359621 .
 **Limite inchangée :** ce diagnostic ne construit pas le moteur
 P2P natif manquant et n'établit aucune vidéo de la C9C autonome.
 
+## Vérification de la vidéo : canal KCP ≠ image décodée
+
+Les fichiers existants `tuya_relay_handshake.py`,
+`tuya_kcp_probe.py` et `tuya_channel0_probe.py`
+rapportent plusieurs preuves distinctes. Jusqu'ici, la présence
+du canal de conversation vidéo KCP `conv=1` pouvait être relayée dans
+`session_video_creee=true`, y compris sans le moindre paquet vidéo
+déchiffré, ou la moindre image.
+
+La PR n° 4 inclut maintenant les corrections suivantes,
+**limitées au parcours C9C autonome** :
+
+- `c9c_thing4_mqtt_evidence.summarize_existing_relay` analyse les
+  compteurs **déjà collectés** par le relais TCP/KCP (aucune nouvelle
+  requête ni commande). Il distingue l'authentification de la signature
+  du **relais TCP**, le canal KCP vidéo observé, les paquets chiffrés,
+  les paquets déchiffrés et les images JPEG complètes trouvées en RAM.
+- Le suivi `LivePreview.summary().images_jpeg_decodees` mesure
+  uniquement le nombre d'images décodées **après le début de cette session**.
+  Un compteur déjà positif avant la nouvelle lecture ne prouve pas
+  une nouvelle image.
+- Une image visible ne peut être confirmée que si **la réponse SDP
+  de la bonne session a été vérifiée**, le relais est authentifié,
+  le canal KCP vidéo et des paquets déchiffrés sont observés et le
+  nombre d'images JPEG décodées a **augmenté**.
+- `tuya_mqtt_offer._probe` expose
+  `preuves_media_c9c.phase_observee` et
+  `preuves_media_c9c.video_visible_confirmee`, sans exposer
+  les images, identifiants ou SDP.
+- `tuya_rtc_inventory` ne reprend plus, **pour la C9C autonome**,
+  le seul booléen `conversation_video_detectee` pour définir
+  `session_video_creee`. L'ancien comportement des C5L/H1L est
+  conservé.
+
+**Distinction essentielle :** une signature de relais TCP valide ne
+démontre pas l'authentification d'une connexion **Thing-4 native**,
+qui exige toujours un véritable adaptateur P2P. Il est légitime de
+signaler une image visiblement décodée dans le client existant sans
+prétendre que l'implémentation native Android a été reproduite.
+
+Les tests synthétiques
+`tests/test_c9c_relay_media_proofs.py` couvrent notamment le faux
+positif « canal KCP présent », les paquets déchiffrés sans image,
+une JPEG complète non affichée, une image ancienne, la signature de relais
+absente et une vraie progression d'image simulée.
+**CI réussie** :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43611654318 .
+
+**Aucun test vidéo sur caméra réelle n'est revendiqué** par ces
+modifications ; la C9C autonome du frère reste sans direct validé.
+
 ## Bloquants restants — sans nouvelle manipulation chez le frère
 
 - **Identité** : le `cpDeviceId` AOSU authentique n'était pas présent
