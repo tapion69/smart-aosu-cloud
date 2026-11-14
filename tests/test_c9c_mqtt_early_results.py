@@ -98,7 +98,8 @@ class TestC9CEarlyMQTTStatus(unittest.TestCase):
         self.assertEqual(result["etat"],"connack_non_accepte")
         self.assertFalse(result["observation_session_c9c"]["offre_emise"])
         self.assertFalse(result["observation_session_c9c"]["video_confirmee"])
-        self.assertEqual(len(sock.sent),1)
+        # CONNECT and best-effort MQTT DISCONNECT from the existing finally.
+        self.assertEqual(len(sock.sent),2)
 
     def test_suback_refusal_returns_safe_status(self):
         p,a,m,sock=compile_probe(messages=[
@@ -111,7 +112,8 @@ class TestC9CEarlyMQTTStatus(unittest.TestCase):
         self.assertFalse(status["offre_emise"])
         self.assertFalse(status["reponse_sdp_origine_verifiee"])
         self.assertFalse(status["video_confirmee"])
-        self.assertEqual(len(sock.sent),2)
+        # CONNECT, SUBSCRIBE, then best-effort MQTT DISCONNECT.
+        self.assertEqual(len(sock.sent),3)
 
     def test_legacy_c5l_has_no_c9c_observation(self):
         p,a,m,sock=compile_probe(messages=[(0x20,bytes([0,5]))])
