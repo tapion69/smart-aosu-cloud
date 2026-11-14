@@ -256,6 +256,18 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 capturer_media_localement):
             return {'etat':'offre_http_c9c_confirmation_et_exclusivite_requises',
                     'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
+        # The camera owner has observed two *explicit* cloud refusals on
+        # a candidate selected by uniqueness, not a proven AOSU/Tuya link.
+        # Native APK requires createDevice/setCameraConfig/connect/RTC state
+        # before offer_1.0. None of that state is built by this Python probe.
+        # Suspend this obsolete test rather than allow further active cloud
+        # sessions on a weak target. Re-enable only with a real session engine
+        # and an exact typed identity, reviewed on a separate branch.
+        return {'etat':'offre_http_suspendue_parite_session_absente',
+                'requete_http_effectuee':False,
+                'appel_reseau':0,'commande_camera':0,'commandes_ptz':0,
+                'offres_mqtt_envoyees':0,'video_lancee':False,
+                'secrets_retournes':False}
     elif confirmation_offre_http or confirmation_cible_unique_non_prouvee:
         return {'etat':'offre_http_hors_mode_interdite',
                 'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
