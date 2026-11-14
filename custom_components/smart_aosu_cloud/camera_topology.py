@@ -122,8 +122,17 @@ def select_tuya_standalone_target_typed(devices, *, camera_sn=None,
     """Select C9C only when typed AOSU references match typed Tuya fields.
 
     Strong links, each from independently authenticated data:
-    AOSU SN <-> Tuya device serial; AOSU cpDeviceId <-> Tuya cpDeviceId;
-    AOSU cpDeviceInfo.cpUuid <-> Tuya device uuid.
+    AOSU SN <-> Tuya device serial; AOSU cpDeviceId <-> Tuya
+    devId or explicit Tuya cpDeviceId; AOSU cpDeviceInfo.cpUuid <->
+    Tuya device uuid.
+
+    The owner APK 5.10.12 calls TyDeviceCenter.Oooo000(auroraId),
+    returning GzDeviceInfo.cpDeviceId, then passes that exact value to
+    ThingIPCSdk.createCameraP2P. Official Tuya IPC SDK defines that argument
+    as devId. Exact equality between independently fetched AOSU CP device ID
+    and an authenticated Tuya device-list devId is therefore an admissible
+    typed link, NOT equality between an arbitrary AOSU coop UUID and Tuya uuid.
+    A missing CP device ID still cannot be inferred from a unique device.
 
     The Android application uses platform Ty cpUuid for its camera bridge.
     An AOSU coopUUID/cpDeviceId must NOT be compared with a Tuya devId or
@@ -155,8 +164,16 @@ def select_tuya_standalone_target_typed(devices, *, camera_sn=None,
                   and obj['cpDeviceId']}
         uuids = {obj['uuid'] for obj in objs
                  if isinstance(obj.get('uuid'), str) and obj['uuid']}
+        # DeviceBean.devId is the real argument of Tuya createCameraP2P.
+        # The AOSU SDK passes its own SN-matched cpDeviceId directly there.
+        # A mere AOSU serial or Tuya uuid coincidence with devId does NOT
+        # qualify; only this specifically traced AOSU cpDeviceId namespace.
+        cp_as_p2p_devid = (isinstance(camera_cp_device_id, str)
+                          and bool(camera_cp_device_id)
+                          and camera_cp_device_id == dev_id)
         matches = (
             (bool(camera_sn) and camera_sn in serials)
+            or cp_as_p2p_devid
             or (bool(camera_cp_device_id) and camera_cp_device_id in cp_ids)
             or (bool(camera_ty_cp_uuid) and camera_ty_cp_uuid in uuids)
         )
@@ -175,6 +192,7 @@ def select_tuya_standalone_target_typed(devices, *, camera_sn=None,
             'serie' if camera_sn and camera_sn in serials
             else 'ty_cp_uuid' if camera_ty_cp_uuid
             and camera_ty_cp_uuid in uuids
+            else 'cp_device_id_dev_id' if cp_as_p2p_devid
             else 'cp_device_id'
         )
     if contradiction or len(evidence) > 1:
