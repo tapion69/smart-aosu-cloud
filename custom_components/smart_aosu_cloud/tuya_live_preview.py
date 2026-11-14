@@ -27,7 +27,8 @@ LIVE_SECONDS = None  # No artificial playback duration; user Stop or a stalled l
 class LivePreview:
     """A manually-activated preview with no fixed duration and JPEG held in RAM."""
 
-    def __init__(self, *, ffmpeg_path: str | None = None, on_frame=None):
+    def __init__(self, *, ffmpeg_path: str | None = None, on_frame=None,
+                 lazy_hevc: bool = False):
         self._lock = threading.Lock()
         self._metrics_lock = threading.Lock()
         self._b93_metrics = VideoMetricsB93()
@@ -46,6 +47,9 @@ class LivePreview:
         self.ptz_mqtt_observer = PassiveMqttPtzObserver()
         self._queue: queue.Queue[bytes | None] = queue.Queue(maxsize=256)
         self._ffmpeg_path = ffmpeg_path if ffmpeg_path is not None else shutil.which('ffmpeg')
+        # Standalone C9C can send direct MJPEG. Do not require HEVC/FFmpeg
+        # until real HEVC NAL units arrive; legacy C5L keeps eager FFmpeg.
+        self._lazy_hevc = lazy_hevc is True
         self._process: subprocess.Popen | None = None
         self._threads: list[threading.Thread] = []
         self._opened = False
@@ -96,14 +100,29 @@ class LivePreview:
         return self._stop.is_set()
 
     def start(self) -> bool:
-        if self._opened or self._stop.is_set() or not self._ffmpeg_path:
+        if self._opened or self._stop.is_set():
             with self._lock:
-                self._status = 'ffmpeg_indisponible' if not self._ffmpeg_path else 'demarrage_invalide'
+                self._status = 'demarrage_invalide'
             return False
-        # Forced elementary HEVC: the default 5-second stream analysis can
-        # buffer a short camera session without producing ANY JPEG while stdin
-        # remains open. The bounded probe has been tested with synthetic HEVC.
-        # Deliberately avoid -fflags +nobuffer: it dropped HEVC references.
+        if self._lazy_hevc:
+            # C9C MJPEG is displayed without FFmpeg; still allow a fallback
+            # if actual HEVC RTP NALs are later received in this session.
+            self._opened = True
+            self._ffmpeg_started_at = time.monotonic()
+            self.mark_phase_b93('preview_jpeg_pret')
+            with self._lock:
+                self._status = 'attente_video'
+            return True
+        return self._start_hevc_decoder()
+
+    def _start_hevc_decoder(self) -> bool:
+        """Start the existing decoder on demand only when C9C HEVC is seen."""
+        if self._process is not None or self._stop.is_set() or not self._ffmpeg_path:
+            if not self._lazy_hevc and not self._ffmpeg_path:
+                with self._lock:
+                    self._status = 'ffmpeg_indisponible'
+            return False
+        # Preserve the original C5L/H1L HEVC command line and threading.
         cmd = [self._ffmpeg_path, '-hide_banner', '-nostdin', '-loglevel', 'error',
                '-threads', '2', '-probesize', '32768', '-analyzeduration', '0',
                '-f', 'hevc', '-i', 'pipe:0', '-an', '-sn',
@@ -114,11 +133,15 @@ class LivePreview:
                                              stdout=subprocess.PIPE,
                                              stderr=subprocess.PIPE, bufsize=0)
         except OSError:
-            with self._lock:
-                self._status = 'echec_lancement_ffmpeg'
+            # A C9C can still produce MJPEG even when FFmpeg is absent or
+            # failed. Do not tear down its already opened direct-JPEG preview.
+            if not self._lazy_hevc:
+                with self._lock:
+                    self._status = 'echec_lancement_ffmpeg'
             return False
         self._opened = True
-        self._ffmpeg_started_at = time.monotonic()
+        if not self._ffmpeg_started_at:
+            self._ffmpeg_started_at = time.monotonic()
         self.mark_phase_b93('ffmpeg_demarre')
         with self._lock:
             self._status = 'attente_video'
@@ -245,6 +268,13 @@ class LivePreview:
         # Avoid retaining full video in RAM while preserving sequence/FU state.
         del self._decoder.nals[:]
         self._decoder._size=0
+        if self._lazy_hevc and self._process is None:
+            # Only initialize FFmpeg after seeing a *complete* HEVC NAL,
+            # never for decrypted MJPEG chunks or a bare KCP conversation.
+            has_hevc = any(nal and ((nal[0]>>1)&0x3f) in
+                           (32,33,34,19,20) for nal in added)
+            if not has_hevc or not self._start_hevc_decoder():
+                return
         for nal in added:
             typ=(nal[0]>>1)&0x3f
             if typ in (32,33,34):
