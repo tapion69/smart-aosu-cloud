@@ -206,7 +206,8 @@ def _handshake(sock: socket.socket, relay: dict, uid: str, did: str) -> dict[str
 
 
 def probe_relay_handshake(relay: Any, uid: str, did: str, *, media=None, offer=None, tester_kcp: bool=False, tester_media: bool=False, answer_sdp: str='',
-                          local_capture_directory: str | None = None, live_preview=None, ice_candidate: str | None = None) -> dict[str, object]:
+                          local_capture_directory: str | None = None, live_preview=None, ice_candidate: str | None = None,
+                          standalone_c9c: bool = False) -> dict[str, object]:
     """One raw TCP connection; bounded reads; no KCP and no camera commands."""
     out: dict[str, object] = {'diagnostic': 'aosu_tuya_relais_tcp_b19',
         'connexion_tcp_relais': False,
@@ -238,7 +239,7 @@ def probe_relay_handshake(relay: Any, uid: str, did: str, *, media=None, offer=N
                     tester_media=tester_media,answer_sdp=answer_sdp,
                     local_key=media.local_key,device_password=media.device_password,
                     local_capture_directory=local_capture_directory,live_preview=live_preview,
-                    ice_candidate=ice_candidate)
+                    ice_candidate=ice_candidate,standalone_c9c=standalone_c9c)
                 out['kcp_demarre']=bool(out['kcp'].get('tunnel_offre_relais_envoyee'))
                 if tester_media:
                     out['commande_camera']=out['kcp'].get('commandes_demarrage_video',0)
