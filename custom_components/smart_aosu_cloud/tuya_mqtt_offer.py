@@ -24,6 +24,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from .tuya_media_bootstrap import PrivateMediaBootstrap
 from .c9c_session_classify import classify_unmatched_c9c_message
+from .c9c_thing4_mqtt_evidence import C9CMqttSessionEvidence
 from .tuya_ice_b85 import ControlledIceB85
 from .tuya_relay_handshake import probe_relay_handshake
 from .tuya_mqtt_signaling import (
@@ -254,6 +255,10 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
     }
     try:
         key,offer=_media_payload(media,uid,use_moto_id=use_moto_id)
+        # Standalone C9C ONLY: passive evidence boundary around the existing
+        # MQTT connection. Never synthesizes native P2P callbacks.
+        c9c_evidence=(C9CMqttSessionEvidence(
+            media.device_id, uid, media.session_id) if use_moto_id else None)
         result['signalisation_chiffree_preparee']=True
         result['moto_id_applique']=bool(offer['header']['moto_id'])
     except (ValueError,AttributeError,TypeError):
@@ -319,6 +324,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
             'reponses_302_hors_session_emis_par_appareil': 0,
             'reponses_302_hors_session_vers_utilisateur': 0,
             'reponses_302_session_absente': 0,
+            'reponses_302_origine_invalide': 0,
+            'reponses_302_sdp_incompatible': 0,
         })
     result['signalisation_b89'] = diag
     try:
@@ -381,6 +388,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             max(0, min(60000, int(
                                 (time.monotonic() - confirmed_at) * 1000))))
                     sent_offer=True
+                    if c9c_evidence is not None:
+                        c9c_evidence.mark_offer_sent()
                     result['offre_sdp_envoyee']=True
                     diag['etape']='offre_envoyee'
                     diag['offre_envoyee']=True
@@ -425,6 +434,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             if int.from_bytes(p,'big')==11:
                                 result['ack_offre_mqtt']=True
                                 diag['puback_offre']=True
+                                if c9c_evidence is not None:
+                                    c9c_evidence.mark_puback(11)
                                 if wake_before_offer:
                                     result['reveil_et_video']['puback_offre']=True
                             continue
@@ -486,6 +497,22 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                                         unmatched['session_state']=='absente')
                                 continue
                             typ=header.get('type')
+                            if c9c_evidence is not None:
+                                verdict=c9c_evidence.classify(protocol,header,msg)
+                                if verdict == 'origine_ou_destination_incorrecte':
+                                    # An answer with the correct sessionid is
+                                    # NOT enough. Require correct from/to too.
+                                    diag['reponses_302_origine_invalide']+=1
+                                    continue
+                                if verdict == 'reponse_sdp_incompatible':
+                                    diag['reponses_302_sdp_incompatible']+=1
+                                    continue
+                                if verdict not in (
+                                    'reponse_sdp_liee_a_notre_session',
+                                    'candidat_confirme',
+                                    'deconnexion_confirmee'):
+                                    diag['messages_302_format_invalide']+=1
+                                    continue
                             if typ=='answer' and isinstance(msg.get('sdp'),str):
                                 sdp=msg['sdp']
                                 result['reponse_sdp_recue']=True
@@ -576,6 +603,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
     except (TimeoutError,socket.timeout):result['etat']='mqtt_timeout'
     except (OSError,ssl.SSLError,ConnectionError):result['etat']='mqtt_reseau_echec'
     except (ValueError,TypeError,EOFError):result['etat']='mqtt_trame_inattendue'
+    if c9c_evidence is not None:
+        result['observation_session_c9c']=c9c_evidence.safe_status()
     return result
 
 
