@@ -274,8 +274,8 @@ class LivePreview:
         if (not self._opened or self._stop.is_set() or self._pause.is_set()
                 or not isinstance(jpeg, bytes)
                 or not 1024 <= len(jpeg) <= _MAX_IMAGE
-                or not jpeg.startswith(b"\\xff\\xd8")
-                or not jpeg.endswith(b"\\xff\\xd9")):
+                or not jpeg.startswith(b"\xff\xd8")
+                or not jpeg.endswith(b"\xff\xd9")):
             return False
         now=time.monotonic()
         with self._lock:
