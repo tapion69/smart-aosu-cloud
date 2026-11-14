@@ -7,11 +7,15 @@ on:
     paths:
       - custom_components/smart_aosu_cloud/c9c_upstream_sdk_bridge.py
       - tests/test_c9c_upstream_sdk_bridge.py
+      - custom_components/smart_aosu_cloud/c9c_sdk_safe_signaling.py
+      - tests/test_c9c_sdk_safe_signaling.py
       - .github/workflows/c9c-upstream-sdk-bridge.yml
   pull_request:
     paths:
       - custom_components/smart_aosu_cloud/c9c_upstream_sdk_bridge.py
       - tests/test_c9c_upstream_sdk_bridge.py
+      - custom_components/smart_aosu_cloud/c9c_sdk_safe_signaling.py
+      - tests/test_c9c_sdk_safe_signaling.py
       - .github/workflows/c9c-upstream-sdk-bridge.yml
 
 permissions:
@@ -30,4 +34,6 @@ jobs:
       - name: Syntax verify
         run: python -m compileall -q custom_components/smart_aosu_cloud
       - name: Real SDK object compatibility; simulate transport without camera
-        run: python -m unittest discover -s tests -p 'test_c9c_upstream_sdk_bridge.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_c9c_upstream_sdk_bridge.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_sdk_safe_signaling.py' -v
