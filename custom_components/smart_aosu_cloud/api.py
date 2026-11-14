@@ -138,7 +138,9 @@ class AosuCloudClient:
         self._standalone_c9c_sn=None  # RAM only; candidate for explicit VIDEO test
         self._standalone_c9c_coop_id=None  # RAM only, never published
         self._standalone_c9c_ty_cp_uuid=None  # Ty-only cpDeviceInfo.cpUuid; RAM
-        self._standalone_c9c_ty_uuid_detail=None  # SN + AOSU session-bound; RAM
+        self._standalone_c9c_ty_uuid_detail=None
+        self._standalone_c9c_cp_detail=None  # SN + AOSU session-bound; RAM
+        self._standalone_c9c_cp_detail=None  # SN+SID UID detail CP; no disk
         self._standalone_c9c_device_id=None  # SN-matched getList deviceId; RAM only
         self._standalone_c9c_cp_source='absente'  # safe enum, not an ID
         self._c5l_sn=None  # private RAM-only target for manual discovery
@@ -199,6 +201,7 @@ class AosuCloudClient:
         self._oem_identity_hints=None
         self._oem_login_flags=None
         self._standalone_c9c_ty_uuid_detail=None
+        self._standalone_c9c_cp_detail=None
         self._standalone_c9c_ty_cp_uuid=None
         self._standalone_c9c_coop_id=None
         self._standalone_c9c_device_id=None
@@ -292,6 +295,7 @@ class AosuCloudClient:
                 self._standalone_c9c_cp_source='absente'
                 self._standalone_c9c_ty_cp_uuid=None
                 self._standalone_c9c_ty_uuid_detail=None
+        self._standalone_c9c_cp_detail=None
                 self._standalone_c9c_device_id=None
             # One private target for the opt-in read-only identity audit.
             # APK conversion path: UUIDInfoWebDataItem.coopUUID -> GzDeviceInfo.cpDeviceId.
@@ -362,6 +366,7 @@ class AosuCloudClient:
             self._oem_identity_hints=None
             self._oem_login_flags=None
             self._standalone_c9c_ty_uuid_detail=None
+        self._standalone_c9c_cp_detail=None
             self._standalone_c9c_ty_cp_uuid=None
             self._standalone_c9c_coop_id=None
             self._standalone_c9c_device_id=None
@@ -385,6 +390,7 @@ class AosuCloudClient:
         self._standalone_c9c_coop_id=None
         self._standalone_c9c_ty_cp_uuid=None
         self._standalone_c9c_ty_uuid_detail=None
+        self._standalone_c9c_cp_detail=None
         self._standalone_c9c_device_id=None
         self._standalone_c9c_cp_source='absente'
         self._c5l_sn=None
