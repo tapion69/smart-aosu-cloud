@@ -45,7 +45,7 @@ def _exact(objects: list[dict], fields: tuple[str, ...],
 def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
                                select_standalone, select_tuya,
                                select_tuya_typed=None,
-                               resolve_ty_uuid=None) -> dict:
+                               resolve_ty_uuid=None, resolve_cp_id=None) -> dict:
     """Classify matching evidence; uniqueness does not prove device identity."""
     result = {
         "diagnostic": "aosu_c9c_identite_cache_b5",
@@ -100,6 +100,9 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
     }
     sn = getattr(client, "_standalone_c9c_sn", None)
     coop = getattr(client, "_standalone_c9c_coop_id", None)
+    cp_source = "getlist_sn" if isinstance(coop, str) and coop else "aucune"
+    if resolve_cp_id is not None:
+        coop, cp_source = resolve_cp_id(client)
     sn = sn if isinstance(sn, str) and sn else None
     coop = coop if isinstance(coop, str) and coop else None
     if resolve_ty_uuid is not None:
@@ -112,6 +115,9 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
     result["identite_aosu"] = {
         "numero_serie_present": sn is not None,
         "coop_uuid_present": coop is not None,
+        "cp_device_id_source": (cp_source if cp_source in (
+            "getlist_sn", "detail_sn_session", "aucune",
+            "sources_aosu_contradictoires") else "aucune"),
         "ty_cp_uuid_present": ty_uuid is not None,
         "ty_cp_uuid_source": ty_source,
     }
