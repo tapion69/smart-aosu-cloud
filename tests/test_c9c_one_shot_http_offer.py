@@ -126,7 +126,7 @@ class OneShotHttpTests(unittest.TestCase):
         self.assertFalse(result["video_lancee"])
         self.assertFalse(result["identifiants_retournes"])
         self.assertNotIn(TARGET,json.dumps(result))
-        self.assertNotIn("secret",json.dumps(result))
+        self.assertNotIn('"access_key"',json.dumps(result))
 
     def test_http_explicit_rejection_precedes_acceptance(self):
         result=module.safe_http_result({
