@@ -96,6 +96,11 @@ class OneShotHttpTests(unittest.TestCase):
         self.assertEqual(body["header"]["to"],TARGET)
         self.assertNotIn("devId",body)
         self.assertNotIn("path",body["header"])
+        self.assertNotIn("security_level",body["header"])
+        self.assertEqual(set(body["header"]), {
+            "from", "to", "sessionid", "moto_id", "type",
+            "trace_id", "is_pre", "p2p_skill",
+        })
         self.assertNotIn("preconnect",body["msg"])
         self.assertNotIn("udp_token",body["msg"])
         self.assertEqual(body["msg"]["sdp"],SDP)
@@ -106,6 +111,12 @@ class OneShotHttpTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.native_http_form(offer(),target="wrong_target_002")
         altered=offer();altered["header"]["p2p_skill"]=5
+        with self.assertRaises(ValueError):
+            module.native_http_form(altered,target=TARGET)
+
+    def test_http_rejects_missing_native_header_field(self):
+        altered=offer()
+        del altered["header"]["moto_id"]
         with self.assertRaises(ValueError):
             module.native_http_form(altered,target=TARGET)
 
@@ -127,6 +138,19 @@ class OneShotHttpTests(unittest.TestCase):
         self.assertFalse(result["identifiants_retournes"])
         self.assertNotIn(TARGET,json.dumps(result))
         self.assertNotIn('"access_key"',json.dumps(result))
+
+    def test_http_refusal_is_fixed_category_not_raw_remote_text(self):
+        remote="PRIVATE_ERROR_HAS_SECRET_AND_USER_IDENTIFIERS"
+        result=module.safe_http_result({
+            "serveur_accepte":False,"rejet_explicite":True,
+            "categorie_refus":"parametres",
+            "code_erreur_present":True,"raw_response":remote})
+        self.assertEqual(result["categorie_refus"],"parametres")
+        self.assertTrue(result["code_erreur_present"])
+        self.assertNotIn(remote,str(result))
+        result=module.safe_http_result({
+            "rejet_explicite":True,"categorie_refus":remote})
+        self.assertEqual(result["categorie_refus"],"non_applicable")
 
     def test_http_explicit_rejection_precedes_acceptance(self):
         result=module.safe_http_result({

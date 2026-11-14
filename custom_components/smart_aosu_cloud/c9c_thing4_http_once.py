@@ -113,9 +113,18 @@ def native_http_form(offer: object, *, target: str) -> dict[str,object]:
         if key not in body:
             raise ValueError("c9c_http_transport_missing")
     # Explicit construction: do not forward arbitrary metadata from MQTT.
-    native_header={k:h[k] for k in ("type","from","to","sessionid",
-                                     "moto_id","trace_id","is_pre",
-                                     "p2p_skill","security_level") if k in h}
+    # AOSU 5.10.12 native libThingP2PSDK.so builds EXACTLY eight
+    # HTTP offer header keys (0x69b88..0x69c28):
+    # from, to, sessionid, moto_id, type, trace_id, is_pre, p2p_skill.
+    # "security_level" is present in other native contexts but NOT this
+    # HTTP builder. The original Python MQTT offer had copied it here.
+    native_header={k:h[k] for k in ("from","to","sessionid",
+                                     "moto_id","type","trace_id",
+                                     "is_pre","p2p_skill") if k in h}
+    if set(native_header) != {
+            "from","to","sessionid","moto_id","type","trace_id",
+            "is_pre","p2p_skill"}:
+        raise ValueError("c9c_http_native_header_incomplete")
     native_msg={k:body[k] for k in ("sdp","token","udp_token","tcp_token","log")
                 if k in body}
     serialized=json.dumps({"header":native_header,"msg":native_msg},
@@ -138,6 +147,15 @@ def safe_http_result(safe: object) -> dict[str,object]:
         "requete_http_effectuee":True,
         "serveur_accepte":accepted,
         "rejet_explicite":rejected,
+        "categorie_refus":(
+            state.get("categorie_refus")
+            if state.get("categorie_refus") in (
+                "mot_de_passe_ou_identifiants","trop_de_tentatives",
+                "jeton_invalide","region","signature_ou_application",
+                "installation","autorisation","compte_ou_uid",
+                "parametres","indeterminee")
+            else "non_applicable"),
+        "code_erreur_present":state.get("code_erreur_present") is True,
         "reponse_sdp_recue":False,
         "video_lancee":False,
         "offres_mqtt_envoyees":0,

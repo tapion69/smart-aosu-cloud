@@ -1,8 +1,29 @@
-# Smart AOSU Cloud — 0.8.13-beta44-rc2 (comparaison locale du SN AOSU)
+# Smart AOSU Cloud — 0.8.13-beta44-rc3 (offre HTTP native Thing-4 ajustée)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
 > La vidéo et le PTZ ont été confirmés en 0.8.10 sur le banc de développement (1× C5L et 2× C9C3CA11 derrière H1L). Cette nouvelle bêta n'a pas été testée physiquement ; ne l'utilisez pas comme unique système de sécurité.
+
+## 0.8.13-beta44-rc3 — en-tête HTTP natif Thing-4 (14 novembre 2026)
+
+L'analyse locale de l'APK AOSU originale 5.10.12 confirme que la construction
+**native de l'offre HTTP** comporte huit clés d'en-tête :
+`from`, `to`, `sessionid`, `moto_id`, `type`, `trace_id`,
+`is_pre`, `p2p_skill`. Notre version précédente y ajoutait
+`security_level`, champ utilisé dans d'autres échanges mais **pas dans
+cette requête HTTP**. Le chemin C9C expérimental reproduit maintenant
+strictement les huit champs et refuse de préparer une offre incomplète.
+
+En cas de refus explicite, le service
+`smart_aosu_cloud.tester_offre_http_thing4_c9c` retourne désormais une
+**catégorie d'erreur fixe** et un indicateur de présence de code, jamais
+les erreurs ou les données Tuya brutes. Aucun changement sur la vidéo et le
+PTZ de la C5L et des C9C derrière H1L.
+
+**La C9C autonome n'a pas de vidéo validée**, et la correspondance SN AOSU ↔
+identifiant Tuya est encore hypothétique. Cette modification ne garantit pas
+que Tuya acceptera l'offre HTTP. Si l'on refait un essai, il doit être unique,
+volontaire, sur l'instance C9C de test et avec les confirmations du service.
 
 ## 0.8.13-beta44-rc2 — comparer localement le SN de la C9C (14 novembre 2026)
 
