@@ -96,6 +96,11 @@ class OneShotHttpTests(unittest.TestCase):
         self.assertEqual(body["header"]["to"],TARGET)
         self.assertNotIn("devId",body)
         self.assertNotIn("path",body["header"])
+        self.assertNotIn("security_level",body["header"])
+        self.assertEqual(set(body["header"]), {
+            "from", "to", "sessionid", "moto_id", "type",
+            "trace_id", "is_pre", "p2p_skill",
+        })
         self.assertNotIn("preconnect",body["msg"])
         self.assertNotIn("udp_token",body["msg"])
         self.assertEqual(body["msg"]["sdp"],SDP)
