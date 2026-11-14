@@ -30,7 +30,8 @@ class SafeAosuMotoClient(MotoClient):
         self._aosu_moto_id = (
             moto_id if isinstance(moto_id, str)
             and len(moto_id) <= 128 and moto_id == moto_id.strip()
-            and moto_id.isprintable() else "")
+            and moto_id.isprintable() and not any(ch.isspace() for ch in moto_id)
+            else "")
 
     def _header(self, message_type: str, trace_id: str = "") -> dict:
         header = super()._header(message_type, trace_id)
