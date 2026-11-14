@@ -24,6 +24,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from .tuya_media_bootstrap import PrivateMediaBootstrap
 from .c9c_session_classify import classify_unmatched_c9c_message
+from .c9c_thing4_mqtt_evidence import C9CMqttSessionEvidence
 from .tuya_ice_b85 import ControlledIceB85
 from .tuya_relay_handshake import probe_relay_handshake
 from .tuya_mqtt_signaling import (
@@ -252,13 +253,37 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         'mqtt_messages_lus':0,'mqtt_messages_publies':0,'deconnexion_signalee':False,
         'commande_ptz':0,'session_video_creee':False,'secrets_retournes':False,
     }
+    c9c_evidence = None
+    def finish_probe() -> dict[str, object]:
+        """Capture C9C evidence on EVERY path; never return raw wire data."""
+        if use_moto_id:
+            result['observation_session_c9c'] = (
+                c9c_evidence.safe_status() if c9c_evidence is not None
+                else {
+                    'diagnostic': 'aosu_c9c_mqtt_observateur_session_v1',
+                    'etat': 'non_initialisee',
+                    'offre_emise': False,
+                    'puback_broker': False,
+                    'reponse_sdp_origine_verifiee': False,
+                    'connexion_p2p_authentifiee': False,
+                    'image_decodee': False,
+                    'video_confirmee': False,
+                    'requete_reseau_supplementaire': 0,
+                    'identifiants_retournes': False,
+                    'secrets_retournes': False,
+                })
+        return result
     try:
         key,offer=_media_payload(media,uid,use_moto_id=use_moto_id)
+        # Standalone C9C ONLY: passive evidence boundary around the existing
+        # MQTT connection. Never synthesizes native P2P callbacks.
+        c9c_evidence=(C9CMqttSessionEvidence(
+            media.device_id, uid, media.session_id) if use_moto_id else None)
         result['signalisation_chiffree_preparee']=True
         result['moto_id_applique']=bool(offer['header']['moto_id'])
     except (ValueError,AttributeError,TypeError):
         result['etat']='rtc_ou_cle_locale_incompatible'
-        return result
+        return finish_probe()
     ctx=ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
     ctx.verify_mode=ssl.CERT_REQUIRED;ctx.check_hostname=True
     pubtopic=f'smart/mb/out/{media.device_id}'
@@ -319,6 +344,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
             'reponses_302_hors_session_emis_par_appareil': 0,
             'reponses_302_hors_session_vers_utilisateur': 0,
             'reponses_302_session_absente': 0,
+            'reponses_302_origine_invalide': 0,
+            'reponses_302_sdp_incompatible': 0,
         })
     result['signalisation_b89'] = diag
     try:
@@ -333,14 +360,14 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                     sock.sendall(_mqtt_connect_packet(auth))
                     t,p=_mqtt_read(sock)
                     if t!=0x20 or len(p)!=2 or p[1]!=0:
-                        result['etat']='connack_non_accepte';return result
+                        result['etat']='connack_non_accepte';return finish_probe()
                     result['connack_accepte']=True
                     diag['etape']='mqtt_connecte'
                     diag['connack_accepte']=True
                     sock.sendall(_mqtt_subscribe_packet(auth.topic))
                     t,p=_mqtt_read(sock)
                     if t!=0x90 or len(p)!=3 or p[:2]!=b'\x00\x01' or p[2]==0x80:
-                        result['etat']='abonnement_non_accepte';return result
+                        result['etat']='abonnement_non_accepte';return finish_probe()
                     result['abonnement_signalisation_accepte']=True
                     diag['etape']='abonnement_confirme'
                     diag['abonnement_confirme']=True
@@ -370,7 +397,7 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                         }
                         if not awake:
                             result['etat'] = 'reveil_non_confirme_offre_non_envoyee'
-                            return result
+                            return finish_probe()
                         confirmed_at = time.monotonic()
                     _send_once(sock,key,pubtopic,source,sequence_start,10,22,{'reqType':'sigQry'})
                     result['mqtt_messages_publies']=1
@@ -381,6 +408,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             max(0, min(60000, int(
                                 (time.monotonic() - confirmed_at) * 1000))))
                     sent_offer=True
+                    if c9c_evidence is not None:
+                        c9c_evidence.mark_offer_sent()
                     result['offre_sdp_envoyee']=True
                     diag['etape']='offre_envoyee'
                     diag['offre_envoyee']=True
@@ -425,6 +454,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                             if int.from_bytes(p,'big')==11:
                                 result['ack_offre_mqtt']=True
                                 diag['puback_offre']=True
+                                if c9c_evidence is not None:
+                                    c9c_evidence.mark_puback(11)
                                 if wake_before_offer:
                                     result['reveil_et_video']['puback_offre']=True
                             continue
@@ -486,6 +517,22 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                                         unmatched['session_state']=='absente')
                                 continue
                             typ=header.get('type')
+                            if c9c_evidence is not None:
+                                verdict=c9c_evidence.classify(protocol,header,msg)
+                                if verdict == 'origine_ou_destination_incorrecte':
+                                    # An answer with the correct sessionid is
+                                    # NOT enough. Require correct from/to too.
+                                    diag['reponses_302_origine_invalide']+=1
+                                    continue
+                                if verdict == 'reponse_sdp_incompatible':
+                                    diag['reponses_302_sdp_incompatible']+=1
+                                    continue
+                                if verdict not in (
+                                    'reponse_sdp_liee_a_notre_session',
+                                    'candidat_confirme',
+                                    'deconnexion_confirmee'):
+                                    diag['messages_302_format_invalide']+=1
+                                    continue
                             if typ=='answer' and isinstance(msg.get('sdp'),str):
                                 sdp=msg['sdp']
                                 result['reponse_sdp_recue']=True
@@ -576,7 +623,7 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
     except (TimeoutError,socket.timeout):result['etat']='mqtt_timeout'
     except (OSError,ssl.SSLError,ConnectionError):result['etat']='mqtt_reseau_echec'
     except (ValueError,TypeError,EOFError):result['etat']='mqtt_trame_inattendue'
-    return result
+    return finish_probe()
 
 
 def run_tuya_mqtt_offer(client:Any, identity:Any, signer:Any, session:Any,

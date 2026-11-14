@@ -56,10 +56,13 @@ class TestTyCpUuidIdentity(unittest.TestCase):
         self.assertEqual(
             choose(devices, camera_sn=SN, camera_ty_cp_uuid=DEVICEID),
             (DEVICEID, 'appareil_tuya_unique_sans_categorie_video'))
+        # AOSU SDK TyDeviceCenter reads GzDeviceInfo.cpDeviceId and passes
+        # that exact value to createCameraP2P(devId). This is a distinct
+        # verified SDK route from incorrectly comparing Ty cpUuid to devId.
         self.assertEqual(
             choose({DEVICEID: {'devId': DEVICEID, 'uuid': TYUUID}},
                    camera_sn=SN, camera_cp_device_id=DEVICEID),
-            (DEVICEID, 'appareil_tuya_unique_sans_categorie_video'))
+            (DEVICEID, 'identite_exacte_cp_device_id_dev_id'))
 
     def test_cp_device_id_and_sn_are_independently_typed(self):
         devices = {DEVICEID: {'devId': DEVICEID, 'cpDeviceId': CPID}}

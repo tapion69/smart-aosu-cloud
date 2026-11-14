@@ -1270,6 +1270,7 @@ async def async_setup(hass,config):
             'offre_http_test_termine','offre_http_cible_non_autorisee',
             'offre_http_type4_non_prouve','offre_http_rtc_incompatible',
             'offre_http_preparation_refusee','limite_offre_http_une_heure',
+            'offre_http_suspendue_parite_session_absente',
             'offre_http_c9c_confirmation_et_exclusivite_requises',
             'offre_http_hors_mode_interdite','test_deja_en_cours',
             'session_AOSU_ou_profil_absent','preflight_OEM_invalide',

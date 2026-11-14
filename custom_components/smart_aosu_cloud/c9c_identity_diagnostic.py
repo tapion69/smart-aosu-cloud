@@ -211,7 +211,8 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
         target, method = select_tuya(devices, camera_sn=sn, camera_coop=coop)
     allowed_methods = (
         "identite_exacte", "identite_exacte_serie",
-        "identite_exacte_cp_device_id", "identite_exacte_ty_cp_uuid",
+        "identite_exacte_cp_device_id", "identite_exacte_cp_device_id_dev_id",
+        "identite_exacte_ty_cp_uuid",
         "correspondance_ambigue",
         "camera_tuya_unique_non_confirmee",
         "cameras_tuya_multiples_ambigues",
@@ -223,7 +224,8 @@ def inspect_c9c_identity_cache(*, data: Any, client: Any, cache: Any,
     method = method if method in allowed_methods else "autre_methode"
     exact = target is not None and method in (
         "identite_exacte", "identite_exacte_serie",
-        "identite_exacte_cp_device_id", "identite_exacte_ty_cp_uuid")
+        "identite_exacte_cp_device_id", "identite_exacte_cp_device_id_dev_id",
+        "identite_exacte_ty_cp_uuid")
     result["correspondance"] = {
         "serie_exacte_nombre": strong_sn,
         "serie_egale_id_tuya_nombre": sn_matches_tuya_id,
