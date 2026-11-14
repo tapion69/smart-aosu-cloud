@@ -246,6 +246,51 @@ puisse recevoir ces fragments. Ce correctif ajoute le support pour
 ce format **si des trames arrivent** ; il ne prouve pas un direct
 fonctionnel, une identité AOSU–Tuya exacte ou la parité native du SDK.
 
+## Correction du démarrage vidéo : JPEG direct indépendant de FFmpeg
+
+Le premier chemin JPEG `feed_jpeg` fonctionnait uniquement si
+`LivePreview._opened` avait été mis à vrai par `LivePreview.start()`.
+Mais `start()` refusait tout démarrage sans `ffmpeg` et
+instanciait toujours le décodeur **HEVC** même si le flux C9C à recevoir
+pouvait être **MJPEG**.
+
+Ce faux prérequis est supprimé uniquement pour la C9C autonome :
+
+- `LiveController.start` construit maintenant
+  `LivePreview(lazy_hevc=True)` uniquement pour
+  `standalone_c9c_video_test=True`. L'absence de FFmpeg ne bloque
+  **plus** un futur direct JPEG.
+- `LivePreview.start` prépare immédiatement un aperçu JPEG en mémoire,
+  **sans lancer de sous-processus**. Une véritable image JPEG complète
+  du canal vidéo est envoyée à `feed_jpeg`, puis à l'événement HA
+  `on_frame`, même sans FFmpeg.
+- Si le dépaqueteur du flux reconnaît ensuite de **vraies unités NAL
+  HEVC** (VPS/SPS/PPS ou IDR), le même décodeur HEVC historique peut être
+  démarré *à la demande*. De simples octets non-HEVC ou une conversation
+  KCP ouverte ne suffisent pas à lancer FFmpeg.
+- Les C5L et les C9C derrière H1L gardent le mode `lazy_hevc=False`,
+  donc l'initialisation préexistante de FFmpeg, son décodage HEVC, ses
+  threads, et ses protections d'arrêt.
+- Lorsque des images JPEG directes sont présentes, le diagnostic du
+  preview affiche `images_jpeg_directes`, au lieu d'un trompeur
+  `aucun_paquet_rtp_valide`.
+- Le décodeur FFmpeg *n'est pas retiré* : il demeure disponible lorsque
+  le codec réellement observé le justifie.
+
+Validation GitHub purement synthétique :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43619115148 .
+
+Le fichier `tests/test_c9c_jpeg_lazy_ffmpeg.py` vérifie l'ouverture du
+preview sans FFmpeg, l'émission d'une image JPEG vers le callback HA,
+le refus de JPEG pendant Stop/Pause, l'absence de lancement FFmpeg sur
+données non HEVC, son déclenchement à partir d'une NAL HEVC, et le
+maintien de l'obligation FFmpeg pour les caméras historiques.
+
+**Ne pas confondre cette avancée avec une connexion vidéo physique.**
+Elle rend autonome le *récepteur JPEG* ; elle ne fournit pas encore
+le mapping AOSU–Tuya ni le moteur P2P natif nécessaire pour recevoir
+le tout premier paquet de la C9C du frère.
+
 ## Bloquants restants — sans nouvelle manipulation chez le frère
 
 - **Identité** : le `cpDeviceId` AOSU authentique n'était pas présent
