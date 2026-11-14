@@ -1285,6 +1285,14 @@ async def async_setup(hass,config):
                 or raw.get('requete_http_effectuee') is True,
             'serveur_accepte':safe.get('serveur_accepte') is True,
             'rejet_explicite':safe.get('rejet_explicite') is True,
+            'categorie_refus':safe.get('categorie_refus')
+                if safe.get('categorie_refus') in (
+                    'mot_de_passe_ou_identifiants','trop_de_tentatives',
+                    'jeton_invalide','region','signature_ou_application',
+                    'installation','autorisation','compte_ou_uid',
+                    'parametres','indeterminee','non_applicable')
+                else 'non_applicable',
+            'code_erreur_present':safe.get('code_erreur_present') is True,
             'methode_cible':raw.get('methode_selection_rtc')
                 if raw.get('methode_selection_rtc') in (
                     'identite_typée','candidat_unique_autorise_manuellement')
