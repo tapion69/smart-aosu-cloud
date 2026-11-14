@@ -254,9 +254,31 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         'commande_ptz':0,'session_video_creee':False,'secrets_retournes':False,
     }
     c9c_evidence = None
+    # Capture the preview baseline before any new offer, so JPEGs from a
+    # previous Play cannot be counted as fresh images of this C9C session.
+    preview_jpeg_baseline = None
+    def _preview_count():
+        if live_preview is None or not hasattr(live_preview, 'summary'):
+            return None
+        try:
+            snapshot = live_preview.summary()
+            count = snapshot.get('images_jpeg_decodees') if isinstance(snapshot,dict) else None
+            return count if type(count) is int and 0 <= count <= 1000000000 else None
+        except (AttributeError,ValueError,TypeError,RuntimeError):
+            # No logging of vendor/decoder exceptions or private strings.
+            return None
+
     def finish_probe() -> dict[str, object]:
         """Capture C9C evidence on EVERY path; never return raw wire data."""
         if use_moto_id:
+            if c9c_evidence is not None:
+                current = _preview_count() if tester_media else None
+                newly_decoded = (
+                    max(0,current-preview_jpeg_baseline)
+                    if type(current) is int and type(preview_jpeg_baseline) is int
+                    and current >= preview_jpeg_baseline else 0)
+                result['preuves_media_c9c'] = c9c_evidence.summarize_existing_relay(
+                    result.get('relais_tcp'), decoded_jpeg_delta=newly_decoded)
             result['observation_session_c9c'] = (
                 c9c_evidence.safe_status() if c9c_evidence is not None
                 else {
@@ -279,6 +301,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         # MQTT connection. Never synthesizes native P2P callbacks.
         c9c_evidence=(C9CMqttSessionEvidence(
             media.device_id, uid, media.session_id) if use_moto_id else None)
+        if c9c_evidence is not None and tester_media:
+            preview_jpeg_baseline = _preview_count()
         result['signalisation_chiffree_preparee']=True
         result['moto_id_applique']=bool(offer['header']['moto_id'])
     except (ValueError,AttributeError,TypeError):
