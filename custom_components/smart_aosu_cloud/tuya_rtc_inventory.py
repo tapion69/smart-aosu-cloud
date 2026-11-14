@@ -854,7 +854,17 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     if type(command_count) is int and command_count>0:
                         out['commande_camera']=command_count
                         out['commandes_demarrage_video']=command_count
-                        out['session_video_creee']=bool(media_result.get('conversation_video_detectee'))
+                        if standalone_c9c_video_test is True:
+                            # The Thing-4 standalone C9C needs a NEW decoded
+                            # preview JPEG in the same live session; observing
+                            # KCP conversation 1 does not prove video.
+                            evidence=out['signalisation_mqtt'].get('preuves_media_c9c') or {}
+                            out['session_video_creee']=(
+                                isinstance(evidence,dict)
+                                and evidence.get('video_visible_confirmee') is True)
+                        else:
+                            out['session_video_creee']=bool(
+                                media_result.get('conversation_video_detectee'))
                 except (TypeError,AttributeError):
                     pass
             elif tester_mqtt is True and private is not None:
