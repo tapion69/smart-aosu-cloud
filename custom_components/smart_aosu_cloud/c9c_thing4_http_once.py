@@ -143,6 +143,15 @@ def safe_http_result(safe: object) -> dict[str,object]:
         "requete_http_effectuee":True,
         "serveur_accepte":accepted,
         "rejet_explicite":rejected,
+        "categorie_refus":(
+            state.get("categorie_refus")
+            if state.get("categorie_refus") in (
+                "mot_de_passe_ou_identifiants","trop_de_tentatives",
+                "jeton_invalide","region","signature_ou_application",
+                "installation","autorisation","compte_ou_uid",
+                "parametres","indeterminee")
+            else "non_applicable"),
+        "code_erreur_present":state.get("code_erreur_present") is True,
         "reponse_sdp_recue":False,
         "video_lancee":False,
         "offres_mqtt_envoyees":0,
