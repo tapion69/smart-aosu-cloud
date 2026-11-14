@@ -253,6 +253,26 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         'mqtt_messages_lus':0,'mqtt_messages_publies':0,'deconnexion_signalee':False,
         'commande_ptz':0,'session_video_creee':False,'secrets_retournes':False,
     }
+    c9c_evidence = None
+    def finish_probe() -> dict[str, object]:
+        """Capture C9C evidence on EVERY path; never return raw wire data."""
+        if use_moto_id:
+            result['observation_session_c9c'] = (
+                c9c_evidence.safe_status() if c9c_evidence is not None
+                else {
+                    'diagnostic': 'aosu_c9c_mqtt_observateur_session_v1',
+                    'etat': 'non_initialisee',
+                    'offre_emise': False,
+                    'puback_broker': False,
+                    'reponse_sdp_origine_verifiee': False,
+                    'connexion_p2p_authentifiee': False,
+                    'image_decodee': False,
+                    'video_confirmee': False,
+                    'requete_reseau_supplementaire': 0,
+                    'identifiants_retournes': False,
+                    'secrets_retournes': False,
+                })
+        return result
     try:
         key,offer=_media_payload(media,uid,use_moto_id=use_moto_id)
         # Standalone C9C ONLY: passive evidence boundary around the existing
@@ -263,7 +283,7 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
         result['moto_id_applique']=bool(offer['header']['moto_id'])
     except (ValueError,AttributeError,TypeError):
         result['etat']='rtc_ou_cle_locale_incompatible'
-        return result
+        return finish_probe()
     ctx=ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
     ctx.verify_mode=ssl.CERT_REQUIRED;ctx.check_hostname=True
     pubtopic=f'smart/mb/out/{media.device_id}'
@@ -340,14 +360,14 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                     sock.sendall(_mqtt_connect_packet(auth))
                     t,p=_mqtt_read(sock)
                     if t!=0x20 or len(p)!=2 or p[1]!=0:
-                        result['etat']='connack_non_accepte';return result
+                        result['etat']='connack_non_accepte';return finish_probe()
                     result['connack_accepte']=True
                     diag['etape']='mqtt_connecte'
                     diag['connack_accepte']=True
                     sock.sendall(_mqtt_subscribe_packet(auth.topic))
                     t,p=_mqtt_read(sock)
                     if t!=0x90 or len(p)!=3 or p[:2]!=b'\x00\x01' or p[2]==0x80:
-                        result['etat']='abonnement_non_accepte';return result
+                        result['etat']='abonnement_non_accepte';return finish_probe()
                     result['abonnement_signalisation_accepte']=True
                     diag['etape']='abonnement_confirme'
                     diag['abonnement_confirme']=True
@@ -377,7 +397,7 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                         }
                         if not awake:
                             result['etat'] = 'reveil_non_confirme_offre_non_envoyee'
-                            return result
+                            return finish_probe()
                         confirmed_at = time.monotonic()
                     _send_once(sock,key,pubtopic,source,sequence_start,10,22,{'reqType':'sigQry'})
                     result['mqtt_messages_publies']=1
@@ -603,9 +623,7 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
     except (TimeoutError,socket.timeout):result['etat']='mqtt_timeout'
     except (OSError,ssl.SSLError,ConnectionError):result['etat']='mqtt_reseau_echec'
     except (ValueError,TypeError,EOFError):result['etat']='mqtt_trame_inattendue'
-    if c9c_evidence is not None:
-        result['observation_session_c9c']=c9c_evidence.safe_status()
-    return result
+    return finish_probe()
 
 
 def run_tuya_mqtt_offer(client:Any, identity:Any, signer:Any, session:Any,
