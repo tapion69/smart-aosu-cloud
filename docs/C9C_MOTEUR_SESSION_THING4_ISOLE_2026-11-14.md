@@ -1,0 +1,361 @@
+# Smart AOSU Cloud — moteur d'états Thing-4 C9C autonome (14 novembre 2026)
+
+**État : code expérimental et tests hors ligne, aucun direct validé sur la C9C autonome.**
+Le projet `main` reste sur `0.8.13-beta44-rc3`. Les caméras historiques
+(C5L et 2×C9C3CA11/H1L) ne sont pas modifiées.
+
+## Pourquoi ne pas relancer l'offre cloud
+
+Deux appels manuels `thing.m.rtc.session.offer_1.0` ont été **explicitement
+rejetés** par le serveur Tuya. Les corrections de l'en-tête HTTP n'ont pas
+changé ce résultat. L'APK d'AOSU 5.10.12 utilise `createCameraP2P`,
+`setCameraConfig`, `connect` et ses callbacks, puis l'encodeur SDP natif
+et des jetons issus de l'état de session. Notre ancien test n'instanciait
+pas ce moteur de session.
+
+**Ce que fait la nouvelle modification** : le module Python
+`custom_components/smart_aosu_cloud/c9c_thing4_session_state.py` fournit
+un modèle de session **portable, strict et réutilisable**, mais
+**n'implémente pas encore** le transport réel. Il n'importe pas le
+SDK Android et ne prépare pas de faux SDP.
+
+## États de session distincts
+
+`nouvelle → identite_verifiee → configuration_verifiee →
+peripherique_p2p_cree → connexion_en_cours → offre_emise →
+reponse_sdp_recue → connexion_p2p_confirmee → premiere_image_recue`.
+
+Pour chaque étape :
+
+1. **Identité** : seule une correspondance typée exacte établie à partir
+   de l'AOSU et de Tuya est admise ; caméra C9C autonome unique sans H1L.
+   Un `candidat_unique` ne suffit pas.
+2. **Configuration** : `CameraInfoBean.id` doit être exactement le
+   `devId` sélectionné, `p2pSpecifiedType=4`, clé locale et
+   configuration RTC effectivement présentes, session récente
+   (expiration à 90 secondes).
+3. **Création périphérique** : succès **réel** de l'adaptateur P2P,
+   et non simple présence de paramètres Android.
+4. **Démarrage connexion et émission d'offre** : transitions explicites ;
+   le module ne fait pas lui-même ces appels.
+5. **PUBACK MQTT** : mémorisé comme transport broker seulement ;
+   **ne prouve ni réception par la caméra, ni SDP answer, ni vidéo**.
+6. **SDP answer** : doit être validée et liée exactement à **notre**
+   identifiant de session et à la caméra Tuya autorisée.
+7. **Connexion authentifiée** : callback de connexion P2P réel ;
+   il peut arriver avant l'answer, mais les deux preuves sont
+   requises pour atteindre `connexion_p2p_confirmee`.
+8. **Première image** : seul un véritable paquet média décodé et
+   accepté peut établir `premiere_image_recue`.
+
+L'arrêt, l'expiration ou l'échec purgent les identifiants éphémères et
+les marqueurs de confirmation. Aucun SN, devId, UID, SDP, clé ou secret
+n'est retourné dans les statuts ou les exceptions.
+
+## Tests
+
+- `tests/test_c9c_thing4_session_state.py` : **17 tests hors ligne**,
+  dont succès ordonné, callbacks inversés, messages en avance,
+  mauvaise cible, mauvaise session, réponse non validée,
+  `p2pSpecifiedType` différent de 4, clé absente, état expiré,
+  `PUBACK` sans answer, absence de première image et nettoyage.
+- Compilation Python de l'intégration + tests d'identité CP↔Tuya
+  + suspension de l'ancien test HTTP, dans
+  `.github/workflows/c9c-android-cp-devid.yml`.
+- Tests GitHub :
+  https://github.com/tapion69/smart-aosu-cloud/actions/runs/43593507613 .
+
+Le module n'est pas branché à un moteur réseau : les tests **n'affirment
+pas** que le moteur natif fonctionne chez le frère.
+
+## Branchement réel au récepteur MQTT existant — contrôle de provenance
+
+Le récepteur `tuya_mqtt_offer._probe` disposait déjà d'une vérification
+du `sessionid`, mais **une réponse portant le même `sessionid` pouvait
+être acceptée même si `header.from` ou `header.to` ne correspondaient
+pas à notre caméra/utilisateur**. C'était un risque de fausse réponse
+et un défaut concret de vérification.
+
+Le module `c9c_thing4_mqtt_evidence.py` est maintenant branché
+**uniquement** lorsque `use_moto_id` est vrai (parcours manuel C9C
+autonome) sur **la connexion MQTT et la boucle de réception existantes**.
+
+- Après l'envoi réel du message `offer`, il enregistre ce fait.
+- Un `PUBACK` n'est associé à l'offre que si son packet-id est `11`;
+  il prouve seulement l'acceptation du **broker**, pas une caméra joignable.
+- Chaque `answer`, `candidate` ou `disconnect` de protocole `302`
+  doit porter **le même sessionid, la caméra attendue en `from` et
+  notre UID en `to`**, sur le topic MQTT déjà vérifié.
+- Pour qu'une `answer` puisse atteindre l'ancien code de traitement
+  du relais/vidéo, son SDP doit contenir les champs structurels AES/KCP
+  et ICE attendus. Cela ne prouve **pas** une authentification
+  cryptographique par le moteur P2P ni un décodage vidéo.
+- Une réponse provenant d'un autre appareil/utilisateur ou d'une
+  ancienne session est rejetée **avant** toute action de relais.
+- Les résultats ajoutent un `observation_session_c9c` composé
+  exclusivement d'énumérations, de booléens et de compteurs bornés.
+  `connexion_p2p_authentifiee=false` et
+  `video_confirmee=false` restent explicites en l'absence des
+  callbacks et images réels.
+- Le chemin C5L/H1L (`use_moto_id=false`) conserve son traitement
+  historique, sans modification de l'enveloppe MQTT, du broker
+  ou de ses commandes vidéo/PTZ.
+
+**Tests :** `tests/test_c9c_thing4_mqtt_evidence.py` couvre 15
+cas d'observation hors ligne : identité, anciens messages, destinataires,
+SDP incomplet, publications, accusés de réception, candidats,
+déconnexion, données sensibles et vérification du raccordement.
+CI : https://github.com/tapion69/smart-aosu-cloud/actions/runs/43598313282 .
+
+**Limite :** cette surveillance est un *contrôle de provenance
+de signalisation*, pas un substitut à `createDevice/setCameraConfig/connect`.
+Le module d'états natif `Thing4C9CSession` ne doit pas être avancé
+artificiellement vers `peripherique_p2p_cree` ou `connexion_p2p_confirmee`
+par ce seul observateur. Il faut un adaptateur P2P réel pour les callbacks
+d'initialisation, de connexion, d'authentification et de réception média.
+
+## Fiabilisation du résultat sur toutes les sorties MQTT
+
+Le test de régression du client `tuya_mqtt_offer._probe` a mis en
+évidence que l'observateur `C9CMqttSessionEvidence` n'était initialement
+inséré dans le résultat **qu'en fin de fonction**, alors que le code peut
+quitter prématurément la boucle via plusieurs `return` :
+configuration RTC incompatible, CONNACK refusé, SUBACK refusé, ou
+réveil non confirmé.
+
+La correction ajoute un seul finaliseur local `finish_probe()` qui
+n'exécute **aucune requête** et restitue, pour le parcours C9C uniquement,
+un statut fixe/expurgé même si l'offre n'a jamais été envoyée.
+
+- Le résultat `observation_session_c9c.etat=non_initialisee` permet
+  de distinguer un échec de préparation d'un manque de SDP.
+- Si le MQTT est refusé avant `offer`, le rapport indique
+  `offre_emise=false`, `reponse_sdp_origine_verifiee=false` et
+  `video_confirmee=false`.
+- Le chemin C5L/H1L ne reçoit **aucun** nouveau champ C9C.
+- Le `DISCONNECT` MQTT déjà exécuté par le `finally` est préservé,
+  y compris pour les refus de connexion et d'abonnement.
+- Aucune valeur de SN, clé, compte, UID, devId, SDP ou jeton n'est
+  renvoyée par l'observateur.
+
+Les **six tests** de `tests/test_c9c_mqtt_early_results.py` simulent
+les erreurs de préparation, CONNACK/SUBACK, les sorties prématurées,
+l'absence d'impact sur C5L et l'expurgation. Test final vérifié :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43599359621 .
+
+**Limite inchangée :** ce diagnostic ne construit pas le moteur
+P2P natif manquant et n'établit aucune vidéo de la C9C autonome.
+
+## Vérification de la vidéo : canal KCP ≠ image décodée
+
+Les fichiers existants `tuya_relay_handshake.py`,
+`tuya_kcp_probe.py` et `tuya_channel0_probe.py`
+rapportent plusieurs preuves distinctes. Jusqu'ici, la présence
+du canal de conversation vidéo KCP `conv=1` pouvait être relayée dans
+`session_video_creee=true`, y compris sans le moindre paquet vidéo
+déchiffré, ou la moindre image.
+
+La PR n° 4 inclut maintenant les corrections suivantes,
+**limitées au parcours C9C autonome** :
+
+- `c9c_thing4_mqtt_evidence.summarize_existing_relay` analyse les
+  compteurs **déjà collectés** par le relais TCP/KCP (aucune nouvelle
+  requête ni commande). Il distingue l'authentification de la signature
+  du **relais TCP**, le canal KCP vidéo observé, les paquets chiffrés,
+  les paquets déchiffrés et les images JPEG complètes trouvées en RAM.
+- Le suivi `LivePreview.summary().images_jpeg_decodees` mesure
+  uniquement le nombre d'images décodées **après le début de cette session**.
+  Un compteur déjà positif avant la nouvelle lecture ne prouve pas
+  une nouvelle image.
+- Une image visible ne peut être confirmée que si **la réponse SDP
+  de la bonne session a été vérifiée**, le relais est authentifié,
+  le canal KCP vidéo et des paquets déchiffrés sont observés et le
+  nombre d'images JPEG décodées a **augmenté**.
+- `tuya_mqtt_offer._probe` expose
+  `preuves_media_c9c.phase_observee` et
+  `preuves_media_c9c.video_visible_confirmee`, sans exposer
+  les images, identifiants ou SDP.
+- `tuya_rtc_inventory` ne reprend plus, **pour la C9C autonome**,
+  le seul booléen `conversation_video_detectee` pour définir
+  `session_video_creee`. L'ancien comportement des C5L/H1L est
+  conservé.
+
+**Distinction essentielle :** une signature de relais TCP valide ne
+démontre pas l'authentification d'une connexion **Thing-4 native**,
+qui exige toujours un véritable adaptateur P2P. Il est légitime de
+signaler une image visiblement décodée dans le client existant sans
+prétendre que l'implémentation native Android a été reproduite.
+
+Les tests synthétiques
+`tests/test_c9c_relay_media_proofs.py` couvrent notamment le faux
+positif « canal KCP présent », les paquets déchiffrés sans image,
+une JPEG complète non affichée, une image ancienne, la signature de relais
+absente et une vraie progression d'image simulée.
+**CI réussie** :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43611654318 .
+
+**Aucun test vidéo sur caméra réelle n'est revendiqué** par ces
+modifications ; la C9C autonome du frère reste sans direct validé.
+
+## Chemin JPEG/MJPEG direct ajouté au lecteur C9C
+
+Le client vidéo historique `LivePreview` interprétait **tous** les
+enregistrements vidéo déchiffrés avec un dépaqueteur C5L **HEVC/RTP**,
+alors que l'implémentation de référence Tuya P2P sait recevoir des
+conversations vidéo **MJPEG/JPEG**. Le moteur C9C disposait déjà
+du parseur `_maybe_jpeg_chunks`, sans possibilité d'afficher une
+image JPEG reconstruite par cette voie.
+
+La PR ajoute un chemin opérationnel conditionnel pour **la C9C
+autonome seulement** :
+
+1. `c9c_mjpeg_reassembly.C9CJpegReassembler` reçoit les fragments
+   `(offset, contenu)` **après authentification du relais et
+   déchiffrement AES du canal KCP vidéo**. Il refuse les trous,
+   les chevauchements incohérents, les trames trop grandes, les
+   débuts sans marqueur JPEG et les fragments incomplets.
+2. Une image JPEG complète est conservée **uniquement en RAM**.
+   Aucun fichier n'est créé, et aucune requête, commande caméra
+   ou offre supplémentaire n'est émise.
+3. `LivePreview.feed_jpeg` accepte ce JPEG via le mécanisme
+   `_jpeg`, `_frames`, `on_frame` **déjà utilisé par
+   Home Assistant**, sans repasser cette image dans FFmpeg HEVC.
+4. Le drapeau `standalone_c9c` traverse les modules existants
+   `tuya_mqtt_offer → tuya_relay_handshake → tuya_kcp_probe →
+   tuya_channel0_probe`, **uniquement** quand la branche
+   C9C `use_moto_id` est active.
+5. En l'absence de fragments JPEG, le chemin HEVC préexistant
+   peut encore traiter les données. Les C5L et C9C/H1L restent
+   sur leur pipeline historique inchangé.
+6. Le compteur `images_jpeg_decodees` du flux n'augmente que
+   lorsqu'une image complète est effectivement fournie à
+   `LivePreview`, ce qui rejoint les garde-fous
+   `preuves_media_c9c.video_visible_confirmee`.
+
+Les tests **sans matériel ni accès réseau** passent dans GitHub Actions :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43613225039 .
+
+Ils exercent la chaîne réelle de reconstruction par trois fragments,
+le rejet des trous, le chevauchement incohérent, la taille maximale,
+la pause/arrêt et le raccordement conditionnel à la C9C. Le
+dépaqueteur HEVC historique n'est pas modifié.
+
+**Limite :** il n'est pas encore établi que la C9C du frère envoie
+précisément du MJPEG, ni que notre session P2P actuellement refusée
+puisse recevoir ces fragments. Ce correctif ajoute le support pour
+ce format **si des trames arrivent** ; il ne prouve pas un direct
+fonctionnel, une identité AOSU–Tuya exacte ou la parité native du SDK.
+
+## Correction du démarrage vidéo : JPEG direct indépendant de FFmpeg
+
+Le premier chemin JPEG `feed_jpeg` fonctionnait uniquement si
+`LivePreview._opened` avait été mis à vrai par `LivePreview.start()`.
+Mais `start()` refusait tout démarrage sans `ffmpeg` et
+instanciait toujours le décodeur **HEVC** même si le flux C9C à recevoir
+pouvait être **MJPEG**.
+
+Ce faux prérequis est supprimé uniquement pour la C9C autonome :
+
+- `LiveController.start` construit maintenant
+  `LivePreview(lazy_hevc=True)` uniquement pour
+  `standalone_c9c_video_test=True`. L'absence de FFmpeg ne bloque
+  **plus** un futur direct JPEG.
+- `LivePreview.start` prépare immédiatement un aperçu JPEG en mémoire,
+  **sans lancer de sous-processus**. Une véritable image JPEG complète
+  du canal vidéo est envoyée à `feed_jpeg`, puis à l'événement HA
+  `on_frame`, même sans FFmpeg.
+- Si le dépaqueteur du flux reconnaît ensuite de **vraies unités NAL
+  HEVC** (VPS/SPS/PPS ou IDR), le même décodeur HEVC historique peut être
+  démarré *à la demande*. De simples octets non-HEVC ou une conversation
+  KCP ouverte ne suffisent pas à lancer FFmpeg.
+- Les C5L et les C9C derrière H1L gardent le mode `lazy_hevc=False`,
+  donc l'initialisation préexistante de FFmpeg, son décodage HEVC, ses
+  threads, et ses protections d'arrêt.
+- Lorsque des images JPEG directes sont présentes, le diagnostic du
+  preview affiche `images_jpeg_directes`, au lieu d'un trompeur
+  `aucun_paquet_rtp_valide`.
+- Le décodeur FFmpeg *n'est pas retiré* : il demeure disponible lorsque
+  le codec réellement observé le justifie.
+
+Validation GitHub purement synthétique :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43619115148 .
+
+Le fichier `tests/test_c9c_jpeg_lazy_ffmpeg.py` vérifie l'ouverture du
+preview sans FFmpeg, l'émission d'une image JPEG vers le callback HA,
+le refus de JPEG pendant Stop/Pause, l'absence de lancement FFmpeg sur
+données non HEVC, son déclenchement à partir d'une NAL HEVC, et le
+maintien de l'obligation FFmpeg pour les caméras historiques.
+
+**Ne pas confondre cette avancée avec une connexion vidéo physique.**
+Elle rend autonome le *récepteur JPEG* ; elle ne fournit pas encore
+le mapping AOSU–Tuya ni le moteur P2P natif nécessaire pour recevoir
+le tout premier paquet de la C9C du frère.
+
+## Prévalidation de l'identité avant Play : pas de troisième tentative inutile
+
+`c9c_cached_video_preflight.py` ajoute une vérification **purement
+locale** avant le démarrage du direct de la C9C autonome.
+
+Elle consulte uniquement les données AOSU et Tuya déjà présentes en
+RAM, en exigeant :
+- le SN de la C9C AOSU de la session actuelle ;
+- une session AOSU authentifiée courante ;
+- une session Tuya ayant moins de 1 200 secondes ;
+- un inventaire Tuya ayant moins de 600 secondes et **lié à l'UID
+  de cette même session Tuya** ;
+- une égalité exacte dans le sélecteur typé
+  `AOSU.sn↔Tuya.serial`, `AOSU.cpDeviceId↔Tuya.devId/cpDeviceId`
+  ou `AOSU.Ty.cpUuid↔Tuya.uuid`.
+
+Si ce cache récent n'offre qu'un candidat unique non prouvé ou
+une correspondance contradictoire, `LiveController.start`
+rend `c9c_identite_non_prouvee_cache_frais` avec
+`nouvelle_offre_mqtt=false`, `appels_reseau=0` et
+`commande_camera=0`, **avant de construire un aperçu ou de lancer
+un worker**. Il efface également un aperçu ancien éventuellement
+conservé par un direct précédent.
+
+Un cache absent, périmé, provenant d'une autre session, ou de forme
+invalide est **non concluant**, et non un rejet définitif :
+le parcours normal de découverte authentifiée demeure alors
+possible. La garde d'identité forte côté `tuya_rtc_inventory`
+reste le verrou principal avant toute vidéo.
+
+Ce contrôle **ne prétend pas créer une identité**. Il élimine les
+tentatives redondantes lorsque la preuve négative est déjà en
+mémoire, sans pénaliser les caméras C5L/H1L.
+
+Tests : `tests/test_c9c_cached_video_preflight.py`, incluant
+sources authentifiées exactes, inventaires ambigus, sessions expirées
+ou croisées, absence de secrets, arrêt local du Play, et
+non-régression du parcours C5L.
+CI : https://github.com/tapion69/smart-aosu-cloud/actions/runs/43619711369 .
+
+## Bloquants restants — sans nouvelle manipulation chez le frère
+
+- **Identité** : le `cpDeviceId` AOSU authentique n'était pas présent
+  dans les réponses HTTP du compte extérieur. L'APK officielle enrichit
+  un cache privé Android, inaccessible via les providers non exportés.
+  Les sources publiques/requêtes Tuya disponibles ne prouvent pas encore
+  la liaison SN↔devId de cette caméra.
+- **Adaptateur P2P** : il faut fournir une implémentation Python
+  compatible avec la génération de SDP, les jetons, le routage
+  LAN/MQTT/HTTP et les vrais callbacks `createDevice/connect`.
+  Les bibliothèques AOSU ARM64/Android ne sont pas directement
+  chargeables dans HA OS x86-64.
+- **Codec** : une fois seulement la session vraiment connectée,
+  valider le format vidéo de la C9C (le client Python Tuya public a été
+  testé surtout avec des appareils MJPEG, pas cette caméra).
+- **Nettoyage de sessions** : interdire les retries agressifs et
+  fermer le transport avant tout nouvel essai pour éviter
+  une caméra bloquée par une ancienne session.
+
+## Conclusion de cette étape
+
+La correction sur la branche n'ajoute aucun bouton, aucun appel Tuya,
+aucune nouvelle version à installer ; elle met en place le **contrat
+du futur adaptateur de connexion**, sans confondre acceptation HTTP,
+broker MQTT et vidéo. La prochaine implémentation doit établir une
+correspondance d'identité effective puis fournir un **vrai transport**.
+
+PR draft : https://github.com/tapion69/smart-aosu-cloud/pull/4 .

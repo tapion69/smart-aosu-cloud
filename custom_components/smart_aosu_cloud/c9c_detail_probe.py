@@ -8,6 +8,7 @@ import time
 import requests
 from .identity_audit import TARGET_INFO, summarize_info
 from .c9c_ty_detail_hydration import remember_ty_cp_uuid_from_aosu_detail
+from .c9c_cp_detail_identity import remember_cp_id_from_aosu_detail
 
 
 def _valid(value):
@@ -127,9 +128,11 @@ def probe_c9c_detail(client):
             # New data source: the authenticated, SN-matched detail response,
             # not getList's web-only record. No additional network request.
             ty_source = remember_ty_cp_uuid_from_aosu_detail(client, parsed, sn)
+            cp_source = remember_cp_id_from_aosu_detail(client, parsed, sn)
             cache = getattr(client, "_tuya_oem_inventory_cache", None)
             report = summarize_c9c_detail(parsed, sn, cache)
             report["ty_cp_uuid_detail_source"] = ty_source
+            report["cp_device_id_detail_source"] = cp_source
             # Historical reverse CP probes (beta33-36) returned no
             # AOSU deviceId; do not repeat the exhausted extra request.
             # Beta43 tests a different source: the already-authorized

@@ -1,0 +1,96 @@
+name: C9C native Android CP to Tuya devId bridge
+
+on:
+  push:
+    branches:
+      - experiment/c9c-android-cpdeviceid-to-tuya-devid
+      - main
+    paths:
+      - custom_components/smart_aosu_cloud/camera_topology.py
+      - custom_components/smart_aosu_cloud/tuya_rtc_inventory.py
+      - tests/test_c9c_android_cp_devid_bridge.py
+      - tests/test_c9c_http_suspension.py
+      - custom_components/smart_aosu_cloud/c9c_thing4_session_state.py
+      - tests/test_c9c_thing4_session_state.py
+      - custom_components/smart_aosu_cloud/c9c_thing4_mqtt_evidence.py
+      - tests/test_c9c_thing4_mqtt_evidence.py
+      - tests/test_c9c_mqtt_early_results.py
+      - tests/test_c9c_relay_media_proofs.py
+      - custom_components/smart_aosu_cloud/c9c_mjpeg_reassembly.py
+      - custom_components/smart_aosu_cloud/tuya_channel0_probe.py
+      - custom_components/smart_aosu_cloud/tuya_kcp_probe.py
+      - custom_components/smart_aosu_cloud/tuya_relay_handshake.py
+      - custom_components/smart_aosu_cloud/tuya_live_preview.py
+      - tests/test_c9c_mjpeg_direct_preview.py
+      - tests/test_c9c_jpeg_lazy_ffmpeg.py
+      - custom_components/smart_aosu_cloud/c9c_cached_video_preflight.py
+      - tests/test_c9c_cached_video_preflight.py
+      - custom_components/smart_aosu_cloud/c9c_cp_detail_identity.py
+      - custom_components/smart_aosu_cloud/c9c_detail_probe.py
+      - custom_components/smart_aosu_cloud/c9c_identity_diagnostic.py
+      - custom_components/smart_aosu_cloud/api.py
+      - custom_components/smart_aosu_cloud/__init__.py
+      - tests/test_c9c_cp_detail_identity.py
+      - tests/test_c9c_ty_cp_uuid_identity.py
+      - .github/workflows/c9c-android-cp-devid.yml
+  pull_request:
+    paths:
+      - custom_components/smart_aosu_cloud/camera_topology.py
+      - custom_components/smart_aosu_cloud/tuya_rtc_inventory.py
+      - tests/test_c9c_android_cp_devid_bridge.py
+      - tests/test_c9c_http_suspension.py
+      - custom_components/smart_aosu_cloud/c9c_thing4_session_state.py
+      - tests/test_c9c_thing4_session_state.py
+      - custom_components/smart_aosu_cloud/c9c_thing4_mqtt_evidence.py
+      - tests/test_c9c_thing4_mqtt_evidence.py
+      - tests/test_c9c_mqtt_early_results.py
+      - tests/test_c9c_relay_media_proofs.py
+      - custom_components/smart_aosu_cloud/c9c_mjpeg_reassembly.py
+      - custom_components/smart_aosu_cloud/tuya_channel0_probe.py
+      - custom_components/smart_aosu_cloud/tuya_kcp_probe.py
+      - custom_components/smart_aosu_cloud/tuya_relay_handshake.py
+      - custom_components/smart_aosu_cloud/tuya_live_preview.py
+      - tests/test_c9c_mjpeg_direct_preview.py
+      - tests/test_c9c_jpeg_lazy_ffmpeg.py
+      - custom_components/smart_aosu_cloud/c9c_cached_video_preflight.py
+      - tests/test_c9c_cached_video_preflight.py
+      - custom_components/smart_aosu_cloud/c9c_cp_detail_identity.py
+      - custom_components/smart_aosu_cloud/c9c_detail_probe.py
+      - custom_components/smart_aosu_cloud/c9c_identity_diagnostic.py
+      - custom_components/smart_aosu_cloud/api.py
+      - custom_components/smart_aosu_cloud/__init__.py
+      - tests/test_c9c_cp_detail_identity.py
+      - tests/test_c9c_ty_cp_uuid_identity.py
+      - .github/workflows/c9c-android-cp-devid.yml
+
+permissions:
+  contents: read
+
+jobs:
+  typed-identity-no-network:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile integration
+        run: python -m compileall -q custom_components/smart_aosu_cloud
+      - name: Verify Android CP device ID and independent namespaces
+        run: |
+          python -m unittest discover -s tests -p 'test_c9c_android_cp_devid_bridge.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_http_suspension.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_thing4_session_state.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_thing4_mqtt_evidence.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_mqtt_early_results.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_relay_media_proofs.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_mjpeg_direct_preview.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_jpeg_lazy_ffmpeg.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_cached_video_preflight.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_cp_detail_identity.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_ty_detail_hydration.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_detail_probe.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_unmatched_session.py' -v
+          python -m unittest discover -s tests -p 'test_mqtt_c9c_diagnostics.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_ty_cp_uuid_identity.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_standalone.py' -v

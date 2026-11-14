@@ -17,6 +17,10 @@ from .tuya_video_metrics_b93 import VideoMetricsB93
 from .tuya_stream_timing_b94 import StreamTimingB94
 from .ptz_live_observer_b41 import PassivePtzChannelObserver
 from .ptz_mqtt_observer_b42 import PassiveMqttPtzObserver
+from .camera_topology import select_tuya_standalone_target_typed
+from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
+from .c9c_cp_detail_identity import resolve_aosu_cp_device_id
+from .c9c_cached_video_preflight import cached_c9c_video_preflight
 
 _MAX_IMAGE = 3 * 1024 * 1024
 # Better display cadence than B85 (2 fps), without inventing missing source frames.
@@ -27,7 +31,8 @@ LIVE_SECONDS = None  # No artificial playback duration; user Stop or a stalled l
 class LivePreview:
     """A manually-activated preview with no fixed duration and JPEG held in RAM."""
 
-    def __init__(self, *, ffmpeg_path: str | None = None, on_frame=None):
+    def __init__(self, *, ffmpeg_path: str | None = None, on_frame=None,
+                 lazy_hevc: bool = False):
         self._lock = threading.Lock()
         self._metrics_lock = threading.Lock()
         self._b93_metrics = VideoMetricsB93()
@@ -46,6 +51,9 @@ class LivePreview:
         self.ptz_mqtt_observer = PassiveMqttPtzObserver()
         self._queue: queue.Queue[bytes | None] = queue.Queue(maxsize=256)
         self._ffmpeg_path = ffmpeg_path if ffmpeg_path is not None else shutil.which('ffmpeg')
+        # Standalone C9C can send direct MJPEG. Do not require HEVC/FFmpeg
+        # until real HEVC NAL units arrive; legacy C5L keeps eager FFmpeg.
+        self._lazy_hevc = lazy_hevc is True
         self._process: subprocess.Popen | None = None
         self._threads: list[threading.Thread] = []
         self._opened = False
@@ -96,14 +104,29 @@ class LivePreview:
         return self._stop.is_set()
 
     def start(self) -> bool:
-        if self._opened or self._stop.is_set() or not self._ffmpeg_path:
+        if self._opened or self._stop.is_set():
             with self._lock:
-                self._status = 'ffmpeg_indisponible' if not self._ffmpeg_path else 'demarrage_invalide'
+                self._status = 'demarrage_invalide'
             return False
-        # Forced elementary HEVC: the default 5-second stream analysis can
-        # buffer a short camera session without producing ANY JPEG while stdin
-        # remains open. The bounded probe has been tested with synthetic HEVC.
-        # Deliberately avoid -fflags +nobuffer: it dropped HEVC references.
+        if self._lazy_hevc:
+            # C9C MJPEG is displayed without FFmpeg; still allow a fallback
+            # if actual HEVC RTP NALs are later received in this session.
+            self._opened = True
+            self._ffmpeg_started_at = time.monotonic()
+            self.mark_phase_b93('preview_jpeg_pret')
+            with self._lock:
+                self._status = 'attente_video'
+            return True
+        return self._start_hevc_decoder()
+
+    def _start_hevc_decoder(self) -> bool:
+        """Start the existing decoder on demand only when C9C HEVC is seen."""
+        if self._process is not None or self._stop.is_set() or not self._ffmpeg_path:
+            if not self._lazy_hevc and not self._ffmpeg_path:
+                with self._lock:
+                    self._status = 'ffmpeg_indisponible'
+            return False
+        # Preserve the original C5L/H1L HEVC command line and threading.
         cmd = [self._ffmpeg_path, '-hide_banner', '-nostdin', '-loglevel', 'error',
                '-threads', '2', '-probesize', '32768', '-analyzeduration', '0',
                '-f', 'hevc', '-i', 'pipe:0', '-an', '-sn',
@@ -114,11 +137,15 @@ class LivePreview:
                                              stdout=subprocess.PIPE,
                                              stderr=subprocess.PIPE, bufsize=0)
         except OSError:
-            with self._lock:
-                self._status = 'echec_lancement_ffmpeg'
+            # A C9C can still produce MJPEG even when FFmpeg is absent or
+            # failed. Do not tear down its already opened direct-JPEG preview.
+            if not self._lazy_hevc:
+                with self._lock:
+                    self._status = 'echec_lancement_ffmpeg'
             return False
         self._opened = True
-        self._ffmpeg_started_at = time.monotonic()
+        if not self._ffmpeg_started_at:
+            self._ffmpeg_started_at = time.monotonic()
         self.mark_phase_b93('ffmpeg_demarre')
         with self._lock:
             self._status = 'attente_video'
@@ -245,6 +272,13 @@ class LivePreview:
         # Avoid retaining full video in RAM while preserving sequence/FU state.
         del self._decoder.nals[:]
         self._decoder._size=0
+        if self._lazy_hevc and self._process is None:
+            # Only initialize FFmpeg after seeing a *complete* HEVC NAL,
+            # never for decrypted MJPEG chunks or a bare KCP conversation.
+            has_hevc = any(nal and ((nal[0]>>1)&0x3f) in
+                           (32,33,34,19,20) for nal in added)
+            if not has_hevc or not self._start_hevc_decoder():
+                return
         for nal in added:
             typ=(nal[0]>>1)&0x3f
             if typ in (32,33,34):
@@ -263,6 +297,39 @@ class LivePreview:
                 self._decode_error=True
                 self._have_idr=False
                 # Restart at next IDR; data gap could otherwise corrupt the next frames.
+
+    def feed_jpeg(self, jpeg: bytes) -> bool:
+        """Accept one complete C9C MJPEG frame without the HEVC/FFmpeg path.
+
+        Only call with data from the *already decrypted* video channel and
+        contiguous, validated JPEG chunk reassembly. The historic C5L path
+        continues through feed()/HEVC as before.
+        """
+        if (not self._opened or self._stop.is_set() or self._pause.is_set()
+                or not isinstance(jpeg, bytes)
+                or not 1024 <= len(jpeg) <= _MAX_IMAGE
+                or not jpeg.startswith(b"\xff\xd8")
+                or not jpeg.endswith(b"\xff\xd9")):
+            return False
+        now=time.monotonic()
+        with self._lock:
+            if self._stop.is_set() or self._pause.is_set():
+                return False
+            self._jpeg=jpeg
+            self._jpeg_at=now
+            self._frames+=1
+            if self._frames == 1:
+                self._first_jpeg_delay=round(now-self._ffmpeg_started_at,2)
+            self._status='images_reçues'
+        with self._metrics_lock:
+            self._b93_metrics.jpeg()
+            self._b94_timing.note('jpeg')
+        if self._on_frame is not None:
+            try:
+                self._on_frame()
+            except (RuntimeError, ValueError):
+                pass
+        return True
 
     def pause(self) -> bool:
         if not self._opened or self.stopped:
@@ -296,7 +363,9 @@ class LivePreview:
         params = {32: types.get(32, 0), 33: types.get(33, 0), 34: types.get(34, 0)}
         idr = types.get(19, 0) + types.get(20, 0)
         valid_rtp = self._decoder.packets
-        if valid_rtp == 0:
+        if self._lazy_hevc and self._frames > 0 and not self._have_idr:
+            diagnosis = 'images_jpeg_directes'
+        elif valid_rtp == 0:
             diagnosis = 'aucun_paquet_rtp_valide'
         elif not types:
             diagnosis = 'fragments_rtp_sans_nal_complete'
@@ -617,6 +686,27 @@ class LiveController:
             return self._deny_start('demarrage_non_lance_reessai',
                                     secondes_restantes=retry_seconds,
                                     cause=self._retry.last_reason)
+        if standalone_c9c_video_test is True:
+            # If the same authenticated session has a recent Tuya inventory
+            # that *already* lacks a typed AOSU↔Tuya identity, do not start
+            # another MQTT/P2P attempt. A stale/absent cache is inconclusive
+            # and retains the existing inventory-first behavior.
+            cached_gate = cached_c9c_video_preflight(
+                self.client,
+                select_tuya_typed=select_tuya_standalone_target_typed,
+                resolve_ty_uuid=resolve_aosu_ty_cp_uuid,
+                resolve_cp_id=resolve_aosu_cp_device_id)
+            if cached_gate['etat'] == 'identite_non_prouvee_cache_reutilise':
+                self.preview = None
+                self._status = 'identite_c9c_non_prouvee'
+                self._last_result = {
+                    'etat_negociation': 'non_lance_identite_cache',
+                    'commandes_video': 0, 'paquets_dechiffres': 0}
+                self._notify()
+                return self._deny_start(
+                    'c9c_identite_non_prouvee_cache_frais',
+                    nouvelle_offre_mqtt=False, appels_reseau=0,
+                    commande_camera=0)
         readiness = readiness_live(self.client)
         if not readiness['pret_cote_limites_locales']:
             self._status = 'limitation_locale'
@@ -627,8 +717,12 @@ class LiveController:
                                     cause='operation_locale_en_cours',
                                     secondes_restantes=0,
                                     nouvelle_offre_mqtt=False)
-        self.preview=LivePreview(on_frame=self._frame_ready)
-        if not self.preview._ffmpeg_path:
+        self.preview=LivePreview(
+            on_frame=self._frame_ready,
+            lazy_hevc=(standalone_c9c_video_test is True))
+        # C9C can display MJPEG natively. Only C5L/H1L still REQUIRE
+        # FFmpeg at startup; HEVC on C9C starts lazily if observed.
+        if not self.preview._ffmpeg_path and standalone_c9c_video_test is not True:
             return self._deny_start('ffmpeg_absent')
         self._start_refusal = None
         self._start_refusal_count = 0

@@ -30,6 +30,7 @@ from .c9c_tuya_device_b27 import summarize_tuya_device_b27
 from .c9c_full_audit_b31 import run_full_c9c_audit_b31
 from .c9c_cp_reverse_read import extract_tuya_detail_cp_candidates
 from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
+from .c9c_cp_detail_identity import resolve_aosu_cp_device_id
 from .c9c_thing4_http_once import (manual_target_gate, validate_type4_rtc,
                                     native_http_form, safe_http_result)
 from .c9c_sdk_preflight_b37 import summarize_native_prerequisites_b37, compare_rtc_sdk_b38, summarize_thing4_media_alignment_b40
@@ -256,6 +257,18 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 capturer_media_localement):
             return {'etat':'offre_http_c9c_confirmation_et_exclusivite_requises',
                     'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
+        # The camera owner has observed two *explicit* cloud refusals on
+        # a candidate selected by uniqueness, not a proven AOSU/Tuya link.
+        # Native APK requires createDevice/setCameraConfig/connect/RTC state
+        # before offer_1.0. None of that state is built by this Python probe.
+        # Suspend this obsolete test rather than allow further active cloud
+        # sessions on a weak target. Re-enable only with a real session engine
+        # and an exact typed identity, reviewed on a separate branch.
+        return {'etat':'offre_http_suspendue_parite_session_absente',
+                'requete_http_effectuee':False,
+                'appel_reseau':0,'commande_camera':0,'commandes_ptz':0,
+                'offres_mqtt_envoyees':0,'video_lancee':False,
+                'secrets_retournes':False}
     elif confirmation_offre_http or confirmation_cible_unique_non_prouvee:
         return {'etat':'offre_http_hors_mode_interdite',
                 'appel_reseau':0,'commande_camera':0,'secrets_retournes':False}
@@ -537,8 +550,7 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     target, selection = select_tuya_standalone_target_typed(
                         all_devices,
                         camera_sn=getattr(client, '_standalone_c9c_sn', None),
-                        camera_cp_device_id=getattr(
-                            client, '_standalone_c9c_coop_id', None),
+                        camera_cp_device_id=resolve_aosu_cp_device_id(client)[0],
                         camera_ty_cp_uuid=resolve_aosu_ty_cp_uuid(client)[0])
                 else:
                     target, selection = select_tuya_standalone_target(
@@ -557,6 +569,7 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                         and selection not in (
                             'identite_exacte_serie',
                             'identite_exacte_cp_device_id',
+                            'identite_exacte_cp_device_id_dev_id',
                             'identite_exacte_ty_cp_uuid')):
                     # Never reuse credentials from an earlier manual probe.
                     client._tuya_oem_media_bootstrap=None
@@ -841,7 +854,17 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                     if type(command_count) is int and command_count>0:
                         out['commande_camera']=command_count
                         out['commandes_demarrage_video']=command_count
-                        out['session_video_creee']=bool(media_result.get('conversation_video_detectee'))
+                        if standalone_c9c_video_test is True:
+                            # The Thing-4 standalone C9C needs a NEW decoded
+                            # preview JPEG in the same live session; observing
+                            # KCP conversation 1 does not prove video.
+                            evidence=out['signalisation_mqtt'].get('preuves_media_c9c') or {}
+                            out['session_video_creee']=(
+                                isinstance(evidence,dict)
+                                and evidence.get('video_visible_confirmee') is True)
+                        else:
+                            out['session_video_creee']=bool(
+                                media_result.get('conversation_video_detectee'))
                 except (TypeError,AttributeError):
                     pass
             elif tester_mqtt is True and private is not None:

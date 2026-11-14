@@ -116,7 +116,8 @@ def _next_frame(sock: Any) -> tuple[int, bytes]:
 
 def _probe_loop(sock: Any, media_key: bytes, offer: dict, *, tester_media: bool=False,
                 answer_sdp: str='', local_key: str='', device_password: str='',
-                local_capture_directory: str | None = None, live_preview=None, ice_candidate: str | None = None) -> dict[str, object]:
+                local_capture_directory: str | None = None, live_preview=None, ice_candidate: str | None = None,
+                standalone_c9c: bool = False) -> dict[str, object]:
     """Socket is authenticated by b19; no second TCP session is opened here."""
     out: dict[str, object] = {
         'tunnel_offre_relais_envoyee': False,
@@ -162,7 +163,7 @@ def _probe_loop(sock: Any, media_key: bytes, offer: dict, *, tester_media: bool=
             from .tuya_channel0_probe import run_media_start
             out['media_start']=run_media_start(sock,media_key,answer_sdp,local_key,device_password,
                      local_capture_directory=local_capture_directory,live_preview=live_preview,
-                     wait_seconds=11.0)
+                     wait_seconds=11.0,standalone_c9c=standalone_c9c)
             out['commandes_demarrage_video']=out['media_start']['commandes_controle_envoyees']
             out['conversation_controle_detectee']=out['media_start']['conversation_controle_detectee']
             out['conversation_video_detectee']=out['media_start']['conversation_video_detectee']
