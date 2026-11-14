@@ -83,6 +83,7 @@ from .camera_topology import (select_standalone_c9c_key,
     select_tuya_standalone_target, select_tuya_standalone_target_typed)
 from .c9c_identity_diagnostic import inspect_c9c_identity_cache
 from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
+from .c9c_sn_application_compare import compare_app_sn_locally
 from .c9c_detail_probe import probe_c9c_detail
 PLATFORMS=[Platform.SENSOR, Platform.BINARY_SENSOR, Platform.IMAGE, Platform.CAMERA, Platform.BUTTON]
 
@@ -405,6 +406,20 @@ async def async_setup(hass,config):
         if call.data.get('confirmation_envoi_mot_de_passe') is not True or call.data.get('confirmation_camera_c5l') is not True:
             raise ServiceValidationError('Confirmer le login Tuya et la camera candidate avant le direct')
         return _loaded_direct_controller().start(password_confirmed=True,candidate_confirmed=True)
+
+    async def comparer_sn_application_c9c(call):
+        """Read-only, RAM-only: compare the official-app SN with AOSU cache."""
+        entries=[entry for entry in hass.config_entries.async_entries(DOMAIN)
+                 if getattr(entry,'runtime_data',None)]
+        if len(entries)!=1:
+            raise ServiceValidationError('Une seule configuration AOSU active requise')
+        runtime=entries[0].runtime_data
+        if select_standalone_c9c_key(runtime.data) is None:
+            raise ServiceValidationError('Une unique camera C9C autonome sans H1L requise')
+        # Do not log, persist, publish, or return the app-provided SN.
+        return compare_app_sn_locally(
+            call.data.get('sn_application_aosu'),
+            getattr(runtime.client,'_standalone_c9c_sn',None))
 
     async def diagnostiquer_identite_c9c_autonome(call):
         """Explicit read-only identity comparison, with optional Tuya cloud refresh.
@@ -2601,6 +2616,9 @@ async def async_setup(hass,config):
     hass.services.async_register(DOMAIN,'audit_ecarts_offre_video_c9_b124',audit_ecarts_offre_video_c9_b124,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'audit_rtc_c9_topologie_b102',audit_rtc_c9_candidate_b101,
+                                 supports_response=SupportsResponse.ONLY)
+    hass.services.async_register(DOMAIN,'comparer_sn_application_c9c',
+                                 comparer_sn_application_c9c,
                                  supports_response=SupportsResponse.ONLY)
     hass.services.async_register(DOMAIN,'diagnostiquer_identite_c9c_autonome',
                                  diagnostiquer_identite_c9c_autonome,
