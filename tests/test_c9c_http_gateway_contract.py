@@ -80,6 +80,36 @@ class HttpGatewayContractTests(unittest.TestCase):
                                  "serveur_accepte":True,
                                  "rejet_explicite":False})
 
+    def test_refusal_is_classified_without_leaking_raw_error(self):
+        gateway,history=gateway_with_calls()
+        # Underlying API stub returns a refusal and a private server message.
+        def rejected_api(identity,signer,mode,**kwargs):
+            history.append(kwargs)
+            return {"success":False,"errorMsg":"PRIVATE_NOT_FOR_LOG"}, {}, {
+                "acceptation_explicite":False,
+                "rejet_explicite":True}
+        original=gateway.__globals__["_call_api"]
+        original_classifier=gateway.__globals__.get("_safe_server_refusal")
+        try:
+            gateway.__globals__["_call_api"]=rejected_api
+            gateway.__globals__["_safe_server_refusal"] = lambda *_args: {
+                "categorie_refus":"parametres",
+                "type_code_erreur":"symbolique",
+                "code_erreur_present":True}
+            result=gateway(object(),object(),"sha256_material",FakeSession(),
+                target=self.target,form_data=payload(self.target),
+                explicit_consent=True,**self.args)
+        finally:
+            gateway.__globals__["_call_api"]=original
+            if original_classifier is None:
+                gateway.__globals__.pop("_safe_server_refusal",None)
+            else:
+                gateway.__globals__["_safe_server_refusal"]=original_classifier
+        self.assertEqual(len(history),1)
+        self.assertEqual(result["categorie_refus"],"parametres")
+        self.assertEqual(result["type_code_erreur"],"symbolique")
+        self.assertNotIn("PRIVATE",str(result))
+
     def test_gateway_does_not_forward_raw_server_data(self):
         gateway, history=gateway_with_calls()
         actual=gateway(object(),object(),"sha256_material",FakeSession(),
