@@ -1293,6 +1293,13 @@ async def async_setup(hass,config):
                     'parametres','indeterminee','non_applicable')
                 else 'non_applicable',
             'code_erreur_present':safe.get('code_erreur_present') is True,
+            'code_erreur_tuya':safe.get('code_erreur_tuya')
+                if (isinstance(safe.get('code_erreur_tuya'),str)
+                    and 1 <= len(safe['code_erreur_tuya']) <= 8
+                    and safe['code_erreur_tuya'].isascii()
+                    and safe['code_erreur_tuya'].isdecimal()
+                    and safe['code_erreur_tuya'] != '0')
+                else 'non_disponible',
             'methode_cible':raw.get('methode_selection_rtc')
                 if raw.get('methode_selection_rtc') in (
                     'identite_typée','candidat_unique_autorise_manuellement')
