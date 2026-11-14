@@ -58,7 +58,34 @@ de chaînes sans fournir la référence ne suffira pas.
   dans `main` et pas encore déployée sur le Home Assistant du frère.
   Il ne faut **pas** interpréter cela comme une mise à jour déjà reçue.
 
-## 4. Seule suite de développement réellement justifiée
+## 4. Vérification supplémentaire de l'accès au cache Android
+
+Le manifeste binaire **original** de `base.apk` de l'APK AOSU 5.10.12
+a été inspecté localement, en lecture seule. SHA-256 du manifeste AXML :
+`bdf13c6ae42ea6acde2749f07fb93be0d9988d7f883181f4dd25483ad6e2bbab`.
+
+- **10 fournisseurs de contenu Android**, tous avec
+  `android:exported=false`. Le `FileProvider` présent est également non
+  exporté ; `grantUriPermissions=true` ne rend pas son contenu lisible à
+  tous les clients par défaut.
+- L'attribut de l'application `android:allowBackup` est **`false`**.
+- Aucune interface `ContentProvider` exportée n'est présente dans ce
+  manifeste pour publier à une autre application les entrées de
+  `TyDeviceInfoSource` ou les `GzDeviceInfo`.
+
+**Conséquence vérifiable :** installer une application compagnon ordinaire
+sur le même téléphone **ne suffit pas** pour lire le cache privé AOSU par
+`ContentResolver` ni par une sauvegarde ADB standard. Une application
+compagne devrait disposer **de ses propres API et autorisations**, ou
+utiliser un export expressément fourni par AOSU. Ne pas recommander de
+root, de lecture forcée du stockage privé ni une APK modifiée dont la
+signature casserait l'authentification AOSU.
+
+Cette preuve ne démontre pas qu'aucune autre interface autorisée n'existe :
+elle exclut seulement l'accès simple via un provider exporté ou un
+backup Android ordinaire dans cette APK.
+
+## 5. Seule suite de développement réellement justifiée
 
 Deux problèmes **indépendants** restent à résoudre avant un nouvel essai vidéo :
 
