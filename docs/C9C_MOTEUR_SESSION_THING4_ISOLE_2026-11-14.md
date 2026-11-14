@@ -197,6 +197,55 @@ https://github.com/tapion69/smart-aosu-cloud/actions/runs/43611654318 .
 **Aucun test vidéo sur caméra réelle n'est revendiqué** par ces
 modifications ; la C9C autonome du frère reste sans direct validé.
 
+## Chemin JPEG/MJPEG direct ajouté au lecteur C9C
+
+Le client vidéo historique `LivePreview` interprétait **tous** les
+enregistrements vidéo déchiffrés avec un dépaqueteur C5L **HEVC/RTP**,
+alors que l'implémentation de référence Tuya P2P sait recevoir des
+conversations vidéo **MJPEG/JPEG**. Le moteur C9C disposait déjà
+du parseur `_maybe_jpeg_chunks`, sans possibilité d'afficher une
+image JPEG reconstruite par cette voie.
+
+La PR ajoute un chemin opérationnel conditionnel pour **la C9C
+autonome seulement** :
+
+1. `c9c_mjpeg_reassembly.C9CJpegReassembler` reçoit les fragments
+   `(offset, contenu)` **après authentification du relais et
+   déchiffrement AES du canal KCP vidéo**. Il refuse les trous,
+   les chevauchements incohérents, les trames trop grandes, les
+   débuts sans marqueur JPEG et les fragments incomplets.
+2. Une image JPEG complète est conservée **uniquement en RAM**.
+   Aucun fichier n'est créé, et aucune requête, commande caméra
+   ou offre supplémentaire n'est émise.
+3. `LivePreview.feed_jpeg` accepte ce JPEG via le mécanisme
+   `_jpeg`, `_frames`, `on_frame` **déjà utilisé par
+   Home Assistant**, sans repasser cette image dans FFmpeg HEVC.
+4. Le drapeau `standalone_c9c` traverse les modules existants
+   `tuya_mqtt_offer → tuya_relay_handshake → tuya_kcp_probe →
+   tuya_channel0_probe`, **uniquement** quand la branche
+   C9C `use_moto_id` est active.
+5. En l'absence de fragments JPEG, le chemin HEVC préexistant
+   peut encore traiter les données. Les C5L et C9C/H1L restent
+   sur leur pipeline historique inchangé.
+6. Le compteur `images_jpeg_decodees` du flux n'augmente que
+   lorsqu'une image complète est effectivement fournie à
+   `LivePreview`, ce qui rejoint les garde-fous
+   `preuves_media_c9c.video_visible_confirmee`.
+
+Les tests **sans matériel ni accès réseau** passent dans GitHub Actions :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43613225039 .
+
+Ils exercent la chaîne réelle de reconstruction par trois fragments,
+le rejet des trous, le chevauchement incohérent, la taille maximale,
+la pause/arrêt et le raccordement conditionnel à la C9C. Le
+dépaqueteur HEVC historique n'est pas modifié.
+
+**Limite :** il n'est pas encore établi que la C9C du frère envoie
+précisément du MJPEG, ni que notre session P2P actuellement refusée
+puisse recevoir ces fragments. Ce correctif ajoute le support pour
+ce format **si des trames arrivent** ; il ne prouve pas un direct
+fonctionnel, une identité AOSU–Tuya exacte ou la parité native du SDK.
+
 ## Bloquants restants — sans nouvelle manipulation chez le frère
 
 - **Identité** : le `cpDeviceId` AOSU authentique n'était pas présent
