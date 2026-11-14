@@ -1,0 +1,31 @@
+name: C9C native HTTP state gates offline
+
+on:
+  push:
+    branches:
+      - research/c9c-http-refusal-native-parity
+    paths:
+      - tools/aosu_c9c_native_http_gates_offline.py
+      - tests/test_aosu_c9c_native_http_gates_offline.py
+      - .github/workflows/c9c-native-http-state-gates.yml
+  pull_request:
+    paths:
+      - tools/aosu_c9c_native_http_gates_offline.py
+      - tests/test_aosu_c9c_native_http_gates_offline.py
+      - .github/workflows/c9c-native-http-state-gates.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-no-network:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile static auditor
+        run: python -m py_compile tools/aosu_c9c_native_http_gates_offline.py
+      - name: Test eight native guards without any proprietary APK
+        run: python -m unittest discover -s tests -p 'test_aosu_c9c_native_http_gates_offline.py' -v
