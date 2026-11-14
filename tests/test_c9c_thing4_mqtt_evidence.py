@@ -169,7 +169,9 @@ class TestC9CMqttEvidence(unittest.TestCase):
                         s.index("result['reponse_sdp_recue']=True"))
         self.assertLess(s.index("if verdict == 'origine_ou_destination_incorrecte'"),
                         s.index("result['reponse_sdp_recue']=True"))
-        self.assertIn("result['observation_session_c9c']=c9c_evidence.safe_status()",s)
+        self.assertIn("def finish_probe()",s)
+        self.assertIn("c9c_evidence.safe_status() if c9c_evidence is not None",s)
+        self.assertIn("return finish_probe()",s)
         ast.parse(s)
 
 
