@@ -291,6 +291,46 @@ Elle rend autonome le *récepteur JPEG* ; elle ne fournit pas encore
 le mapping AOSU–Tuya ni le moteur P2P natif nécessaire pour recevoir
 le tout premier paquet de la C9C du frère.
 
+## Prévalidation de l'identité avant Play : pas de troisième tentative inutile
+
+`c9c_cached_video_preflight.py` ajoute une vérification **purement
+locale** avant le démarrage du direct de la C9C autonome.
+
+Elle consulte uniquement les données AOSU et Tuya déjà présentes en
+RAM, en exigeant :
+- le SN de la C9C AOSU de la session actuelle ;
+- une session AOSU authentifiée courante ;
+- une session Tuya ayant moins de 1 200 secondes ;
+- un inventaire Tuya ayant moins de 600 secondes et **lié à l'UID
+  de cette même session Tuya** ;
+- une égalité exacte dans le sélecteur typé
+  `AOSU.sn↔Tuya.serial`, `AOSU.cpDeviceId↔Tuya.devId/cpDeviceId`
+  ou `AOSU.Ty.cpUuid↔Tuya.uuid`.
+
+Si ce cache récent n'offre qu'un candidat unique non prouvé ou
+une correspondance contradictoire, `LiveController.start`
+rend `c9c_identite_non_prouvee_cache_frais` avec
+`nouvelle_offre_mqtt=false`, `appels_reseau=0` et
+`commande_camera=0`, **avant de construire un aperçu ou de lancer
+un worker**. Il efface également un aperçu ancien éventuellement
+conservé par un direct précédent.
+
+Un cache absent, périmé, provenant d'une autre session, ou de forme
+invalide est **non concluant**, et non un rejet définitif :
+le parcours normal de découverte authentifiée demeure alors
+possible. La garde d'identité forte côté `tuya_rtc_inventory`
+reste le verrou principal avant toute vidéo.
+
+Ce contrôle **ne prétend pas créer une identité**. Il élimine les
+tentatives redondantes lorsque la preuve négative est déjà en
+mémoire, sans pénaliser les caméras C5L/H1L.
+
+Tests : `tests/test_c9c_cached_video_preflight.py`, incluant
+sources authentifiées exactes, inventaires ambigus, sessions expirées
+ou croisées, absence de secrets, arrêt local du Play, et
+non-régression du parcours C5L.
+CI : https://github.com/tapion69/smart-aosu-cloud/actions/runs/43619711369 .
+
 ## Bloquants restants — sans nouvelle manipulation chez le frère
 
 - **Identité** : le `cpDeviceId` AOSU authentique n'était pas présent
