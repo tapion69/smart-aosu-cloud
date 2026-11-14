@@ -133,7 +133,7 @@ class Thing4C9CSession:
     def on_sdp_answer(self, *, from_device_id: str, session_id: str,
                       validated: bool, now: float | None = None) -> None:
         """Accept a *validated* answer for exactly our own fresh session."""
-        self._require(Phase.OFFER_SENT, Phase.CONNECTING)
+        self._require(Phase.OFFER_SENT)
         self._require_fresh(now)
         if (validated is not True or from_device_id != self._device_id
                 or session_id != self._session_id):
@@ -177,6 +177,8 @@ class Thing4C9CSession:
         self._deadline = None
         self._answer_seen = False
         self._connected_seen = False
+        self._frames_seen = 0
+        self._ack_seen = False
 
     def safe_status(self) -> dict[str, object]:
         """Stable whitelisted status fields: no SN, UID, devId, tokens or SDP."""
