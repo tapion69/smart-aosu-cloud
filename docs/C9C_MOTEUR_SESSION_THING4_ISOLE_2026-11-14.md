@@ -114,6 +114,38 @@ artificiellement vers `peripherique_p2p_cree` ou `connexion_p2p_confirmee`
 par ce seul observateur. Il faut un adaptateur P2P réel pour les callbacks
 d'initialisation, de connexion, d'authentification et de réception média.
 
+## Fiabilisation du résultat sur toutes les sorties MQTT
+
+Le test de régression du client `tuya_mqtt_offer._probe` a mis en
+évidence que l'observateur `C9CMqttSessionEvidence` n'était initialement
+inséré dans le résultat **qu'en fin de fonction**, alors que le code peut
+quitter prématurément la boucle via plusieurs `return` :
+configuration RTC incompatible, CONNACK refusé, SUBACK refusé, ou
+réveil non confirmé.
+
+La correction ajoute un seul finaliseur local `finish_probe()` qui
+n'exécute **aucune requête** et restitue, pour le parcours C9C uniquement,
+un statut fixe/expurgé même si l'offre n'a jamais été envoyée.
+
+- Le résultat `observation_session_c9c.etat=non_initialisee` permet
+  de distinguer un échec de préparation d'un manque de SDP.
+- Si le MQTT est refusé avant `offer`, le rapport indique
+  `offre_emise=false`, `reponse_sdp_origine_verifiee=false` et
+  `video_confirmee=false`.
+- Le chemin C5L/H1L ne reçoit **aucun** nouveau champ C9C.
+- Le `DISCONNECT` MQTT déjà exécuté par le `finally` est préservé,
+  y compris pour les refus de connexion et d'abonnement.
+- Aucune valeur de SN, clé, compte, UID, devId, SDP ou jeton n'est
+  renvoyée par l'observateur.
+
+Les **six tests** de `tests/test_c9c_mqtt_early_results.py` simulent
+les erreurs de préparation, CONNACK/SUBACK, les sorties prématurées,
+l'absence d'impact sur C5L et l'expurgation. Test final vérifié :
+https://github.com/tapion69/smart-aosu-cloud/actions/runs/43599359621 .
+
+**Limite inchangée :** ce diagnostic ne construit pas le moteur
+P2P natif manquant et n'établit aucune vidéo de la C9C autonome.
+
 ## Bloquants restants — sans nouvelle manipulation chez le frère
 
 - **Identité** : le `cpDeviceId` AOSU authentique n'était pas présent
