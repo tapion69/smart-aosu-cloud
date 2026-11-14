@@ -8,10 +8,10 @@ normal Home Assistant refresh. Request values exist only in RAM.
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
 
-_HTTP_ACTION = "thing.m.rtc.session.offer_1.0"
+_HTTP_ACTION = "thing.m.rtc.session.offer"
+_HTTP_VERSION = "1.0"
 _NON_VIDEO = frozenset(("gw","gateway","hub","switch","socket","sensor",
                          "light","zigbee","plug","cz","kg","dj","cl","pir","wsdcg"))
 
@@ -86,11 +86,12 @@ def validate_type4_rtc(rtc: object, target: str) -> bool:
     return found
 
 
-def native_http_form(offer: object, *, target: str) -> dict[str,str]:
+def native_http_form(offer: object, *, target: str) -> dict[str,object]:
     """Convert the existing validated MQTT offer to the native HTTP envelope.
 
     Native cJSON creates header+msg, stringifies that object and sends a
-    separate Tuya api/devId/msg request. No invented UDP relay fields.
+    separate Tuya api/devId/msg request. Java parses the inner JSON string
+    into the POST data. The API name is split from suffix '_1.0'.\n    No invented UDP relay fields.
     """
     if not _id(target) or not isinstance(offer,dict):
         raise ValueError("c9c_http_offer_invalid")
@@ -121,7 +122,7 @@ def native_http_form(offer: object, *, target: str) -> dict[str,str]:
                           ensure_ascii=False,separators=(",",":"))
     if len(serialized.encode("utf-8"))>32_768:
         raise ValueError("c9c_http_offer_oversized")
-    return {"devId":target,"msg":serialized}
+    return {"header":native_header,"msg":native_msg}
 
 
 def safe_http_result(safe: object) -> dict[str,object]:
