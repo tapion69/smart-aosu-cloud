@@ -401,6 +401,13 @@ def do_oem_thing4_session_offer_once(identity:APKIdentity, signer:TuyaSigner,
         safe['categorie_refus']=refusal['categorie_refus']
         safe['type_code_erreur']=refusal['type_code_erreur']
         safe['code_erreur_present']=refusal['code_erreur_present']
+        # Error codes already bounded by _safe_server_refusal to <=8 decimal
+        # digits. Do not expose symbolic server codes or raw error messages.
+        numeric=refusal.get('code_erreur_tuya')
+        if (isinstance(numeric,str) and 1 <= len(numeric) <= 8
+                and numeric.isascii() and numeric.isdecimal()
+                and numeric != '0'):
+            safe['code_erreur_tuya']=numeric
     return safe
 
 
