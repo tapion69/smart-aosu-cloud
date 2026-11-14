@@ -110,6 +110,40 @@ class HttpGatewayContractTests(unittest.TestCase):
         self.assertEqual(result["type_code_erreur"],"symbolique")
         self.assertNotIn("PRIVATE",str(result))
 
+    def test_bounded_numeric_error_code_passes_but_not_symbolic(self):
+        gateway,history=gateway_with_calls()
+        original=gateway.__globals__.get("_safe_server_refusal")
+        def denied(identity,signer,mode,**kwargs):
+            return {"success":False},{},{
+                "acceptation_explicite":False,"rejet_explicite":True}
+        old_call=gateway.__globals__["_call_api"]
+        try:
+            gateway.__globals__["_call_api"]=denied
+            gateway.__globals__["_safe_server_refusal"]=lambda *_:{
+                "categorie_refus":"indeterminee",
+                "type_code_erreur":"numerique",
+                "code_erreur_present":True,
+                "code_erreur_tuya":"4321"}
+            got=gateway(object(),object(),"sha256_material",FakeSession(),
+                target=self.target,form_data=payload(self.target),
+                explicit_consent=True,**self.args)
+            self.assertEqual(got["code_erreur_tuya"],"4321")
+            gateway.__globals__["_safe_server_refusal"]=lambda *_:{
+                "categorie_refus":"indeterminee",
+                "type_code_erreur":"symbolique",
+                "code_erreur_present":True,
+                "code_erreur_tuya":"SN_SECRET"}
+            got=gateway(object(),object(),"sha256_material",FakeSession(),
+                target=self.target,form_data=payload(self.target),
+                explicit_consent=True,**self.args)
+            self.assertNotIn("code_erreur_tuya",got)
+        finally:
+            gateway.__globals__["_call_api"]=old_call
+            if original is None:
+                gateway.__globals__.pop("_safe_server_refusal",None)
+            else:
+                gateway.__globals__["_safe_server_refusal"]=original
+
     def test_gateway_does_not_forward_raw_server_data(self):
         gateway, history=gateway_with_calls()
         actual=gateway(object(),object(),"sha256_material",FakeSession(),
