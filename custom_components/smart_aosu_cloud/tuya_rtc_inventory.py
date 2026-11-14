@@ -759,9 +759,15 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
             out['media_bootstrap']=media
             if standalone_c9c_v4_rtc_audit:
                 out['media_v4_pret']=private is not None
-            if standalone_c9c_video_test or standalone_c9c_http_offer_test:
-                # Only these explicitly consented C9C modes may consume the resolved RTC
-                # moto_id. The C5L / H1L paths stay bit-for-bit unchanged.
+            if standalone_c9c_video_test:
+                # Keep the legacy C9C video branch unchanged.
+                moto_value, moto_source=resolve_rtc_moto_id(rtc)
+                out['moto_id_source_rtc']=moto_source
+                out['moto_id_rtc_exploitable']=bool(moto_value)
+                if private is not None:
+                    private.moto_id=moto_value
+            if standalone_c9c_http_offer_test:
+                # HTTP-only experiment never activates the video branch.
                 moto_value, moto_source=resolve_rtc_moto_id(rtc)
                 out['moto_id_source_rtc']=moto_source
                 out['moto_id_rtc_exploitable']=bool(moto_value)
@@ -795,12 +801,15 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 # Consume the per-installation permission BEFORE sending.
                 _LAST_C9C_HTTP[client_key]=time.monotonic()+3600
                 out['appel_reseau']+=1
-                result=do_oem_thing4_session_offer_once(
-                    identity,signer,'sha256_material',session,target=target,
-                    form_data=form,ttid=f'sdk_international@{identity.app_id}',
-                    device_id=install_id,endpoint=_ENDPOINT,
-                    explicit_consent=True)
-                client._tuya_oem_media_bootstrap=None
+                out['requete_http_effectuee']=True
+                try:
+                    result=do_oem_thing4_session_offer_once(
+                        identity,signer,'sha256_material',session,target=target,
+                        form_data=form,ttid=f'sdk_international@{identity.app_id}',
+                        device_id=install_id,endpoint=_ENDPOINT,
+                        explicit_consent=True)
+                finally:
+                    client._tuya_oem_media_bootstrap=None
                 out['offre_http_c9c']=safe_http_result(result)
                 out['etat']='offre_http_test_termine'
                 return out
