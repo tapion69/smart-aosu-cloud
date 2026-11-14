@@ -125,8 +125,16 @@ class C9CMqttSessionEvidence:
             media.get("image_jpeg_complete_detectee") is True)
         new_jpeg = (self._answer_validated and relay_signed and
                     decrypted_media and _positive_int(decoded_jpeg_delta))
+        milestone = (
+            "image_preview_decodee" if new_jpeg else
+            "video_dechiffree_sans_image" if decrypted_media else
+            "canal_kcp_video_observe" if kcp_seen else
+            "relais_tcp_authentifie" if relay_signed else
+            "reponse_sdp_validee" if self._answer_validated else
+            "offre_envoyee" if self._offer_sent else "aucun")
         return {
             "diagnostic": "aosu_c9c_relais_video_preuves_v1",
+            "phase_observee": milestone,
             "reponse_sdp_origine_verifiee": self._answer_validated,
             "relais_tcp_authentifie": relay_signed,
             "canal_video_kcp_observe": kcp_seen,
