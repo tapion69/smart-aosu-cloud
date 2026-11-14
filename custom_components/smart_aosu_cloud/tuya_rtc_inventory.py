@@ -557,6 +557,7 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                         and selection not in (
                             'identite_exacte_serie',
                             'identite_exacte_cp_device_id',
+                            'identite_exacte_cp_device_id_dev_id',
                             'identite_exacte_ty_cp_uuid')):
                     # Never reuse credentials from an earlier manual probe.
                     client._tuya_oem_media_bootstrap=None
