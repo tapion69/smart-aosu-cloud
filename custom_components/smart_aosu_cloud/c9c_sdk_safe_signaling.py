@@ -11,6 +11,7 @@ The SDK itself is not modified or vendored here. Not wired into HA Play.
 from __future__ import annotations
 
 import asyncio
+import json
 import ssl
 from typing import Any
 
@@ -19,6 +20,9 @@ import aiomqtt
 from tuya_ipc_p2p_sdk.exceptions import TuyaIpcP2pError
 from tuya_ipc_p2p_sdk.signaling.envelope import decode_payload
 from tuya_ipc_p2p_sdk.signaling.moto_client import MotoClient
+from tuya_ipc_p2p_sdk.signaling.relay_frames import (
+    relay_offer_frame, relay_candidate_frame)
+from tuya_ipc_p2p_sdk.json_types import dump_json
 from tuya_ipc_p2p_sdk.stream_session import StreamSession
 
 
@@ -111,3 +115,39 @@ class SafeAosuStreamSession(StreamSession):
             on_disconnect=self._on_device_disconnect,
             moto_id=config.moto_id)
         await self._moto.async_connect()
+
+    def _tunnel_signaling(self, offer, trace_id: str, token) -> None:
+        """Keep native OEM moto_id in the relay's offer and ICE candidates.
+
+        The upstream SDK hardcodes empty moto_id on BOTH MQTT and relay
+        frames. AOSU C9C may carry a camera-specific ID in each. Reuse the
+        upstream frame builders unchanged apart from this one OEM field.
+        """
+        relay = self._require_relay()
+        moto = getattr(self._config, "moto_id", "")
+        if (not isinstance(moto, str) or len(moto) > 128
+                or moto != moto.strip() or not moto.isprintable()
+                or any(ch.isspace() for ch in moto)):
+            moto = ""
+
+        def add_oem_moto(frame: bytes) -> bytes:
+            if not moto:
+                return frame
+            item = json.loads(frame)
+            if isinstance(item, dict) and isinstance(item.get("header"), dict):
+                item["header"]["moto_id"] = moto
+            return dump_json(item)
+
+        relay.send_tunnel_frame(
+            offer.aes_key,
+            add_oem_moto(relay_offer_frame(
+                self._uid, self._config.device_id, offer.session_id, trace_id,
+                offer.sdp, self._config.ice_servers_as_json(), token.as_json(),
+                self._config.log_config_as_json())))
+        for candidate in self._candidates:
+            relay.send_tunnel_frame(
+                offer.aes_key,
+                add_oem_moto(relay_candidate_frame(
+                    self._uid, self._config.device_id, offer.session_id,
+                    trace_id, candidate)))
+
