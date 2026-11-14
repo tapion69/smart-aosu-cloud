@@ -2,6 +2,8 @@
 import ast
 import json
 import runpy
+import time
+import types
 import unittest
 from pathlib import Path
 
@@ -95,6 +97,34 @@ class AndroidCpDevIdBridgeTests(unittest.TestCase):
         safe={"methode_selection":kind,"liaison_tuyee":bool(dev)}
         for secret in (SN,DEV,OTHER):
             self.assertNotIn(secret,json.dumps(safe))
+
+    def test_readonly_identity_report_marks_cp_devid_equality_without_ids(self):
+        inspect=runpy.run_path(
+            str(DIR/"c9c_identity_diagnostic.py")
+        )["inspect_c9c_identity_cache"]
+        fake_client=types.SimpleNamespace(
+            _standalone_c9c_sn=SN,
+            _standalone_c9c_coop_id=DEV,
+            _standalone_c9c_ty_cp_uuid=None,
+            _provider_snapshot=None)
+        result=inspect(
+            data={"only":{
+                "model":"C9C","is_camera":True,"via_device":None}},
+            client=fake_client,
+            cache={"created":time.monotonic(),"session_uid":"synthetic_session",
+                   "devices":{DEV:{"devId":DEV,"skills":{"p2pType":4}}}},
+            select_standalone=TOPO["select_standalone_c9c_key"],
+            select_tuya=TOPO["select_tuya_standalone_target"],
+            select_tuya_typed=match)
+        self.assertEqual(result["etat"],"identite_exacte_confirmee")
+        self.assertEqual(
+            result["correspondance"]["selection_rtc"],
+            "identite_exacte_cp_device_id_dev_id")
+        self.assertTrue(result["correspondance"]["identite_exacte_confirmee"])
+        self.assertEqual(result["commandes_camera"],0)
+        self.assertEqual(result["commandes_ptz"],0)
+        for secret in (SN,DEV,OTHER,"synthetic_session"):
+            self.assertNotIn(secret,json.dumps(result))
 
     def test_same_action_guard_is_still_manual_and_exact_only(self):
         source=(DIR/"tuya_rtc_inventory.py").read_text()
