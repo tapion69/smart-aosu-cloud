@@ -20,6 +20,7 @@ _EXACT = frozenset({
 def cached_c9c_video_preflight(client: Any, *,
                               select_tuya_typed: Callable,
                               resolve_ty_uuid: Callable,
+                              resolve_cp_id: Callable | None = None,
                               now: float | None = None) -> dict[str, object]:
     """Safe constant-token report; only fresh same-session data can block."""
     base = {
@@ -56,10 +57,13 @@ def cached_c9c_video_preflight(client: Any, *,
             or not 1 <= len(devices) <= 100):
         return base
     ty_uuid, _source = resolve_ty_uuid(client)
+    cp_id = (
+        resolve_cp_id(client)[0] if callable(resolve_cp_id)
+        else getattr(client, "_standalone_c9c_coop_id", None))
     target, classification = select_tuya_typed(
         devices,
         camera_sn=client._standalone_c9c_sn,
-        camera_cp_device_id=getattr(client,"_standalone_c9c_coop_id",None),
+        camera_cp_device_id=cp_id,
         camera_ty_cp_uuid=ty_uuid)
     if target is not None and classification in _EXACT:
         return {**base,"etat":"identite_exacte_cachee"}
