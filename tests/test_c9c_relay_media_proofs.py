@@ -146,6 +146,16 @@ class TestC9CMediaProofs(unittest.TestCase):
         self.assertIn("result['preuves_media_c9c']",source)
         self.assertIn("return finish_probe()",source)
 
+    def test_high_level_ha_outcome_requires_actual_new_picture_for_c9c(self):
+        receiver=(BASE/"tuya_rtc_inventory.py").read_text(encoding="utf-8")
+        self.assertIn("if standalone_c9c_video_test is True:",receiver)
+        self.assertIn("evidence.get('video_visible_confirmee') is True",receiver)
+        self.assertIn("out['session_video_creee']=bool(",receiver)
+        probe=(BASE/"tuya_mqtt_offer.py").read_text(encoding="utf-8")
+        self.assertIn("result['preuves_media_c9c']['video_visible_confirmee'] is True",probe)
+        self.assertIn("result['session_video_creee'] = (",probe)
+        ast.parse(receiver)
+
     def test_independent_legacy_relay_path_is_unchanged(self):
         source=(BASE/"tuya_mqtt_offer.py").read_text(encoding="utf-8")
         self.assertIn("if c9c_evidence is not None:",source)
