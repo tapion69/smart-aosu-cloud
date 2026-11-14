@@ -16,6 +16,7 @@ from typing import Any
 
 import aiomqtt
 
+from tuya_ipc_p2p_sdk.exceptions import TuyaIpcP2pError
 from tuya_ipc_p2p_sdk.signaling.envelope import decode_payload
 from tuya_ipc_p2p_sdk.signaling.moto_client import MotoClient
 from tuya_ipc_p2p_sdk.stream_session import StreamSession
@@ -42,7 +43,7 @@ class SafeAosuMotoClient(MotoClient):
         """Discard other-account, other-device or stale-session SDP/candidates."""
         try:
             signal = decode_payload(self._key, payload)
-        except (ValueError, TypeError, KeyError, UnicodeError):
+        except (TuyaIpcP2pError, ValueError, TypeError, KeyError, UnicodeError):
             return
         if not isinstance(signal, dict):
             return
