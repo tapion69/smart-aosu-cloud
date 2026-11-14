@@ -3219,3 +3219,23 @@ tester_offre_http_thing4_c9c:
       required: true
       selector:
         boolean: {}
+
+
+comparer_sn_application_c9c:
+  name: C9C autonome — comparer le SN de l'application AOSU
+  description: >-
+    Compare en mémoire le SN recopié depuis l'application AOSU officielle
+    avec le SN AOSU de la C9C autonome déjà reçu par Home Assistant.
+    Aucune connexion réseau, offre HTTP, MQTT, vidéo ou PTZ.
+    Les numéros de série ne figurent jamais dans la réponse ni dans
+    les journaux de l'intégration. Cette égalité ne prouve PAS la
+    correspondance séparée entre le SN AOSU et l'identifiant Tuya.
+    Ne pas partager la saisie du SN ni une capture de ce formulaire.
+  fields:
+    sn_application_aosu:
+      name: SN affiché par l'application AOSU
+      description: Saisir le SN exactement comme affiché dans AOSU, sans espaces ajoutés
+      required: true
+      selector:
+        text:
+          type: password

@@ -1,0 +1,36 @@
+name: Smart AOSU C9C local official SN comparison
+
+on:
+  push:
+    branches:
+      - fix/c9c-manual-sn-compare-rc2
+      - main
+    paths:
+      - custom_components/smart_aosu_cloud/c9c_sn_application_compare.py
+      - custom_components/smart_aosu_cloud/__init__.py
+      - custom_components/smart_aosu_cloud/services.yaml
+      - tests/test_c9c_sn_application_compare.py
+      - .github/workflows/c9c-sn-application-compare.yml
+  pull_request:
+    paths:
+      - custom_components/smart_aosu_cloud/c9c_sn_application_compare.py
+      - custom_components/smart_aosu_cloud/__init__.py
+      - custom_components/smart_aosu_cloud/services.yaml
+      - tests/test_c9c_sn_application_compare.py
+      - .github/workflows/c9c-sn-application-compare.yml
+
+permissions:
+  contents: read
+
+jobs:
+  local-only-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax-check the full Home Assistant integration
+        run: python -m compileall -q custom_components/smart_aosu_cloud
+      - name: Verify SN comparison is local only, private and fail-closed
+        run: python -m unittest discover -s tests -p 'test_c9c_sn_application_compare.py' -v

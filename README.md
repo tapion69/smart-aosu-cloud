@@ -1,8 +1,20 @@
-# Smart AOSU Cloud — 0.8.13-beta44-rc1 (test HTTP RTC C9C autonome)
+# Smart AOSU Cloud — 0.8.13-beta44-rc2 (comparaison locale du SN AOSU)
 
 > **EXPÉRIMENTAL — intégration indépendante et non officielle, non validée sur une seconde installation.**
 >
 > La vidéo et le PTZ ont été confirmés en 0.8.10 sur le banc de développement (1× C5L et 2× C9C3CA11 derrière H1L). Cette nouvelle bêta n'a pas été testée physiquement ; ne l'utilisez pas comme unique système de sécurité.
+
+## 0.8.13-beta44-rc2 — comparer localement le SN de la C9C (14 novembre 2026)
+
+**Nouvelle action** `smart_aosu_cloud.comparer_sn_application_c9c` :
+saisir **directement dans Home Assistant** le SN affiché dans l'application AOSU officielle.
+L'intégration vérifie seulement s'il est **identique au SN AOSU déjà en mémoire**.
+Aucun SN n'est retourné, affiché, enregistré ou transmis par l'intégration ;
+aucune requête Tuya, offre HTTP, vidéo ou PTZ n'est effectuée.
+
+Cette vérification **ne prouve pas l'identité AOSU↔Tuya** et ne corrige pas encore
+le refus de la négociation HTTP observé lors du premier essai bêta44.
+[Étapes et résultat attendu](docs/C9C_COMPARER_SN_APPLICATION_2026-11-14.md).
 
 ## 0.8.13-beta44-rc1 — essai unique HTTP RTC de la C9C autonome (14 novembre 2026)
 
