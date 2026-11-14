@@ -48,7 +48,7 @@ class ExperimentalC9CHttpSuspension(unittest.TestCase):
     def test_no_http_mode_still_uses_legacy_route(self):
         source=SOURCE.read_text(encoding="utf-8")
         self.assertIn("elif confirmation_offre_http or confirmation_cible_unique_non_prouvee:",source)
-        self.assertIn("if standalone_c9c_video_test or standalone_c9c_http_offer_test",source)
+        self.assertIn("if standalone_c9c_video_test:",source)
         # The suspension is only inside the explicit manual HTTP branch.
         block=source.split("if standalone_c9c_http_offer_test:",1)[1].split(
             "elif confirmation_offre_http or confirmation_cible_unique_non_prouvee:",1)[0]
