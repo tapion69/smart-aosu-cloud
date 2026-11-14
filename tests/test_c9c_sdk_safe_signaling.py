@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import json
 from pathlib import Path
 import ssl
 import sys
@@ -137,6 +138,47 @@ class TestVerifiedVendorMoto(unittest.IsolatedAsyncioTestCase):
                 await client().async_connect()
         finally:
             safe.aiomqtt.Client=old
+
+    async def test_oem_moto_id_in_relay_offer_and_candidate(self):
+        # The upstream SDK 0.1.3 uses moto_id="" in relay_frames.py.
+        # Our AOSU subclass must not lose it after MQTT signaling.
+        source={"p2pConfig":{
+            "session":{
+                "sessionId":SESSION,"aesKey":"af"*16,
+                "iceUfrag":"ICEFAKE","icePassword":"ICEPASSFAKE",
+            },
+            "tcpRelay":{
+                "username":"2000000000:test",
+                "credential":"synthetic_credential",
+                "sessionId":"SERVER_SESSION",
+                "urls":["tcp4:relay.example.test:1443"],
+            }, "ices":[]},
+            "password":"SYNTHETIC_DEVICE_PASSWORD",
+            "motoId":MOTO}
+        config=StreamConfig.from_json(source,DEV,KEY)
+        session=safe.SafeAosuStreamSession(config,IDENTITY,USER,lambda x:None)
+        class FakeRelay:
+            def __init__(self):self.sent=[]
+            def send_tunnel_frame(self,key,data):self.sent.append((key,data))
+        relay=FakeRelay()
+        session._relay=relay
+        session._candidates=["candidate:1 1 UDP 1 127.0.0.1 1000 typ host"]
+        token=config.relay_token.with_session_id("SYNTHETIC_NEW_RENDEZVOUS")
+        offer=types.SimpleNamespace(
+            aes_key=bytes.fromhex("af"*16),session_id=SESSION,sdp="v=0\r\n")
+        session._tunnel_signaling(offer,"TRACE_FAKE",token)
+        self.assertEqual(len(relay.sent),2)
+        decoded=[json.loads(payload) for _,payload in relay.sent]
+        self.assertEqual([x["header"]["type"] for x in decoded],
+                         ["offer","candidate"])
+        self.assertEqual([x["header"]["moto_id"] for x in decoded],
+                         [MOTO,MOTO])
+        self.assertEqual(decoded[0]["header"]["path"],"relay")
+        self.assertEqual(decoded[0]["msg"]["tcp_token"]["sessionId"],
+                         "SYNTHETIC_NEW_RENDEZVOUS")
+        # No sockets, no MQTT login, and no camera call.
+        session._relay=None
+        await session.async_close()
 
     async def test_real_sdk_stream_session_is_constructible_without_network(self):
         source={"p2pConfig":{
