@@ -21,6 +21,7 @@ from .tuya_kcp_receive_b87 import KcpReceiveB87
 from .tuya_tcp_frames_b90 import RelayFrameReaderB90
 from .tuya_relay_keepalive_b92 import RelayKeepaliveB92
 from .tuya_control_kcp_b96 import ControlDeliveryB96
+from .c9c_mjpeg_reassembly import C9CJpegReassembler
 
 _CONTROL_MAGIC=0x12345678
 _MAX_FRAME=4*1024*1024
@@ -89,7 +90,8 @@ def _maybe_jpeg_chunks(plain:bytes) -> list[tuple[int,bytes]]:
 
 def run_media_start(sock:Any,offer_key:bytes,answer_sdp:str,local_key:str,device_password:str,
                     *,wait_seconds:float=11.0,max_frames:int=320,
-                    local_capture_directory:str|None=None,live_preview=None)->dict[str,object]:
+                    local_capture_directory:str|None=None,live_preview=None,
+                    standalone_c9c:bool=False)->dict[str,object]:
     """Called on an authenticated relay after its tunneled offer.
 
     Manual diagnostics are bounded; interactive live runs until explicit Stop,
@@ -131,6 +133,7 @@ def run_media_start(sock:Any,offer_key:bytes,answer_sdp:str,local_key:str,device
     # Bounded de-dup history: long sessions must not accumulate every KCP seq.
     receivers:dict[int,KcpReceiveB87]={}
     image=bytearray();image_started=False
+    c9c_jpeg_assembler=(C9CJpegReassembler() if standalone_c9c is True else None)
     codec_probe=CodecFingerprint()
     structure_probe=MediaStructureProbe()
     envelope_probe=FrameEnvelopeProbe()
@@ -254,7 +257,11 @@ def run_media_start(sock:Any,offer_key:bytes,answer_sdp:str,local_key:str,device
                 out['paquets_video_dechiffres']+=1
                 if live_preview is not None:live_preview._b87_decrypted_media=out['paquets_video_dechiffres']
                 last_video=time.monotonic()
-                if live_preview is not None:
+                jpeg_chunks=_maybe_jpeg_chunks(plain)
+                if live_preview is not None and (
+                        c9c_jpeg_assembler is None or not jpeg_chunks):
+                    # C9C JPEG chunks must NOT be sent into C5L HEVC parser.
+                    # For non-JPEG data keep the existing HEVC route intact.
                     live_preview.feed(plain)
                 if local_capture is not None:
                     local_capture.feed(plain)
@@ -263,8 +270,15 @@ def run_media_start(sock:Any,offer_key:bytes,answer_sdp:str,local_key:str,device
                 envelope_probe.feed(plain)
                 continuity_probe.feed(plain)
                 assembly_probe.feed(plain)
-                for offset,chunk in _maybe_jpeg_chunks(plain):
+                for offset,chunk in jpeg_chunks:
                     out['blocs_jpeg_detectes']+=1
+                    if c9c_jpeg_assembler is not None:
+                        complete=c9c_jpeg_assembler.feed(offset,chunk)
+                        if complete is not None:
+                            out['image_jpeg_complete_detectee']=True
+                            if live_preview is not None:
+                                live_preview.feed_jpeg(complete)
+                        continue
                     if offset==0 and chunk.startswith(b'\xff\xd8'):
                         if image_started and image.endswith(b'\xff\xd9'):
                             out['image_jpeg_complete_detectee']=True
@@ -278,6 +292,8 @@ def run_media_start(sock:Any,offer_key:bytes,answer_sdp:str,local_key:str,device
         if live_preview is not None and count % 16 == 0:
             _snapshot()
     _snapshot()
+    if c9c_jpeg_assembler is not None:
+        out['mjpeg_c9c']=c9c_jpeg_assembler.summary()
     if live_preview is not None:
         if live_preview.stopped and out['cause_fin_session_b85']=='non_determinee':
             out['cause_fin_session_b85']='arret_demande_par_utilisateur'
