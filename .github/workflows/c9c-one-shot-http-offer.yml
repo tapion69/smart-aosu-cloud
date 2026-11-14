@@ -1,0 +1,35 @@
+name: Smart AOSU C9C one-shot native HTTP offer
+
+on:
+  push:
+    branches:
+      - experiment/c9c-one-shot-http-offer
+    paths:
+      - custom_components/smart_aosu_cloud/c9c_thing4_http_once.py
+      - custom_components/smart_aosu_cloud/tuya_uid_gateway.py
+      - custom_components/smart_aosu_cloud/tuya_rtc_inventory.py
+      - custom_components/smart_aosu_cloud/__init__.py
+      - custom_components/smart_aosu_cloud/services.yaml
+      - tests/test_c9c_one_shot_http_offer.py
+      - .github/workflows/c9c-one-shot-http-offer.yml
+  pull_request:
+    paths:
+      - custom_components/smart_aosu_cloud/c9c_thing4_http_once.py
+      - tests/test_c9c_one_shot_http_offer.py
+      - .github/workflows/c9c-one-shot-http-offer.yml
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile full custom integration without importing HA
+        run: python -m compileall -q custom_components/smart_aosu_cloud
+      - name: Test one-shot HTTP offer and manual identity gates
+        run: python -m unittest discover -s tests -p 'test_c9c_one_shot_http_offer.py' -v
