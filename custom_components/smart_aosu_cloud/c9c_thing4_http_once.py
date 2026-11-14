@@ -156,6 +156,14 @@ def safe_http_result(safe: object) -> dict[str,object]:
                 "parametres","indeterminee")
             else "non_applicable"),
         "code_erreur_present":state.get("code_erreur_present") is True,
+        "code_erreur_tuya":(
+            state["code_erreur_tuya"] if
+            isinstance(state.get("code_erreur_tuya"),str)
+            and 1 <= len(state["code_erreur_tuya"]) <= 8
+            and state["code_erreur_tuya"].isascii()
+            and state["code_erreur_tuya"].isdecimal()
+            and state["code_erreur_tuya"] != "0"
+            else "non_disponible"),
         "reponse_sdp_recue":False,
         "video_lancee":False,
         "offres_mqtt_envoyees":0,
