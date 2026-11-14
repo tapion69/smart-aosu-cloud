@@ -68,6 +68,52 @@ n'est retourné dans les statuts ou les exceptions.
 Le module n'est pas branché à un moteur réseau : les tests **n'affirment
 pas** que le moteur natif fonctionne chez le frère.
 
+## Branchement réel au récepteur MQTT existant — contrôle de provenance
+
+Le récepteur `tuya_mqtt_offer._probe` disposait déjà d'une vérification
+du `sessionid`, mais **une réponse portant le même `sessionid` pouvait
+être acceptée même si `header.from` ou `header.to` ne correspondaient
+pas à notre caméra/utilisateur**. C'était un risque de fausse réponse
+et un défaut concret de vérification.
+
+Le module `c9c_thing4_mqtt_evidence.py` est maintenant branché
+**uniquement** lorsque `use_moto_id` est vrai (parcours manuel C9C
+autonome) sur **la connexion MQTT et la boucle de réception existantes**.
+
+- Après l'envoi réel du message `offer`, il enregistre ce fait.
+- Un `PUBACK` n'est associé à l'offre que si son packet-id est `11`;
+  il prouve seulement l'acceptation du **broker**, pas une caméra joignable.
+- Chaque `answer`, `candidate` ou `disconnect` de protocole `302`
+  doit porter **le même sessionid, la caméra attendue en `from` et
+  notre UID en `to`**, sur le topic MQTT déjà vérifié.
+- Pour qu'une `answer` puisse atteindre l'ancien code de traitement
+  du relais/vidéo, son SDP doit contenir les champs structurels AES/KCP
+  et ICE attendus. Cela ne prouve **pas** une authentification
+  cryptographique par le moteur P2P ni un décodage vidéo.
+- Une réponse provenant d'un autre appareil/utilisateur ou d'une
+  ancienne session est rejetée **avant** toute action de relais.
+- Les résultats ajoutent un `observation_session_c9c` composé
+  exclusivement d'énumérations, de booléens et de compteurs bornés.
+  `connexion_p2p_authentifiee=false` et
+  `video_confirmee=false` restent explicites en l'absence des
+  callbacks et images réels.
+- Le chemin C5L/H1L (`use_moto_id=false`) conserve son traitement
+  historique, sans modification de l'enveloppe MQTT, du broker
+  ou de ses commandes vidéo/PTZ.
+
+**Tests :** `tests/test_c9c_thing4_mqtt_evidence.py` couvre 15
+cas d'observation hors ligne : identité, anciens messages, destinataires,
+SDP incomplet, publications, accusés de réception, candidats,
+déconnexion, données sensibles et vérification du raccordement.
+CI : https://github.com/tapion69/smart-aosu-cloud/actions/runs/43598313282 .
+
+**Limite :** cette surveillance est un *contrôle de provenance
+de signalisation*, pas un substitut à `createDevice/setCameraConfig/connect`.
+Le module d'états natif `Thing4C9CSession` ne doit pas être avancé
+artificiellement vers `peripherique_p2p_cree` ou `connexion_p2p_confirmee`
+par ce seul observateur. Il faut un adaptateur P2P réel pour les callbacks
+d'initialisation, de connexion, d'authentification et de réception média.
+
 ## Bloquants restants — sans nouvelle manipulation chez le frère
 
 - **Identité** : le `cpDeviceId` AOSU authentique n'était pas présent
