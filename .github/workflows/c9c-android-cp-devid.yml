@@ -22,6 +22,7 @@ on:
       - custom_components/smart_aosu_cloud/tuya_relay_handshake.py
       - custom_components/smart_aosu_cloud/tuya_live_preview.py
       - tests/test_c9c_mjpeg_direct_preview.py
+      - tests/test_c9c_jpeg_lazy_ffmpeg.py
       - tests/test_c9c_ty_cp_uuid_identity.py
       - .github/workflows/c9c-android-cp-devid.yml
   pull_request:
@@ -42,6 +43,7 @@ on:
       - custom_components/smart_aosu_cloud/tuya_relay_handshake.py
       - custom_components/smart_aosu_cloud/tuya_live_preview.py
       - tests/test_c9c_mjpeg_direct_preview.py
+      - tests/test_c9c_jpeg_lazy_ffmpeg.py
       - tests/test_c9c_ty_cp_uuid_identity.py
       - .github/workflows/c9c-android-cp-devid.yml
 
@@ -67,6 +69,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_c9c_mqtt_early_results.py' -v
           python -m unittest discover -s tests -p 'test_c9c_relay_media_proofs.py' -v
           python -m unittest discover -s tests -p 'test_c9c_mjpeg_direct_preview.py' -v
+          python -m unittest discover -s tests -p 'test_c9c_jpeg_lazy_ffmpeg.py' -v
           python -m unittest discover -s tests -p 'test_c9c_unmatched_session.py' -v
           python -m unittest discover -s tests -p 'test_mqtt_c9c_diagnostics.py' -v
           python -m unittest discover -s tests -p 'test_c9c_ty_cp_uuid_identity.py' -v
