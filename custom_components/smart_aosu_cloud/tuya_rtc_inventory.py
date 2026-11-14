@@ -1,8 +1,10 @@
-"""Manual, opt-in read-only inventory and optional RTC configuration probe.
+"""Manual Tuya OEM inventory, optional RTC probes and consented experiments.
 
-The OEM Tuya session is held only in memory. Never expose device identifiers,
-local keys, session tokens, network endpoints, or decrypted server bodies.
-No camera command, P2P connection or streaming is initiated here.
+The OEM session is held only in RAM; identifiers, local keys, tokens, media and
+decrypted response bodies must never be serialized into HA service results.
+Normal inventory is read-only. A C9C-only HTTP offer is possible exclusively
+through one manually confirmed, rate-limited state-changing test; it does
+not send a video command, MQTT message, camera wake or PTZ.
 """
 from __future__ import annotations
 import threading
@@ -702,7 +704,8 @@ def run_tuya_oem_inventory(client, *, confirmation_envoi_mot_de_passe:bool=False
                 return {**out,'etat':'fiche_tuya_obtenue'}
             # Drop previous provisional media credentials before minting any new RTC config.
             client._tuya_oem_media_bootstrap=None
-            if not interactive_live and now < _LAST_RTC.get(client_key,0):
+            if (not interactive_live and not standalone_c9c_http_offer_test
+                    and now < _LAST_RTC.get(client_key,0)):
                 return {**out,'etat':'limite_rtc_cinq_minutes'}
             if not interactive_live:
                 _LAST_RTC[client_key]=now+300
