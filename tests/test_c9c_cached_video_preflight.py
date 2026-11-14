@@ -130,6 +130,7 @@ class ControllerWiringTests(unittest.TestCase):
         ns={"cached_c9c_video_preflight":preflight,
             "select_tuya_standalone_target_typed":SELECT,
             "resolve_aosu_ty_cp_uuid":lambda x:(None,"none"),
+            "resolve_aosu_cp_device_id":lambda x:(None,"aucune"),
             "readiness_live":readiness}
         exec(compile(tree,"<live-controller-start>","exec"),ns)
         class Harness:
