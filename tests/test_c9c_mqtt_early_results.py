@@ -93,7 +93,7 @@ class TestC9CEarlyMQTTStatus(unittest.TestCase):
         self.assertFalse(sock.sent)
 
     def test_connack_refusal_returns_safe_status(self):
-        p,a,m,sock=compile_probe(messages=[(0x20,b"\\x00\\x05")])
+        p,a,m,sock=compile_probe(messages=[(0x20,bytes([0,5]))])
         result=p(a,UID,m,use_moto_id=True)
         self.assertEqual(result["etat"],"connack_non_accepte")
         self.assertFalse(result["observation_session_c9c"]["offre_emise"])
@@ -114,13 +114,13 @@ class TestC9CEarlyMQTTStatus(unittest.TestCase):
         self.assertEqual(len(sock.sent),2)
 
     def test_legacy_c5l_has_no_c9c_observation(self):
-        p,a,m,sock=compile_probe(messages=[(0x20,b"\\x00\\x05")])
+        p,a,m,sock=compile_probe(messages=[(0x20,bytes([0,5]))])
         result=p(a,UID,m,use_moto_id=False)
         self.assertEqual(result["etat"],"connack_non_accepte")
         self.assertNotIn("observation_session_c9c",result)
 
     def test_never_exposes_private_data_on_early_errors(self):
-        p,a,m,sock=compile_probe(messages=[(0x20,b"\\x00\\x05")])
+        p,a,m,sock=compile_probe(messages=[(0x20,bytes([0,5]))])
         result=p(a,UID,m,use_moto_id=True)
         payload=json.dumps(result)
         for value in (DEV,SID,UID,"PRIVATE_MOTO","PRIVATE_ICE","PRIVATE_TOPIC"):
