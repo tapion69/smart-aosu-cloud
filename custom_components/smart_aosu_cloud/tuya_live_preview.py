@@ -264,6 +264,39 @@ class LivePreview:
                 self._have_idr=False
                 # Restart at next IDR; data gap could otherwise corrupt the next frames.
 
+    def feed_jpeg(self, jpeg: bytes) -> bool:
+        """Accept one complete C9C MJPEG frame without the HEVC/FFmpeg path.
+
+        Only call with data from the *already decrypted* video channel and
+        contiguous, validated JPEG chunk reassembly. The historic C5L path
+        continues through feed()/HEVC as before.
+        """
+        if (not self._opened or self._stop.is_set() or self._pause.is_set()
+                or not isinstance(jpeg, bytes)
+                or not 1024 <= len(jpeg) <= _MAX_IMAGE
+                or not jpeg.startswith(b"\\xff\\xd8")
+                or not jpeg.endswith(b"\\xff\\xd9")):
+            return False
+        now=time.monotonic()
+        with self._lock:
+            if self._stop.is_set() or self._pause.is_set():
+                return False
+            self._jpeg=jpeg
+            self._jpeg_at=now
+            self._frames+=1
+            if self._frames == 1:
+                self._first_jpeg_delay=round(now-self._ffmpeg_started_at,2)
+            self._status='images_reçues'
+        with self._metrics_lock:
+            self._b93_metrics.jpeg()
+            self._b94_timing.note('jpeg')
+        if self._on_frame is not None:
+            try:
+                self._on_frame()
+            except (RuntimeError, ValueError):
+                pass
+        return True
+
     def pause(self) -> bool:
         if not self._opened or self.stopped:
             return False
