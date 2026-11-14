@@ -359,7 +359,9 @@ class LivePreview:
         params = {32: types.get(32, 0), 33: types.get(33, 0), 34: types.get(34, 0)}
         idr = types.get(19, 0) + types.get(20, 0)
         valid_rtp = self._decoder.packets
-        if valid_rtp == 0:
+        if self._lazy_hevc and self._frames > 0 and not self._have_idr:
+            diagnosis = 'images_jpeg_directes'
+        elif valid_rtp == 0:
             diagnosis = 'aucun_paquet_rtp_valide'
         elif not types:
             diagnosis = 'fragments_rtp_sans_nal_complete'
