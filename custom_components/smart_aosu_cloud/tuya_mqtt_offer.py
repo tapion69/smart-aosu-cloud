@@ -279,6 +279,11 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                     and current >= preview_jpeg_baseline else 0)
                 result['preuves_media_c9c'] = c9c_evidence.summarize_existing_relay(
                     result.get('relais_tcp'), decoded_jpeg_delta=newly_decoded)
+                # A KCP video channel is NOT a decoded frame. For the
+                # standalone C9C only, never promote channel presence to
+                # a successful visual session in higher-level reports.
+                result['session_video_creee'] = (
+                    result['preuves_media_c9c']['video_visible_confirmee'] is True)
             result['observation_session_c9c'] = (
                 c9c_evidence.safe_status() if c9c_evidence is not None
                 else {
