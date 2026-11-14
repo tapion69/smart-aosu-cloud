@@ -32,6 +32,7 @@ def gateway_with_calls():
         ast.ImportFrom(module="__future__",
                        names=[ast.alias(name="annotations")],level=0),
         NODES[0]],type_ignores=[])
+    ast.fix_missing_locations(tree)
     ns={"TuyaAuthSession":FakeSession,"OEMGatewayError":FakeError,
         "_ENDPOINT":"https://unit.test.invalid",
         "_call_api":mock_call}
