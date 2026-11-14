@@ -17,6 +17,9 @@ from .tuya_video_metrics_b93 import VideoMetricsB93
 from .tuya_stream_timing_b94 import StreamTimingB94
 from .ptz_live_observer_b41 import PassivePtzChannelObserver
 from .ptz_mqtt_observer_b42 import PassiveMqttPtzObserver
+from .camera_topology import select_tuya_standalone_target_typed
+from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
+from .c9c_cached_video_preflight import cached_c9c_video_preflight
 
 _MAX_IMAGE = 3 * 1024 * 1024
 # Better display cadence than B85 (2 fps), without inventing missing source frames.
@@ -682,6 +685,26 @@ class LiveController:
             return self._deny_start('demarrage_non_lance_reessai',
                                     secondes_restantes=retry_seconds,
                                     cause=self._retry.last_reason)
+        if standalone_c9c_video_test is True:
+            # If the same authenticated session has a recent Tuya inventory
+            # that *already* lacks a typed AOSU↔Tuya identity, do not start
+            # another MQTT/P2P attempt. A stale/absent cache is inconclusive
+            # and retains the existing inventory-first behavior.
+            cached_gate = cached_c9c_video_preflight(
+                self.client,
+                select_tuya_typed=select_tuya_standalone_target_typed,
+                resolve_ty_uuid=resolve_aosu_ty_cp_uuid)
+            if cached_gate['etat'] == 'identite_non_prouvee_cache_reutilise':
+                self.preview = None
+                self._status = 'identite_c9c_non_prouvee'
+                self._last_result = {
+                    'etat_negociation': 'non_lance_identite_cache',
+                    'commandes_video': 0, 'paquets_dechiffres': 0}
+                self._notify()
+                return self._deny_start(
+                    'c9c_identite_non_prouvee_cache_frais',
+                    nouvelle_offre_mqtt=False, appels_reseau=0,
+                    commande_camera=0)
         readiness = readiness_live(self.client)
         if not readiness['pret_cote_limites_locales']:
             self._status = 'limitation_locale'
