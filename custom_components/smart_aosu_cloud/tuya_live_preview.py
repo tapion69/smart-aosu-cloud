@@ -19,6 +19,7 @@ from .ptz_live_observer_b41 import PassivePtzChannelObserver
 from .ptz_mqtt_observer_b42 import PassiveMqttPtzObserver
 from .camera_topology import select_tuya_standalone_target_typed
 from .c9c_ty_detail_hydration import resolve_aosu_ty_cp_uuid
+from .c9c_cp_detail_identity import resolve_aosu_cp_device_id
 from .c9c_cached_video_preflight import cached_c9c_video_preflight
 
 _MAX_IMAGE = 3 * 1024 * 1024
@@ -693,7 +694,8 @@ class LiveController:
             cached_gate = cached_c9c_video_preflight(
                 self.client,
                 select_tuya_typed=select_tuya_standalone_target_typed,
-                resolve_ty_uuid=resolve_aosu_ty_cp_uuid)
+                resolve_ty_uuid=resolve_aosu_ty_cp_uuid,
+                resolve_cp_id=resolve_aosu_cp_device_id)
             if cached_gate['etat'] == 'identite_non_prouvee_cache_reutilise':
                 self.preview = None
                 self._status = 'identite_c9c_non_prouvee'
