@@ -690,8 +690,12 @@ class LiveController:
                                     cause='operation_locale_en_cours',
                                     secondes_restantes=0,
                                     nouvelle_offre_mqtt=False)
-        self.preview=LivePreview(on_frame=self._frame_ready)
-        if not self.preview._ffmpeg_path:
+        self.preview=LivePreview(
+            on_frame=self._frame_ready,
+            lazy_hevc=(standalone_c9c_video_test is True))
+        # C9C can display MJPEG natively. Only C5L/H1L still REQUIRE
+        # FFmpeg at startup; HEVC on C9C starts lazily if observed.
+        if not self.preview._ffmpeg_path and standalone_c9c_video_test is not True:
             return self._deny_start('ffmpeg_absent')
         self._start_refusal = None
         self._start_refusal_count = 0
