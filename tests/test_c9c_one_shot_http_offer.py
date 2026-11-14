@@ -152,6 +152,20 @@ class OneShotHttpTests(unittest.TestCase):
             "rejet_explicite":True,"categorie_refus":remote})
         self.assertEqual(result["categorie_refus"],"non_applicable")
 
+    def test_numeric_refusal_code_is_safe_bounded_and_not_a_secret(self):
+        valid=module.safe_http_result({
+            "rejet_explicite":True,"code_erreur_present":True,
+            "code_erreur_tuya":"1045"})
+        self.assertEqual(valid["code_erreur_tuya"],"1045")
+        for untrusted in ("UID-PRIVATE","0123456789","0","1 4",
+                          "AOSU_SN_C9C","6\\n7",987):
+            with self.subTest(code=str(untrusted)[:4]):
+                safe=module.safe_http_result({
+                    "rejet_explicite":True,
+                    "code_erreur_tuya":untrusted})
+                self.assertEqual(safe["code_erreur_tuya"],
+                                 "non_disponible")
+
     def test_http_explicit_rejection_precedes_acceptance(self):
         result=module.safe_http_result({
             "serveur_accepte":True,"rejet_explicite":True})
