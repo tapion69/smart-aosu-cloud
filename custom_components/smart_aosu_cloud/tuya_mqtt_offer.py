@@ -593,7 +593,8 @@ def _probe(auth:Any,uid:str,media:PrivateMediaBootstrap, *, tester_relais_tcp:bo
                                             media=media if tester_kcp else None,offer=offer if tester_kcp else None,
                                             tester_kcp=tester_kcp,tester_media=tester_media,answer_sdp=sdp,
                                             local_capture_directory=local_capture_directory,live_preview=live_preview,
-                                            ice_candidate=ice_candidate)
+                                            ice_candidate=ice_candidate,
+                                            standalone_c9c=(c9c_evidence is not None))
                                     finally:
                                         if watch_end is not None:
                                             watch_end.set()
