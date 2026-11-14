@@ -391,9 +391,17 @@ def do_oem_thing4_session_offer_once(identity:APKIdentity, signer:TuyaSigner,
         identity,signer,mode,action='thing.m.rtc.session.offer',
         api_version='1.0',form_data=form_data,ttid=ttid,
         device_id=device_id,endpoint=endpoint,session=session)
-    return {'http_ok':True,
-            'serveur_accepte':status['acceptation_explicite'],
-            'rejet_explicite':status['rejet_explicite']}
+    safe={'http_ok':True,
+          'serveur_accepte':status['acceptation_explicite'],
+          'rejet_explicite':status['rejet_explicite']}
+    if status['rejet_explicite']:
+        # The first HTTP test returned only a rejection bit. Preserve the
+        # existing fixed-category refusal classifier, never raw server data.
+        refusal=_safe_server_refusal(_outer,_decoded)
+        safe['categorie_refus']=refusal['categorie_refus']
+        safe['type_code_erreur']=refusal['type_code_erreur']
+        safe['code_erreur_present']=refusal['code_erreur_present']
+    return safe
 
 
 def publish_ptz_stop_once(identity:APKIdentity, signer:TuyaSigner, mode:str,
