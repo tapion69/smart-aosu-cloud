@@ -114,6 +114,12 @@ class OneShotHttpTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.native_http_form(altered,target=TARGET)
 
+    def test_http_rejects_missing_native_header_field(self):
+        altered=offer()
+        del altered["header"]["moto_id"]
+        with self.assertRaises(ValueError):
+            module.native_http_form(altered,target=TARGET)
+
     def test_http_rejects_no_sdp_or_transport(self):
         altered=offer();altered["msg"]["sdp"]="garbage"
         with self.assertRaises(ValueError):
